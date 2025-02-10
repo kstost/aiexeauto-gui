@@ -53,7 +53,7 @@ export async function loadConfiguration() {
         maxIterations: 0,
         dockerImage: 'my-node-ubuntu',
         useDocker: true, // Docker 사용 여부 (false: 도커 아닌 웹컨테이너 사용, true: 도커 사용함)
-        dockerPath: '/usr/local/bin/docker', // 도커 경로
+        dockerPath: '', // 도커 경로
         dockerWorkDir: '/home/ubuntu/work',
         overwriteOutputDir: false, // 덮어쓰기 여부 (false: 덮어쓰지 않음, true: 덮어씀)
         trackLog: false,
@@ -67,6 +67,50 @@ export async function loadConfiguration() {
     } catch { }
     for (let key in config) {
         if (config_[key] === undefined) config_[key] = config[key];
+    }
+    {
+        if (!config_.dockerPath) {
+            let pathCandidate = [];
+            if (isWindows()) {
+                pathCandidate = [
+                    'C:\\Program Files\\Docker\\Docker\\docker.exe',
+                    'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe',
+                    'C:\\Program Files\\Docker\\Docker\\resources\\docker.exe',
+                    'C:\\Program Files (x86)\\Docker\\Docker\\docker.exe',
+                    'C:\\Program Files\\Docker\\docker.exe',
+                    'C:\\Docker\\Docker\\docker.exe',
+                    'C:\\Program Files\\Docker\\Docker\\cli\\docker.exe',
+                    'C:\\Program Files\\Docker\\docker\\resources\\bin\\docker.exe',
+                    'C:\\Program Files (x86)\\Docker\\docker.exe',
+                ];
+            } else {
+                pathCandidate = [
+                    '/usr/bin/docker',
+                    '/opt/homebrew/bin/docker',
+                    '/opt/local/bin/docker',
+                    '/usr/local/bin/docker',
+                    '/usr/local/sbin/docker',
+                    '/usr/sbin/docker',
+                    '/usr/local/docker/bin/docker',
+                    '/usr/local/share/docker/docker',
+                    '/Applications/Docker.app/Contents/Resources/bin/docker',
+                    '/var/lib/docker/bin/docker',
+                    '/usr/local/lib/docker/bin/docker',
+                    '/usr/local/docker/docker',
+                    '/usr/local/opt/docker/bin/docker',
+                    '/opt/bin/docker',
+                    '/usr/local/etc/docker/bin/docker',
+                ]
+            }
+            for (const path of pathCandidate) {
+                try {
+                    if (fs.existsSync(path)) {
+                        config_.dockerPath = path;
+                        break;
+                    }
+                } catch (error) { }
+            }
+        }
     }
     return config_;
 }
