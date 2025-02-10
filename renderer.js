@@ -32,7 +32,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // 새롭게 추가: 앱 제목 "AIEXE"를 상단에 추가
     const appTitle = document.createElement('h1');
-    appTitle.textContent = 'AIEXE';
+    appTitle.textContent = 'AIEXEAUTO';
     appTitle.style.color = '#ffffff';
     appTitle.style.fontSize = '24px';
     appTitle.style.textAlign = 'center';
