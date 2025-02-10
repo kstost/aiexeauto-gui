@@ -9,14 +9,8 @@
 - **크로스 플랫폼 지원**: Windows와 macOS 모두 지원합니다.
 - **실시간 진행 상황 표시**: 작업 진행 상태를 깔끔한 인터페이스로 확인할 수 있습니다.
 
-## 데모 비디오
-
-[데모 영상 시청하기](https://www.youtube.com/watch?v=GkOZ6fG99RI)  
-[![Video Label](http://img.youtube.com/vi/GkOZ6fG99RI/0.jpg)](https://www.youtube.com/watch?v=GkOZ6fG99RI)
-
 ## 시스템 요구 사항
 
-- **Node.js** (설치 및 빌드 도구로 사용됩니다)
 - **운영체제**: Windows, macOS
 
 ## 설치 방법
