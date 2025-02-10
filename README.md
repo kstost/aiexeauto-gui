@@ -19,17 +19,17 @@
 
 1. Download and install Node.js from [nodejs.org](https://nodejs.org).
 
-### 2. GUI 설치
+### 2. AIEXEAUTO-GUI 설치
 
-일반 사용자를 위한 간편한 GUI 설치 방법은 아래와 같습니다.
+일반 사용자를 위한 간편한 AIEXEAUTO-GUI 설치 방법은 아래와 같습니다.
 
-#### Windows GUI 설치
+#### Windows AIEXEAUTO-GUI 설치
 1. **PowerShell(관리자 권한) 실행 후 아래 명령어 실행**:
    ```powershell
    if (Get-Command npm -ErrorAction SilentlyContinue) { $timestamp = Get-Date -Format "yyyyMMddHHmmss"; $folderName = "_aiexeauto-gui_project_$timestamp"; $desktopPath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), $folderName); New-Item -ItemType Directory -Path $desktopPath -Force; if (Test-Path $desktopPath) { Set-Location -Path $desktopPath; Invoke-WebRequest -Uri "https://github.com/kstost/aiexeauto-gui/archive/refs/heads/main.zip" -OutFile "__aiexeauto-gui_project__.zip" -ErrorAction Stop; if (Test-Path "__aiexeauto-gui_project__.zip") { Expand-Archive -Path "__aiexeauto-gui_project__.zip" -DestinationPath "."; Set-Location -Path "aiexeauto-gui-main"; npm i; if ($?) { npm run build; if ($?) { ii "dist"; ii "dist\\aiexeauto Setup*.exe" } } } } } else { Write-Output "npm is not installed. Please download and install it from https://nodejs.org." }
    ```
 
-#### macOS GUI 설치
+#### macOS AIEXEAUTO-GUI 설치
 1. **Terminal 실행 후 아래 명령어 실행**:
    ```bash
    sudo chown -R 501:20 ~/.npm 2>/dev/null; command -v npm >/dev/null 2>&1 && { timestamp=$(date +%Y%m%d%H%M%S) && cd ~/Downloads && mkdir "_aiexeauto-gui_project_$timestamp" && cd "_aiexeauto-gui_project_$timestamp" && git clone https://github.com/kstost/aiexeauto-gui && cd aiexeauto-gui && npm i && npm run build && open dist/aiexeauto-*.dmg; } || { echo "npm is not installed. Please download and install it from https://nodejs.org."; }
@@ -37,7 +37,7 @@
 
 ### 3. Docker 설치
 
-GUI 설치 외 Docker 환경에서의 빌드를 원하시는 경우 아래 단계를 참고하세요.
+AIEXEAUTO-GUI 설치 외 Docker의 설치가 필요합니다. 아래 단계를 참고하여 설치를 진행해주세요.  
 
 1. **Docker 설치**
    - 최신 버전의 [Docker Desktop](https://www.docker.com/)을 다운로드하여 설치합니다.
