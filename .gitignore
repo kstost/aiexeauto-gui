@@ -1,0 +1,56 @@
+# Node.js 관련
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# 환경 설정
+.env
+.env.local
+.env.*.local
+
+# IDE/편집기 설정
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# 로그 파일
+logs/
+*.log
+
+# 임시 파일
+tmp/
+temp/
+*.tmp
+data/
+data_*/
+# tasks/
+data-output/
+dataout*/
+mission*.txt
+.code_*.js
+
+# 빌드 결과물
+dist/
+build/
+out/
+
+# 프로젝트 특정 파일/폴더
+data-output/
+# tasks/*/output/
+!config.json
+
+# Docker 관련
+.docker/
+docker-compose.override.yml
+
+# 테스트 커버리지
+coverage/
+
+# 기타
+.cache/
+.history/ 

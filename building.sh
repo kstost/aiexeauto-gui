@@ -1,0 +1,1 @@
+rm -rf dist && npm i && npm run build && open dist/aiexeauto-*.dmg;

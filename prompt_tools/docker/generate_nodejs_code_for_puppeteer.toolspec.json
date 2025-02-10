@@ -1,0 +1,16 @@
+{
+    "name": "generate_nodejs_code_for_puppeteer",
+    "description": "generate nodejs code for puppeteer.",
+    "input_schema": [
+        {
+            "nodejs_code": "",
+            "npm_package_list": [
+                ""
+            ]
+        },
+        {
+            "nodejs_code": "nodejs code for the only one task using puppeteer",
+            "npm_package_list": "array of npm package names used in the code"
+        }
+    ]
+}

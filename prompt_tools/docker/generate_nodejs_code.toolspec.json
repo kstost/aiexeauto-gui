@@ -1,0 +1,16 @@
+{
+    "name": "generate_nodejs_code",
+    "description": "generate nodejs code.",
+    "input_schema": [
+        {
+            "nodejs_code": "",
+            "npm_package_list": [
+                ""
+            ]
+        },
+        {
+            "nodejs_code": "nodejs code for the only one task",
+            "npm_package_list": "array of npm package names used in the code"
+        }
+    ]
+}

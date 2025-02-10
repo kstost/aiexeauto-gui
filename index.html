@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electron App</title>
+    <link rel="stylesheet" href="./static/codemirror.min.css">
+    <link rel="stylesheet" href="./static/monokai.min.css">
+    <script src="./static/codemirror.min.js"></script>
+    <script src="./static/python.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/lint/javascript-lint.min.js"
+        integrity="sha512-8kwyIAPFqkeXy+ZFifnFBF57n5pSsXBBWuy9ME1hPCku0evC+UFNnWZOJlITFe/OMSxGi/oWaccjZ07L6YXzJA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/javascript/javascript.min.js"
+        integrity="sha512-I6CdJdruzGtvDyvdO4YsiAq+pkWf2efgd1ZUSK2FnM/u2VuRASPC7GowWQrWyjxCZn6CT89s3ddGI+be0Ak9Fg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="./static/show-hint.min.js"></script>
+    <script src="./static/gsap.min.js"></script>
+    <link rel="stylesheet" href="./static/show-hint.min.css">
+
+    <style>
+        /* 추가: html과 body의 기본 여백 제거 및 전체화면 사용 */
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* body에 flex를 적용하여 좌측과 우측 영역을 나란히 배치 */
+        body {
+            display: flex;
+            background-color: #353535;
+            color: #ffffff;
+        }
+
+        .left-side {
+            width: 200px;
+            height: 100vh;
+            background-color: #1c1c1c;
+        }
+
+        .right-side {
+            flex: 1;
+            height: 100vh;
+            background-color: #252525;
+            padding-top: 3px;
+            padding-left: 10px;
+            padding-right: 10px;
+            overflow-y: auto;
+        }
+
+        /* 환경설정 UI 디자인 스타일 */
+        .config-container {
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .config-container>h2 {
+            margin: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+            font-size: 22px;
+        }
+
+        .config-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .config-group label {
+            width: 200px;
+            flex-shrink: 0;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .config-group input,
+        .config-group select {
+            flex: 1;
+            height: 36px;
+            padding: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #3b3b3b;
+            color: #ffffff;
+            min-width: 0;
+            /* flex item 최소 너비 설정 */
+        }
+
+        .config-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 30px;
+        }
+
+        /* 포커스 시 테두리 및 그림자 제거 */
+        .config-group input:focus,
+        .config-group select:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        .config-group button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #2196F3;
+            color: #ffffff;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+
+<body>
+    <!-- https://cdnjs.com/libraries/codemirror -->
+    <script type="module" src="renderer.js"></script>
+
+</body>
+
+</html>

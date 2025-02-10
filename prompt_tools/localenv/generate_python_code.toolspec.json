@@ -1,0 +1,16 @@
+{
+    "name": "generate_python_code",
+    "description": "generate python code.",
+    "input_schema": [
+        {
+            "python_code": "",
+            "pip_package_list": [
+                ""
+            ]
+        },
+        {
+            "python_code": "python code for the only one task",
+            "pip_package_list": "array of pip package names used in the code"
+        }
+    ]
+}

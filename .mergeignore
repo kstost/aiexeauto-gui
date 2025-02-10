@@ -1,0 +1,38 @@
+# 기본 시스템 파일
+.DS_Store
+Thumbs.db
+
+# 노드 모듈 및 로그
+node_modules/
+
+# 깃 폴더
+.git/
+
+# 무시파일 무시
+.gitignore
+.mergeignore
+
+# 패키지 무시
+package-lock.json
+
+# 바이너리 및 미디어 파일
+*.exe
+*.dll
+*.so
+*.dylib
+*.zip
+*.tar.gz
+*.rar
+*.mp3
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.ico
+*.pdf
+
+LICENSE
+README.md
