@@ -791,6 +791,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     promptInput.setValue('현재 폴더 안에 존재하는 파일 목록을 확인해서 그 목록을 file_list.txt에 기록해줘.');
     promptInput.setValue('print 1 to 1000 in every 1 second');
     promptInput.setValue('make 100 folders and save list of the folders in file_list.txt');
+    promptInput.setValue('');
     promptInput.setPlaceholder('원하는 작업을 입력하세요');
     // promptInput.container.style.opacity = '0.8';
 
