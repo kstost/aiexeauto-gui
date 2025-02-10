@@ -1,218 +1,102 @@
-# aiexeauto
+# aiexeauto-gui
 
-**aiexeauto** is an autonomous AI agent that thinks and acts on its own. It is an innovative CLI tool that understands natural language commands and automatically performs computer tasks after analyzing how best to do them. Even complex tasks are handled automatically by the AI agent, which analyzes the situation and finds the optimal approach.
+**aiexeauto-gui**는 스스로 생각하고 행동하는 자율 AI 에이전트입니다. 이 혁신적인 애플리케이션은 자연어 입력을 이해하고 최적의 방법으로 컴퓨터 작업을 수행하여 복잡한 작업도 자동으로 처리합니다.
 
-## Key Features
+## 주요 특징
 
-- **Control your computer with natural language**: Simply say things like “clean up these files” or “edit the video for me,” and the AI takes care of it automatically.
-- **Automate complex tasks**: Whether it’s file management, image editing, or document tasks, the AI does the tedious work for you.
-- **Works on both Windows/Mac**: Supports all major operating systems.
-- **Real-time progress updates**: Displays a neat interface so you can see exactly what the AI is doing.
+- **자연어 입력**: "파일들을 정리해줘" 또는 "비디오를 편집해줘"와 같이 간단한 입력으로 작업을 수행합니다.
+- **자동화 기능**: 파일 관리, 이미지 편집, 문서 작업 등 다양한 반복 작업을 자동으로 처리합니다.
+- **크로스 플랫폼 지원**: Windows와 macOS 모두 지원합니다.
+- **실시간 진행 상황 표시**: 작업 진행 상태를 깔끔한 인터페이스로 확인할 수 있습니다.
 
-## Demo Video
+## 데모 비디오
 
-Watch the demo video on YouTube to see **aiexeauto** in action!  
-[Click here](https://www.youtube.com/watch?v=GkOZ6fG99RI) to watch.  
+[데모 영상 시청하기](https://www.youtube.com/watch?v=GkOZ6fG99RI)  
 [![Video Label](http://img.youtube.com/vi/GkOZ6fG99RI/0.jpg)](https://www.youtube.com/watch?v=GkOZ6fG99RI)
 
-## System Requirements
+## 시스템 요구 사항
 
-- **Node.js**
-- **Operating System**: 
-  - Windows
-  - macOS
-- **Docker**
+- **Node.js** (설치 및 빌드 도구로 사용됩니다)
+- **운영체제**: Windows, macOS
 
-## Installation
+## 설치 방법
 
-1. **Install Node.js**
-   - Download and install the latest LTS version from [Node.js official website](https://nodejs.org/).
+### 1. GUI 설치
 
-2. **Install Docker**
-   - Download and install the latest version from [Docker Desktop](https://www.docker.com/).
+일반 사용자를 위한 간편한 GUI 설치 방법은 아래와 같습니다.
 
-3. **Build Docker Image**
-
-   **For macOS**:
-   ```bash
-   git clone https://github.com/kstost/aiexeauto.git && cd aiexeauto/my-docker-app && docker build --platform linux/x86_64 -t my-node-ubuntu .
+#### Windows GUI 설치
+1. **PowerShell(관리자 권한) 실행 후 아래 명령어 실행**:
+   ```powershell
+   if (Get-Command npm -ErrorAction SilentlyContinue) { $timestamp = Get-Date -Format "yyyyMMddHHmmss"; $folderName = "_aiexeauto-gui_project_$timestamp"; $desktopPath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), $folderName); New-Item -ItemType Directory -Path $desktopPath -Force; if (Test-Path $desktopPath) { Set-Location -Path $desktopPath; Invoke-WebRequest -Uri "https://github.com/kstost/aiexeauto-gui/archive/refs/heads/main.zip" -OutFile "__aiexeauto-gui_project__.zip" -ErrorAction Stop; if (Test-Path "__aiexeauto-gui_project__.zip") { Expand-Archive -Path "__aiexeauto-gui_project__.zip" -DestinationPath "."; Set-Location -Path "aiexeauto-gui-main"; npm i; if ($?) { npm run build; if ($?) { ii "dist"; ii "dist\\aiexeauto-gui Setup*.exe" } } } } } else { Write-Output "npm is not installed. Please download and install it from https://nodejs.org." }
    ```
 
-   **For Windows**:  
-   1) Open the Start menu, type “PowerShell,” and run it as administrator.  
-   2) Then run the following commands:
+#### macOS GUI 설치
+1. **Terminal 실행 후 아래 명령어 실행**:
+   ```bash
+   sudo chown -R 501:20 ~/.npm 2>/dev/null; command -v npm >/dev/null 2>&1 && { timestamp=$(date +%Y%m%d%H%M%S) && cd ~/Downloads && mkdir "_aiexeauto-gui_project_$timestamp" && cd "_aiexeauto-gui_project_$timestamp" && git clone https://github.com/kstost/aiexeauto-gui && cd aiexeauto-gui && npm i && npm run build && open dist/aiexeauto-*.dmg; } || { echo "npm is not installed. Please download and install it from https://nodejs.org."; }
+   ```
 
+### 2. Docker 설치
+
+GUI 설치 외 Docker 환경에서의 빌드를 원하시는 경우 아래 단계를 참고하세요.
+
+1. **Docker 설치**
+   - 최신 버전의 [Docker Desktop](https://www.docker.com/)을 다운로드하여 설치합니다.
+
+2. **Docker 이미지 빌드**
+
+   **macOS의 경우:**
+   ```bash
+   git clone https://github.com/kstost/aiexeauto-gui.git && cd aiexeauto-gui/my-docker-app && docker build --platform linux/x86_64 -t my-node-ubuntu .
+   ```
+
+   **Windows의 경우:**
+   1) 시작 메뉴에서 "PowerShell"을 관리자 권한으로 실행합니다.  
+   2) 아래 명령어들을 순차적으로 실행합니다:
    ```powershell
-   # Change execution policy
+   # 실행 정책 변경
    Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
 
-   # Create directory
+   # 디렉터리 생성
    New-Item -ItemType Directory -Path "my-docker-app" -Force
 
-   # Move to the working directory
+   # 작업 디렉터리로 이동
    cd my-docker-app
 
-   # Download Dockerfile
-   Invoke-WebRequest -Uri "https://raw.githubusercontent.com/kstost/aiexeauto/refs/heads/main/my-docker-app/Dockerfile" -OutFile "Dockerfile"
+   # Dockerfile 다운로드
+   Invoke-WebRequest -Uri "https://raw.githubusercontent.com/kstost/aiexeauto-gui/refs/heads/main/my-docker-app/Dockerfile" -OutFile "Dockerfile"
 
-   # Build Docker image
+   # Docker 이미지 빌드
    docker build --platform linux/x86_64 -t my-node-ubuntu .
 
-   # End
+   # 완료
    ```
 
-4. **Install aiexeauto**
+## 사용 방법
 
-   **For Windows**:
-   1) Open Start menu, search for “PowerShell,” and run it.
-   2) Paste the command below and press Enter:
-   ```powershell
-   npm install -g aiexeauto
-   ```
+애플리케이션을 실행한 후, GUI 인터페이스에서 작업을 선택하고 자연어로 작업을 설명하면 AI가 자동으로 작업을 수행합니다.
 
-   **For macOS**:
-   1) Open Spotlight (⌘ + Space), search for “Terminal,” and run it.
-   2) Paste the command below into the Terminal and press Enter:
-   ```bash
-   sudo npm install -g aiexeauto
-   ```
-   3) When prompted for the administrator password, enter your Mac login password.
+## 예방 조치 및 주의사항
 
-## Basic Configuration
+- **데이터 백업**: 중요한 데이터는 작업 전 반드시 백업하세요.
+- **보안**: 애플리케이션이 실제 작업을 수행할 때 보안에 유의하세요.
+- **API 요금**: 작업에 따라 Claude, DeepSeek, OpenAI 등의 API 요금이 발생할 수 있습니다.
 
-**aiexeauto** supports Anthropic’s Claude AI model, DeepSeek AI model, and also OpenAI’s Chat Completions.
+## 문제 해결
 
-### Obtaining an API Key (Claude)
+- **일반 오류**: API 키, 경로, 권한 문제를 확인하세요.
+- **지원 요청**: 추가 지원이 필요하면 [COKAC 사이트](https://cokac.com) 또는 "coding old man" 커뮤니티를 이용하세요.
 
-1. Go to [Claude API Console](https://console.anthropic.com/settings/keys).
-2. Create an account and log in.
-3. Register a credit card on the [Billing Settings](https://console.anthropic.com/settings/billing) page.
-4. Obtain an API key.
+## 라이선스
 
-### Obtaining an API Key (DeepSeek)
+이 소프트웨어는 MIT 라이선스로 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 확인하세요.
 
-1. Go to [DeepSeek API Console](https://platform.deepseek.com/api_keys).
-2. Create an account and log in.
-3. Obtain an API key.
+## 기여
 
-### Obtaining an API Key (OpenAI)
+- 버그 신고, 기능 요청 및 풀 리퀘스트를 환영합니다.
+- 기여 시 테스트 코드를 포함해 주세요.
 
-1. Go to [OpenAI](https://platform.openai.com/account/api-keys).
-2. Create an account and log in.
-3. Click “Create new secret key” to obtain an API key.
+## 면책 조항
 
-### Configuration Commands
-
-```bash
-# Required configuration
-aiexeauto config claudeApiKey "sk-ant-api..."     # Claude API key
-aiexeauto config deepseekApiKey "sk-..."          # DeepSeek API key
-aiexeauto config openaiApiKey "sk-openai-..."     # OpenAI API key (newly added)
-
-# Claude-AI model settings
-aiexeauto config model "claude-3-5-haiku-20241022"  # Faster, cheaper
-aiexeauto config model "claude-3-5-sonnet-20241022" # More refined tasks
-
-# DeepSeek-AI model settings
-aiexeauto config deepseekModel "deepseek-chat"
-
-# OpenAI model settings
-aiexeauto config openaiModel "gpt-4o"               # or "gpt-4o-mini"
-
-# Choose which LLM to use (Claude, DeepSeek, or OpenAI)
-aiexeauto config llm "claude"
-aiexeauto config llm "deepseek"
-aiexeauto config llm "openai"
-
-# Execution environment settings
-aiexeauto config maxIterations 0                    # Number of iterations (0 = unlimited)
-aiexeauto config overwriteOutputDir false           # Whether to overwrite output directory
-
-# Docker settings (optional)
-aiexeauto config useDocker true                     # Use Docker or not
-aiexeauto config dockerImage "my-node-ubuntu"       # Docker image name
-aiexeauto config dockerWorkDir "/home/ubuntu/work"  # Docker working directory
-```
-
-## How to Use
-
-### Basic Command Structure
-
-```bash
-aiexeauto "<task_description>" <input_directory> <output_directory>
-```
-
-- **task_description**: Describe the task to be performed in natural language (or a path to a text file containing the description).
-- **input_directory**: Directory containing the data needed for the task (optional; if omitted, a new folder is created in the current directory).
-- **output_directory**: Directory where results will be saved (optional; if omitted, a new folder is created in the same location as the input directory).
-
-### Usage Examples
-
-1. **Enter commands directly**
-   ```bash
-   # Remove duplicate files
-   aiexeauto "Find duplicate files in this folder, keep only one copy and delete the rest." ./data ./output
-   
-   # Image processing
-   aiexeauto "Convert all JPG files to PNG, then reduce their size by half." ./images ./processed
-   
-   # Data analysis
-   aiexeauto "Analyze CSV files, generate a monthly sales report, and produce a chart." ./sales ./report
-   ```
-
-2. **Use a text file for the command**
-   ```bash
-   # Write instructions in task.txt
-   aiexeauto "task.txt" ./data ./output
-   ```
-
-### Tips for Writing Task Descriptions
-
-- **Be specific**: Clearly describe what you want done.
-- **Break down complex tasks**: For lengthy or complicated tasks, outline them step by step.
-- **Specify conditions**: If special constraints or requirements exist, mention them explicitly.
-
-## Precautions
-
-1. **Data**
-   - Always back up important data before using.
-   - Accidental data loss may occur.
-2. **Internet and Security**
-   - By default, the AIEXEAUTO environment is connected to the internet, which can lead to real-world actions. Use with caution.
-3. **Costs - Claude**
-   - Using the Claude API incurs usage fees.
-   - See [Claude Pricing](https://www.anthropic.com/pricing#anthropic-api)
-4. **Costs - DeepSeek**
-   - Using the DeepSeek API incurs usage fees.
-   - See [DeepSeek Pricing](https://api-docs.deepseek.com/quick_start/pricing)
-5. **Costs - OpenAI**
-   - Using OpenAI’s API incurs usage fees.
-   - See [OpenAI Pricing](https://openai.com/pricing)
-
-## Troubleshooting
-
-1. **Common Errors**
-   - API key error: Verify that you have set the correct API key.
-   - Path error: Check your input/output paths.
-   - Permission error: Make sure you have permission to access the necessary directories.
-2. **Docker-Related Errors**
-   - Check whether Docker Desktop is running.
-   - Check the Docker image build status.
-   - Check resource allocation settings.
-3. **Seeking Help**
-   - If you cannot resolve an issue, visit the [COKAC site](https://cokac.com) for assistance.
-   - The “coding old man” community can also help you troubleshoot.
-
-## License
-
-This software is released under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
-## Contributing
-
-Bug reports, feature requests, and pull requests are welcome.
-- Use the GitHub issue tracker.
-- Include test code when contributing.
-
-## Disclaimer
-
-This software is in a prototype stage, and you are responsible for its use. Use caution for critical data or systems.
+이 소프트웨어는 프로토타입 단계입니다. 사용에 따른 모든 책임은 사용자에게 있으며, 중요한 데이터나 시스템에 사용할 때는 주의가 필요합니다.
