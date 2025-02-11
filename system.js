@@ -219,6 +219,7 @@ export async function prepareOutputDir(outputDir, overwrite, doNotCreate = false
         if (!doNotCreate) await fs.promises.mkdir(targetDir, { recursive: true });
         return targetDir;
     } else {
+        console.log(`[remove.005] rm - ${targetDir}`);
         await fs.promises.rm(targetDir, { recursive: true, force: true });
         if (!doNotCreate) await fs.promises.mkdir(targetDir, { recursive: true });
         return targetDir;

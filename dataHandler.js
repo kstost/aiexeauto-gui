@@ -22,6 +22,20 @@ export async function getOutputPath(taskId) {
     return path.join(outputMotherDir, taskId);
 }
 
+export function isAbsolute(path) {
+    return linuxStyleSlash(path).startsWith('/');
+}
+export function dotdotIn(path) {
+    return linuxStyleSlash(path).includes('..');
+}
+export function linuxStyleSlash(path) {
+    if (!path) return path;
+    while (path.split('\\').length > 1) {
+        path = path.split('\\').join('/');
+    }
+    return path;
+}
+
 export async function serializeFolder(folderPath) {
     const CHUNK_SIZE = 1024 * 1024;
     const chunks = [];
@@ -33,9 +47,11 @@ export async function serializeFolder(folderPath) {
             const chunk = tarContent.subarray(i, i + CHUNK_SIZE);
             chunks.push(chunk.toString('base64'));
         }
+        console.log(`[remove.006] unlink - ${tempTarPath}`);
         await fs.promises.unlink(tempTarPath);
         return chunks;
     } catch (error) {
+        console.log(`[remove.007] unlink - ${tempTarPath}`);
         try { await fs.promises.unlink(tempTarPath); } catch (cleanupError) { }
         throw error;
     }
@@ -221,8 +237,10 @@ export async function exportData(page, dataSourcePath, dataOutputPath) {
         });
 
         // 임시 파일 정리
+        console.log(`[remove.008] unlinkSync - ${path.join(dataOutputPath, tmpTarFile)}`);
         fs.unlinkSync(path.join(dataOutputPath, tmpTarFile));
         for (const name of fileList) {
+            console.log(`[remove.009] unlinkSync - ${name}`);
             fs.unlinkSync(name);
         }
         const name = getLastDirectoryName(dataOutputPath);

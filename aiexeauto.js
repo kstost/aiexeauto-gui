@@ -2,7 +2,7 @@
 // node server.js "make three folders named folder_0, folder_1, folder_2"
 
 import { solveLogic } from './solveLogic.js';
-import { getCodePath, findAvailablePort, getAbsolutePath, validatePath, prepareOutputDir, getAppPath, getConfiguration, setConfiguration, flushFolder } from './system.js';
+import { getCodePath, findAvailablePort, getAbsolutePath, validatePath, prepareOutputDir, getAppPath, getConfiguration, setConfiguration, flushFolder, getHomePath } from './system.js';
 import { validateAndCreatePaths, getOutputPath } from './dataHandler.js';
 import fs from 'fs';
 import boxen from 'boxen';
@@ -14,6 +14,8 @@ import { join } from 'path';
 import singleton from './singleton.js';
 import { installProcess, shell_exec } from './codeExecution.js';
 import { fileURLToPath } from 'url';
+import { linuxStyleSlash, isAbsolute, dotdotIn } from './dataHandler.js';
+import { is_file, is_dir } from './codeExecution.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function reqRenderer(mode, arg) {
@@ -49,7 +51,14 @@ if (prompt === 'version') {
         async clear_output_data(body) {
             let outputPath = getAppPath('outputs');
             if (fs.existsSync(outputPath)) {
-                await fs.promises.rm(outputPath, { recursive: true });
+                // [remove.001] rm - /Users/kst/.aiexeauto/workspace/outputs
+                if ((!dotdotIn(outputPath) && isAbsolute(outputPath)) && linuxStyleSlash(outputPath).includes('/.aiexeauto/workspace/') && await is_dir(outputPath) && outputPath.startsWith(getHomePath('.aiexeauto/workspace'))) {
+                    console.log(`[remove.001] rm - ${outputPath}`);
+                    await fs.promises.rm(outputPath, { recursive: true });
+                } else {
+                    console.log(`[remove.001!] rm - ${outputPath}`);
+                }
+
             }
         },
         async open_output_folder(body) {
@@ -171,6 +180,7 @@ if (prompt === 'version') {
                 } catch (err) {
                     if (err.code === 'EXDEV') {
                         await fs.promises.cp(dataOutputPath, outputPath, { recursive: true });
+                        console.log(`[remove.002] rm - ${dataOutputPath}`);
                         await fs.promises.rm(dataOutputPath, { recursive: true });
                     }
                 }

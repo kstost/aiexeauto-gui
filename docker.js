@@ -2,9 +2,12 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import { spawn, spawnSync } from 'child_process';
-import { getAbsolutePath, getAppPath, isWindows, getConfiguration } from './system.js';
+import { getAbsolutePath, getAppPath, isWindows, getConfiguration, getHomePath } from './system.js';
 import chalk from 'chalk';
 import { setHandler, removeHandler } from './sigintManager.js';
+import { linuxStyleSlash, isAbsolute, dotdotIn } from './dataHandler.js';
+import { is_file } from './codeExecution.js';
+
 export async function executeInContainer(containerId, command, streamGetter = null) {
     if (command.includes('"')) {
         return {
@@ -105,7 +108,7 @@ export async function executeCommand(command, streamGetter = null) {
         if (!isWindows()) result = parseCommandLine(command);
         if (isWindows()) result = {
             command: await getPowershellCommand(),
-            args: ['-Command', '& '+command]
+            args: ['-Command', '& ' + command]
         }
         const child = spawn(result.command, result.args, {
             stdio: ['pipe', 'pipe', 'pipe'],
@@ -269,7 +272,13 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
 
         if (result.code !== 0) throw new Error('임시 PY 파일 복사 실패');
     }
-    await fs.promises.rm(tmpPyFile);
+    // [remove.003] unlink - /Users/kst/.aiexeauto/workspace/.code_0.7196721389583982.py
+    if ((!dotdotIn(tmpPyFile) && isAbsolute(tmpPyFile)) && linuxStyleSlash(tmpPyFile).includes('/.aiexeauto/workspace/') && await is_file(tmpPyFile) && tmpPyFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
+        console.log(`[remove.003] unlink - ${tmpPyFile}`);
+        await fs.promises.unlink(tmpPyFile);
+    } else {
+        console.log(`[remove.003!] unlink - ${tmpPyFile}`);
+    }
 
 
     let result = await executeInContainer(containerId, 'cd ' + workDir + ' && python -u ' + pyFileName, streamGetter);
@@ -297,7 +306,14 @@ export async function runNodeJSCode(containerId, workDir, code, requiredPackageN
 
         if (result.code !== 0) throw new Error('임시 JS 파일 복사 실패');
     }
-    await fs.promises.rm(tmpJsFile);
+    // [remove.004] unlink - /Users/kst/.aiexeauto/workspace/.code_0.10591924509577666.js
+    if ((!dotdotIn(tmpJsFile) && isAbsolute(tmpJsFile)) && linuxStyleSlash(tmpJsFile).includes('/.aiexeauto/workspace/') && await is_file(tmpJsFile) && tmpJsFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
+        console.log(`[remove.004] unlink - ${tmpJsFile}`);
+        await fs.promises.unlink(tmpJsFile);
+    } else {
+        console.log(`[remove.004!] unlink - ${tmpJsFile}`);
+    }
+
 
 
     let result = await executeInContainer(containerId, 'cd ' + workDir + ' && node ' + jsFileName, streamGetter);
