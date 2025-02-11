@@ -50,6 +50,17 @@ async function leaveLog({ callMode, data }) {
         }
     }
 }
+export async function isOllamaRunning() {
+    const url = 'http://localhost:11434'; // Ollama의 기본 API 서버 주소
+    try {
+        const response = await fetch(url, { method: 'GET' });
+        const body = await response.text();
+        // 응답에 "Ollama is running"이 포함되어 있으면 실행 중
+        return body.includes('Ollama is running');
+    } catch (err) {
+        return false; // 연결 실패 시 실행 중이 아님
+    }
+}
 export async function getModel() {
     const llm = await getConfiguration('llm');
     const model = llm === 'claude'
@@ -58,7 +69,9 @@ export async function getModel() {
             ? await getConfiguration('deepseekModel')
             : llm === 'openai'
                 ? await getConfiguration('openaiModel')
-                : null;
+                : llm === 'ollama'
+                    ? await getConfiguration('ollamaModel')
+                    : null;
     return model;
 }
 export async function chatCompletion(systemPrompt, promptList, callMode, interfaces = {}, stateLabel = '') {
@@ -68,16 +81,19 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
         let claudeApiKey = await getConfiguration('claudeApiKey');
         let deepseekApiKey = await getConfiguration('deepseekApiKey');
         let openaiApiKey = await getConfiguration('openaiApiKey');
+        let ollamaApiKey = await getConfiguration('ollamaApiKey');
 
         let useDocker = await getConfiguration('useDocker');
         let dockerPath = await getConfiguration('dockerPath');
         claudeApiKey = claudeApiKey.trim();
         deepseekApiKey = deepseekApiKey.trim();
         openaiApiKey = openaiApiKey.trim();
+        ollamaApiKey = ollamaApiKey.trim();
 
         if (llm === 'claude' && !claudeApiKey) throw new Error('Claude API 키가 설정되어 있지 않습니다.');
         if (llm === 'deepseek' && !deepseekApiKey) throw new Error('DeepSeek API 키가 설정되어 있지 않습니다.');
         if (llm === 'openai' && !openaiApiKey) throw new Error('OpenAI API 키가 설정되어 있지 않습니다.');
+        if (llm === 'ollama' && !ollamaApiKey && false) throw new Error('Ollama API 키가 설정되어 있지 않습니다.');
         if (useDocker && !dockerPath) throw new Error('Docker 경로가 설정되어 있지 않습니다.');
 
 
@@ -166,6 +182,9 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
 
         const requestAI = async (llm, callMode, data, url, headers) => {
             while (true) {
+                if (llm === 'ollama' && !(await isOllamaRunning())) {
+                    throw new Error('Ollama가 실행되지 않았습니다. 컴퓨터에서 Ollama를 실행해주세요.');
+                }
                 await leaveLog({ callMode, data });
                 let pid6 = await out_state(`${stateLabel}를 ${model}가 처리중...`);
                 let response;
@@ -258,6 +277,23 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     let text = result?.choices?.[0]?.message?.content;
                     return text || '';
                 }
+                if (llm === 'ollama') {
+                    if (tools) {
+                        try {
+                            let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
+                            if (!toolCall) throw null;
+                            return {
+                                type: 'tool_use',
+                                name: toolCall.function.name,
+                                input: JSON.parse(toolCall.function.arguments)
+                            };
+                        } catch {
+                            continue;
+                        }
+                    }
+                    let text = result?.choices?.[0]?.message?.content;
+                    return text || '';
+                }
 
                 // New branch for OpenAI
                 if (llm === 'openai') {
@@ -324,6 +360,38 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
             const headers = {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${deepseekApiKey}`
+            };
+            if (tools) {
+                tools = JSON.parse(JSON.stringify(tools)).map(function_ => {
+                    function_.parameters = function_.input_schema;
+                    delete function_.input_schema;
+                    return {
+                        "type": "function",
+                        "function": function_
+                    }
+                })
+            }
+            const data = {
+                model: model,
+                messages: promptList.map(p => ({
+                    role: p.role === "assistant" ? "assistant" : "user",
+                    content: p.content
+                })),
+                tools: tools,
+            };
+            data.messages = [
+                {
+                    role: "system",
+                    content: systemPrompt
+                },
+                ...data.messages
+            ];
+            return await requestAI(llm, callMode, data, url, headers);
+        }
+        if (llm === 'ollama') {
+            const url = 'http://localhost:11434/v1/chat/completions';
+            const headers = {
+                "Content-Type": "application/json",
             };
             if (tools) {
                 tools = JSON.parse(JSON.stringify(tools)).map(function_ => {

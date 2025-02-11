@@ -7,7 +7,7 @@ import ora from 'ora';
 import boxen from 'boxen';
 import axios from 'axios';
 import { importData, exportData } from './dataHandler.js';
-import { chatCompletion, getModel } from './aiFeatures.js';
+import { chatCompletion, getModel, isOllamaRunning } from './aiFeatures.js';
 import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
 import { getLastDirectoryName } from './dataHandler.js';
 import { getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
@@ -197,6 +197,11 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     let finishedByError = '';
 
     try {
+        if (await getConfiguration('llm') === 'ollama') {
+            let ollamaModel = await getConfiguration('ollamaModel');
+            if (!ollamaModel) throw new Error('Ollama 모델이 설정되지 않았습니다.');
+            if (!(await isOllamaRunning())) throw new Error('Ollama가 실행되지 않았습니다. 컴퓨터에서 Ollama를 실행해주세요.');
+        }
         {
             let prompt = multiLineMission;
             validatePath(dataSourcePath, '데이터 소스 경로');

@@ -1188,7 +1188,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // 제목
         const configTitle = document.createElement('h2');
-        configTitle.textContent = 'LLM 설정';
+        configTitle.textContent = '환경설정';
         configTitle.style.margin = '0'; // 기존 margin 제거
         configTitle.style.marginBottom = '5px'; // 제목 아래 간격만 추가
         configWrapper.appendChild(configTitle);
@@ -1264,6 +1264,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             <option value="claude">Claude</option>
             <option value="deepseek">DeepSeek</option>
             <option value="openai">OpenAI</option>
+            <option value="ollama">Ollama</option>
         `;
         llmContainer.appendChild(llmSelect);
         configWrapper.appendChild(llmRow);
@@ -1277,7 +1278,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         const { row: claudeKeyRow, inputContainer: claudeKeyContainer } = createConfigRow('Claude API Key');
         const claudeApiKeyInput = document.createElement('input');
-        claudeApiKeyInput.type = 'text';
+        claudeApiKeyInput.type = 'password';
         claudeApiKeyInput.placeholder = 'Enter Claude API Key';
         applyDarkModeInput(claudeApiKeyInput);
         claudeKeyContainer.appendChild(claudeApiKeyInput);
@@ -1303,7 +1304,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         const { row: deepseekKeyRow, inputContainer: deepseekKeyContainer } = createConfigRow('DeepSeek API Key');
         const deepseekApiKeyInput = document.createElement('input');
-        deepseekApiKeyInput.type = 'text';
+        deepseekApiKeyInput.type = 'password';
         deepseekApiKeyInput.placeholder = 'Enter DeepSeek API Key';
         applyDarkModeInput(deepseekApiKeyInput);
         deepseekKeyContainer.appendChild(deepseekApiKeyInput);
@@ -1328,7 +1329,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         const { row: openaiKeyRow, inputContainer: openaiKeyContainer } = createConfigRow('OpenAI API Key');
         const openaiApiKeyInput = document.createElement('input');
-        openaiApiKeyInput.type = 'text';
+        openaiApiKeyInput.type = 'password';
         openaiApiKeyInput.placeholder = 'Enter OpenAI API Key';
         applyDarkModeInput(openaiApiKeyInput);
         openaiKeyContainer.appendChild(openaiApiKeyInput);
@@ -1344,6 +1345,31 @@ window.addEventListener('DOMContentLoaded', async () => {
         `;
         openaiModelContainer.appendChild(openaiModelSelect);
         openaiGroup.appendChild(openaiModelRow);
+
+        // Ollama 설정 그룹 추가
+        const ollamaGroup = document.createElement('div');
+        ollamaGroup.style.display = 'none';
+        ollamaGroup.style.flexDirection = 'column';
+        ollamaGroup.style.gap = '25px';
+        configWrapper.appendChild(ollamaGroup);
+
+        // Ollama 모델 선택
+        const { row: ollamaModelRow, inputContainer: ollamaModelContainer } = createConfigRow('Ollama Model');
+        const ollamaModelInput = document.createElement('input');
+        ollamaModelInput.type = 'text';
+        ollamaModelInput.placeholder = 'Enter Ollama Model Name (e.g., qwen2.5:14b, llama3.3:70b)';
+        applyDarkModeInput(ollamaModelInput);
+        ollamaModelContainer.appendChild(ollamaModelInput);
+        ollamaGroup.appendChild(ollamaModelRow);
+
+        // Ollama 모델 선택 부분 다음에 추가
+        const ollamaModelInfo = document.createElement('div');
+        ollamaModelInfo.style.fontSize = '12px';
+        ollamaModelInfo.style.color = 'rgba(255, 255, 255, 0.5)';
+        ollamaModelInfo.style.marginTop = '8px';
+        ollamaModelInfo.style.paddingLeft = '12px';
+        ollamaModelInfo.innerHTML = `Tools 지원 모델만 사용 가능합니다. 지원 모델 목록: <a href="https://ollama.com/search?c=tools" style="color: #64B5F6; text-decoration: none;" target="_blank">https://ollama.com/search?c=tools</a>`;
+        ollamaModelContainer.appendChild(ollamaModelInfo);
 
         // Docker 설정 부분을 수정
         // Docker 사용 여부 설정
@@ -1398,6 +1424,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 claudeGroup.style.display = selectedLLM === 'claude' ? 'flex' : 'none';
                 deepseekGroup.style.display = selectedLLM === 'deepseek' ? 'flex' : 'none';
                 openaiGroup.style.display = selectedLLM === 'openai' ? 'flex' : 'none';
+                ollamaGroup.style.display = selectedLLM === 'ollama' ? 'flex' : 'none';
             }
 
             // Claude 설정 로드
@@ -1420,6 +1447,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const openaiModel = await getConfig('openaiModel');
             if (openaiModel) openaiModelSelect.value = openaiModel;
+
+            // Ollama 설정 로드
+            const ollamaModel = await getConfig('ollamaModel');
+            if (ollamaModel) ollamaModelInput.value = ollamaModel;
 
             // Docker Path 설정 로드
             const dockerPath = await getConfig('dockerPath');
@@ -1474,6 +1505,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         openaiModelSelect.addEventListener('change', async () => {
             await setConfig('openaiModel', openaiModelSelect.value);
+        });
+
+        ollamaModelInput.addEventListener('input', async () => {
+            await setConfig('ollamaModel', ollamaModelInput.value);
         });
 
         dockerImageInput.addEventListener('input', async () => {
