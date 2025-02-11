@@ -27,7 +27,7 @@ export function makeRealTransaction(processTransactions, multiLineMission, type,
                 '```',
             ]) : [
                 'CODE TO EXECUTE:',
-                '```javascript',
+                '```',
                 code,
                 '```',
             ]).join('\n'),
