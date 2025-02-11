@@ -15,7 +15,7 @@ export async function executeInContainer(containerId, command, streamGetter = nu
             error: new Error('쌍따옴표는 허용되지 않습니다')
         };
     }
-    return await executeCommand('' + (await getDockerCommand()) + ' exec "' + containerId + '" /bin/sh -c "' + command + '"', streamGetter)
+    return await executeCommand('\'' + (await getDockerCommand()) + '\' exec "' + containerId + '" /bin/sh -c "' + command + '"', streamGetter)
 }
 async function getDockerCommand() {
     const dockerPath = await getConfiguration('dockerPath');
@@ -105,7 +105,7 @@ export async function executeCommand(command, streamGetter = null) {
         if (!isWindows()) result = parseCommandLine(command);
         if (isWindows()) result = {
             command: await getPowershellCommand(),
-            args: ['-Command', command]
+            args: ['-Command', '& '+command]
         }
         const child = spawn(result.command, result.args, {
             stdio: ['pipe', 'pipe', 'pipe'],
@@ -180,7 +180,7 @@ export async function importToDocker(containerId, workDir, inputDir) {
     let result = await executeInContainer(containerId, 'mkdir -p ' + workDir);
     if (result.code !== 0) throw new Error('작업 디렉토리 생성 실패');
 
-    result = await executeCommand('' + (await getDockerCommand()) + ' cp "' + inputDir + '/." "' + containerId + ':' + workDir + '"');
+    result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + inputDir + '/." "' + containerId + ':' + workDir + '"');
     if (result.code !== 0) throw new Error('input 폴더 복사 실패');
 }
 
@@ -205,7 +205,7 @@ export async function exportFromDocker(containerId, workDir, outputDir) {
     if (result.code !== 0) throw new Error('임시 파일 삭제 실패');
 
 
-    result = await executeCommand('' + (await getDockerCommand()) + ' cp "' + containerId + ':' + workDir + '/." "' + outputDir + '"');
+    result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + outputDir + '"');
     if (result.code !== 0) throw new Error('output 폴더로 복사 실패');
 }
 
@@ -265,7 +265,7 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     await fs.promises.writeFile(tmpPyFile, code);
 
     {
-        let result = await executeCommand('' + (await getDockerCommand()) + ' cp "' + tmpPyFile + '" "' + containerId + ':' + workDir + '/' + pyFileName + '"');
+        let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpPyFile + '" "' + containerId + ':' + workDir + '/' + pyFileName + '"');
 
         if (result.code !== 0) throw new Error('임시 PY 파일 복사 실패');
     }
@@ -293,7 +293,7 @@ export async function runNodeJSCode(containerId, workDir, code, requiredPackageN
     await fs.promises.writeFile(tmpJsFile, code);
 
     {
-        let result = await executeCommand('' + (await getDockerCommand()) + ' cp "' + tmpJsFile + '" "' + containerId + ':' + workDir + '/' + jsFileName + '"');
+        let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpJsFile + '" "' + containerId + ':' + workDir + '/' + jsFileName + '"');
 
         if (result.code !== 0) throw new Error('임시 JS 파일 복사 실패');
     }
@@ -305,10 +305,10 @@ export async function runNodeJSCode(containerId, workDir, code, requiredPackageN
     return result;
 }
 export async function killDockerContainer(containerId) {
-    await executeCommand(`${await getDockerCommand()} kill "${containerId}"`);
+    await executeCommand(`'${await getDockerCommand()}' kill "${containerId}"`);
 }
 export async function runDockerContainerDemon(dockerImage) {
-    let result = await executeCommand(`${await getDockerCommand()} run -d --rm --platform linux/x86_64 "${dockerImage}" tail -f /dev/null`);
+    let result = await executeCommand(`'${await getDockerCommand()}' run -d --rm --platform linux/x86_64 "${dockerImage}" tail -f /dev/null`);
     if (result.code !== 0) throw new Error('컨테이너 시작 실패');
     return result.stdout.trim();
 }
@@ -329,32 +329,14 @@ export async function runDockerContainer(dockerImage, inputDir, outputDir) {
     }
 }
 
-// let command = `${await getDockerCommand()}` + " info --format '{{json .}}' 2>/dev/null";
-// if (isWindows()) command = `& '${await getDockerCommand()}'` + " info --format '{{json .}}'";
-// if (isWindows()) command = `"${await getPowershellCommand()}" -Command "${command}"`;
 
 export async function doesDockerImageExist(imageName) {
     if (isWindows()) {
-        // try {
-        //     if (!imageName) return false;
-        //     if (imageName.includes('"')) return false;
-        //     const result = await executeCommand(`${await getDockerCommand()} images --format '{{json .}}'`);
-        //     if (result.code !== 0) return false;
-        //     const images = result.stdout.split('\n')
-        //         .filter(line => line.trim())
-        //         .map(line => JSON.parse(line));
-
-        //     return images.some(image => image.Repository === imageName);
-        // } catch (err) {
-        //     return false;
-        // }
         try {
             const execAsync = promisify(exec);
             let command = ``;
             if (isWindows()) command = `& '${await getDockerCommand()}'` + " images --format '{{json .}}'";
             if (isWindows()) command = `"${await getPowershellCommand()}" -Command "${command}"`;
-
-            // C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "& 'C:\Program Files\Docker\Docker\resources\bin\docker.exe' info --format '{{json .}}'"
 
             let result;
             if (!isWindows()) {
@@ -398,7 +380,7 @@ export async function doesDockerImageExist(imageName) {
         try {
             if (!imageName) return false;
             if (imageName.includes('"')) return false;
-            const result = await executeCommand(`${await getDockerCommand()} images --format '{{json .}}'`);
+            const result = await executeCommand(`'${await getDockerCommand()}' images --format '{{json .}}'`);
             if (result.code !== 0) return false;
             const images = result.stdout.split('\n')
                 .filter(line => line.trim())
@@ -484,8 +466,6 @@ export async function getDockerInfo() {
         let command = `${await getDockerCommand()}` + " info --format '{{json .}}' 2>/dev/null";
         if (isWindows()) command = `& '${await getDockerCommand()}'` + " info --format '{{json .}}'";
         if (isWindows()) command = `"${await getPowershellCommand()}" -Command "${command}"`;
-
-        // C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "& 'C:\Program Files\Docker\Docker\resources\bin\docker.exe' info --format '{{json .}}'"
 
         let result;
         if (!isWindows()) {
