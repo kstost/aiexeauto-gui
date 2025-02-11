@@ -329,20 +329,85 @@ export async function runDockerContainer(dockerImage, inputDir, outputDir) {
     }
 }
 
+// let command = `${await getDockerCommand()}` + " info --format '{{json .}}' 2>/dev/null";
+// if (isWindows()) command = `& '${await getDockerCommand()}'` + " info --format '{{json .}}'";
+// if (isWindows()) command = `"${await getPowershellCommand()}" -Command "${command}"`;
 
 export async function doesDockerImageExist(imageName) {
-    try {
-        if (!imageName) return false;
-        if (imageName.includes('"')) return false;
-        const result = await executeCommand(`${await getDockerCommand()} images --format '{{json .}}'`);
-        if (result.code !== 0) return false;
-        const images = result.stdout.split('\n')
-            .filter(line => line.trim())
-            .map(line => JSON.parse(line));
+    if (isWindows()) {
+        // try {
+        //     if (!imageName) return false;
+        //     if (imageName.includes('"')) return false;
+        //     const result = await executeCommand(`${await getDockerCommand()} images --format '{{json .}}'`);
+        //     if (result.code !== 0) return false;
+        //     const images = result.stdout.split('\n')
+        //         .filter(line => line.trim())
+        //         .map(line => JSON.parse(line));
 
-        return images.some(image => image.Repository === imageName);
-    } catch (err) {
-        return false;
+        //     return images.some(image => image.Repository === imageName);
+        // } catch (err) {
+        //     return false;
+        // }
+        try {
+            const execAsync = promisify(exec);
+            let command = ``;
+            if (isWindows()) command = `& '${await getDockerCommand()}'` + " images --format '{{json .}}'";
+            if (isWindows()) command = `"${await getPowershellCommand()}" -Command "${command}"`;
+
+            // C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "& 'C:\Program Files\Docker\Docker\resources\bin\docker.exe' info --format '{{json .}}'"
+
+            let result;
+            if (!isWindows()) {
+                result = await execAsync(command);
+            } else {
+                try { result = await runCommandWithTimeout(command); } catch { }
+            }
+            let stdout = result?.stdout;
+            if (!stdout) {
+                throw new Error('도커 이미지 정보를 가져올 수 없습니다.');
+            }
+            // const dockerInfo = JSON.parse(stdout);
+
+
+            const images = stdout.split('\n')
+                .filter(line => line.trim())
+                .map(line => JSON.parse(line));
+
+            return images.some(image => image.Repository === imageName);
+
+
+            // const images = result.stdout.split('\n')
+            // .filter(line => line.trim())
+            // .map(line => JSON.parse(line));
+
+            // return images.some(image => image.Repository === imageName);
+
+            // const isRunning = !dockerInfo.ServerErrors || dockerInfo.ServerErrors.length === 0;
+            // return {
+            //     ...dockerInfo,
+            //     isRunning
+            // };
+        } catch (error) {
+            return {
+                isRunning: false,
+                error: error.message
+            };
+        }
+
+    } else {
+        try {
+            if (!imageName) return false;
+            if (imageName.includes('"')) return false;
+            const result = await executeCommand(`${await getDockerCommand()} images --format '{{json .}}'`);
+            if (result.code !== 0) return false;
+            const images = result.stdout.split('\n')
+                .filter(line => line.trim())
+                .map(line => JSON.parse(line));
+
+            return images.some(image => image.Repository === imageName);
+        } catch (err) {
+            return false;
+        }
     }
 }
 
