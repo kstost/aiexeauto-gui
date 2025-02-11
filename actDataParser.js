@@ -1,5 +1,49 @@
 import axios from 'axios';
 export async function actDataParser({ actData }) {
+    function shellCommander(shellCommand) {
+        return [
+            `const { spawnSync, spawn } = require('child_process');`,
+            `const fs = require('fs');`,
+            `const outputPath = '/code.sh';`,
+            `fs.writeFileSync(outputPath, '${Buffer.from(shellCommand, 'utf-8').toString('base64')}');`,
+            `const code = fs.readFileSync(outputPath, 'utf-8');`,
+            `fs.writeFileSync(outputPath, Buffer.from(code, 'base64').toString('utf-8'));`,
+            `fs.chmodSync(outputPath, '755');`,
+            //-----------------------------------
+            `{`,
+            `    const child = spawn(outputPath, { shell: true });`,
+            `    child.stdout.setEncoding('utf8');`,
+            `    child.stderr.setEncoding('utf8');`,
+            `    async function main() {`,
+            `        let stdout = '';`,
+            `        let stderr = '';`,
+            `        child.stdout.on('data', (data) => {`,
+            `            process.stdout.write(data);`,
+            `            stdout += data;`,
+            `        });`,
+            `        child.stderr.on('data', (data) => {`,
+            `            process.stderr.write(data);`,
+            `            stderr += data;`,
+            `        });`,
+            `        child.on('error', (err) => {`,
+            `            process.exit(1)`,
+            `        });`,
+            `        const result = await new Promise((resolve, reject) => {`,
+            `            child.on('close', (code) => {`,
+            `                resolve({`,
+            `                    code,`,
+            `                    stdout,`,
+            `                    stderr`,
+            `                })`,
+            `            });`,
+            `        });`,
+            `        if (stdout.trim().length === 0 && stderr.trim().length === 0) console.log('(출력결과 없이 수행되었습니다)');`,
+            `        process.exit(result.code);`,
+            `    }`,
+            `    main();`,
+            `}`,
+        ].join('\n');
+    }
     let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack;
 
     if (actData.name === 'generate_nodejs_code') {
@@ -40,15 +84,7 @@ export async function actDataParser({ actData }) {
             `const aptInstall = require('aptInstall');`,
             `console.log(await aptInstall('${actData.input.package_name}'));`,
         ].join('\n');
-        javascriptCodeBack = [
-            `const { spawnSync } = require('child_process');`,
-            `const result = spawnSync('apt', ['install', '-y', '${actData.input.package_name}'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, encoding: 'utf-8' });`,
-            `const output = result.stderr.toString() + result.stdout.toString();`,
-            `const outputExists = output.trim().length>0;`,
-            `if (result.status === 0) console.log(outputExists?output:'(출력결과는 없지만 문제없이 설치되었습니다)');`,
-            `if (result.status !== 0) console.error('❌ 설치수행 실행 실패'+(outputExists?String.fromCharCode(10)+output:''));`,
-            `process.exit(result.status);`,
-        ].join('\n');
+        javascriptCodeBack = shellCommander(`apt install -y ${actData.input.package_name}`);
     } else if (actData.name === 'which_command') {
         javascriptCode = [
             `const whichCommand = require('whichCommand');`,
@@ -68,22 +104,7 @@ export async function actDataParser({ actData }) {
         javascriptCode = [
             actData.input.command,
         ].join('\n');
-        javascriptCodeBack = [
-            `const { spawnSync } = require('child_process');`,
-            `const fs = require('fs');`,
-            `const outputPath = '/code.sh';`,
-            `fs.writeFileSync(outputPath, '${Buffer.from(actData.input.command, 'utf-8').toString('base64')}');`,
-            `const code = fs.readFileSync(outputPath, 'utf-8');`,
-            `fs.writeFileSync(outputPath, Buffer.from(code, 'base64').toString('utf-8'));`,
-            `// grant execute permission`,
-            `fs.chmodSync(outputPath, '755');`,
-            `const result = spawnSync(outputPath, [], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, encoding: 'utf-8' });`,
-            `const output = result.stderr.toString() + result.stdout.toString();`,
-            `const outputExists = output.trim().length>0;`,
-            `if (result.status === 0) console.log(outputExists?output:'(출력결과는 없지만 문제없이 실행되었습니다)');`,
-            `if (result.status !== 0) console.error(output);`,
-            `process.exit(result.status);`,
-        ].join('\n');
+        javascriptCodeBack = shellCommander(actData.input.command);
     } else if (actData.name === 'read_file') {
         javascriptCode = [
             `const readFile = require('readFile');`,
