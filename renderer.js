@@ -277,6 +277,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
         setState({ text, state }) {
             this.textContainer.textContent = text;
+            this.state.style.display = 'flex';
+            if (!text) this.state.style.display = 'none';
 
             switch (state) {
                 case 'loading':
@@ -584,19 +586,22 @@ window.addEventListener('DOMContentLoaded', async () => {
         },
         async dismiss(body) {
             let id = body.labelId;
+            if (!displayState[id]) return;
             displayState[id].dismiss();
             delete displayState[id];
         },
         async succeed(body) {
-            const distanceToBottom = getDistanceToBottom();
             let id = body.labelId;
+            if (!displayState[id]) return;
+            const distanceToBottom = getDistanceToBottom();
             displayState[id].setState({ text: body.stateLabel, state: 'done' });
             if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
             delete displayState[id];
         },
         async fail(body) {
-            const distanceToBottom = getDistanceToBottom();
             let id = body.labelId;
+            if (!displayState[id]) return;
+            const distanceToBottom = getDistanceToBottom();
             displayState[id].setState({ text: body.stateLabel, state: 'fail' });
             if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
             delete displayState[id];
@@ -1419,7 +1424,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             // Docker Path 설정 로드
             const dockerPath = await getConfig('dockerPath');
             if (dockerPath) dockerPathInput.value = dockerPath;
-            
+
             // Docker 사용 여부에 따른 UI 표시/숨김
             const useDocker = await getConfig('useDocker');
             if (useDocker !== undefined) {

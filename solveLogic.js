@@ -270,64 +270,45 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1) {
                     spinners.iter = createSpinner(`${modelName}가 작업 회고 중...`);
-                    let pid4;
-                    try {
-                        pid4 = await out_state(`${modelName}가 작업 회고 중...`);
-                        whatdidwedo = await chatCompletion(
-                            'As an AI agent, analyze what has been done so far',
-                            makeRealTransaction(processTransactions, multiLineMission, 'whatdidwedo'),
-                            'whatDidWeDo'
-                        );
-                        if (whatdidwedo) whatdidwedo = whatdidwedo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
-                        if (spinners.iter) {
-                            spinners.iter.succeed('작업 회고 완료.');
-                            if (false) await pid4.succeed('작업 회고 완료.');
-                            await pid4.dismiss();
-                        }
-                    } catch (e) {
-                        pid4.dismiss();
-                        throw e;
+                    await out_state(`${modelName}가 작업 회고 중...`);
+                    whatdidwedo = await chatCompletion(
+                        'As an AI agent, analyze what has been done so far',
+                        makeRealTransaction(processTransactions, multiLineMission, 'whatdidwedo'),
+                        'whatDidWeDo',
+                        interfaces,
+                        `작업회고`
+                    );
+                    if (whatdidwedo) whatdidwedo = whatdidwedo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                    if (spinners.iter) {
+                        spinners.iter.succeed('작업 회고 완료.');
                     }
                 }
                 spinners.iter = createSpinner(`${modelName}가 다음 계획수립 중...`);
 
-                let pid5;
-                try {
-                    pid5 = await out_state(`${modelName}가 다음 계획수립 중...`);
-                    whattodo = await chatCompletion(
-                        "당신은 미션 완수를 위해 다음으로 해야 할 단 한 가지의 작업만을 제공하는 AI 비서입니다. 지금까지의 진행 상황과 이전 작업의 결과를 고려하세요. 코드나 불필요한 내용은 제외하고, 한국어로 한 문장만 응답하세요. 선택적인 작업은 생략합니다.",
-                        makeRealTransaction(processTransactions, multiLineMission, 'whattodo'),
-                        'whatToDo'
-                    );
-                    if (spinners.iter) {
-                        spinners.iter.succeed(`${modelName}가 다음 계획수립 완료.`);
-                        if (false) await pid5.succeed(`${modelName}가 다음 계획수립 완료.`);
-                        await pid5.dismiss();
-                    }
-                } catch (e) {
-                    pid5.dismiss();
-                    throw e;
+                whattodo = await chatCompletion(
+                    "당신은 미션 완수를 위해 다음으로 해야 할 단 한 가지의 작업만을 제공하는 AI 비서입니다. 지금까지의 진행 상황과 이전 작업의 결과를 고려하세요. 코드나 불필요한 내용은 제외하고, 한국어로 한 문장만 응답하세요. 선택적인 작업은 생략합니다.",
+                    makeRealTransaction(processTransactions, multiLineMission, 'whattodo'),
+                    'whatToDo',
+                    interfaces,
+                    `다음 계획수립`
+                );
+                if (spinners.iter) {
+                    spinners.iter.succeed(`${modelName}가 다음 계획수립 완료.`);
                 }
                 if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
                 if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                 await out_print({ data: whattodo, mode: 'whattodo' });
                 spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
-                let pid6;
-                try {
-                    pid6 = await out_state(`${modelName}가 코드를 생성하는 중...`);
-                    actData = await chatCompletion(
-                        await prompts.systemPrompt(multiLineMission, whattodo, useDocker),
-                        makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, evaluationText),
-                        'generateCode'
-                    );
-                    console.log('actData', actData);
-                    if (spinners.iter) {
-                        spinners.iter.succeed(`${modelName}가 코드 생성을 완료(${actData.name})했습니다`);
-                        await pid6.succeed(`${modelName}가 코드 생성을 완료(${actData.name})했습니다`);
-                    }
-                } catch (e) {
-                    pid6.dismiss();
-                    throw e;
+                actData = await chatCompletion(
+                    await prompts.systemPrompt(multiLineMission, whattodo, useDocker),
+                    makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, evaluationText),
+                    'generateCode',
+                    interfaces,
+                    `코드생성`
+                );
+                console.log('actData', actData);
+                if (spinners.iter) {
+                    spinners.iter.succeed(`${modelName}가 코드 생성을 완료(${actData.name})했습니다`);
                 }
                 let actDataResult = await actDataParser({ actData });
                 javascriptCode = actDataResult.javascriptCode || '';
@@ -512,52 +493,37 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             // }
             if (true) {
                 spinners.iter = createSpinner('작업 검증중입니다.');
-                let pid11;
-                try {
 
-                    pid11 = await out_state('작업 검증중입니다.');
-                    let actData = await chatCompletion(
-                        prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath),
-                        makeRealTransaction(processTransactions, multiLineMission, 'evaluation'),
-                        'evaluateCode'
-                    );
-                    const { evaluation, reason } = actData.input;
-                    if ((evaluation.replace(/[^A-Z]/g, '') || '').toUpperCase().trim() === 'ENDOFMISSION') {
-                        if (spinners.iter) {
-                            spinners.iter.succeed(`작업완료.`);
-                            if (false) await pid11.succeed(`작업완료.`);
-                            await pid11.dismiss();
-                        }
-                        await out_print({ data: reason, mode: 'evaluation1' });
-                        const pid4 = await out_state(`Mission Completed`);
-                        await pid4.succeed(`Mission Completed`);
-                        // await out_print({ data: 'Mission Completed', mode: 'evaluation2' });
-                        // await pid4.dismiss();
-                        break;
-                    } else if ((evaluation.replace(/[^A-Z]/g, '') || '').toUpperCase().trim() === 'GIVEUPTHEMISSION') {
-                        if (spinners.iter) {
-                            spinners.iter.succeed(`작업 포기.`);
-                            if (false) await pid11.succeed(`작업 포기.`);
-                            await pid11.dismiss();
-                        }
-                        await out_print({ data: reason, mode: 'evaluation1' });
-                        // await out_print({ data: 'Mission Aborted', mode: 'evaluation2' });
-                        const pid4 = await out_state(`Mission Aborted`);
-                        await pid4.fail(`Mission Aborted`);
-
-                        break;
-                    } else {
-                        if (spinners.iter) {
-                            spinners.iter.succeed(`검증완료`);
-                            if (false) await pid11.succeed(`검증완료`);
-                            await pid11.dismiss();
-                        }
-                        await out_print(({ data: reason, mode: 'evaluation' }));
-                        evaluationText = reason;
+                let actData = await chatCompletion(
+                    prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath),
+                    makeRealTransaction(processTransactions, multiLineMission, 'evaluation'),
+                    'evaluateCode',
+                    interfaces,
+                    `작업검증`
+                );
+                const { evaluation, reason } = actData.input;
+                if ((evaluation.replace(/[^A-Z]/g, '') || '').toUpperCase().trim() === 'ENDOFMISSION') {
+                    if (spinners.iter) {
+                        spinners.iter.succeed(`작업완료.`);
                     }
-                } catch (e) {
-                    pid11.dismiss();
-                    throw e;
+                    await out_print({ data: reason, mode: 'evaluation1' });
+                    const pid4 = await out_state(`Mission Completed`);
+                    await pid4.succeed(`Mission Completed`);
+                    break;
+                } else if ((evaluation.replace(/[^A-Z]/g, '') || '').toUpperCase().trim() === 'GIVEUPTHEMISSION') {
+                    if (spinners.iter) {
+                        spinners.iter.succeed(`작업 포기.`);
+                    }
+                    await out_print({ data: reason, mode: 'evaluation1' });
+                    const pid4 = await out_state(`Mission Aborted`);
+                    await pid4.fail(`Mission Aborted`);
+                    break;
+                } else {
+                    if (spinners.iter) {
+                        spinners.iter.succeed(`검증완료`);
+                    }
+                    await out_print(({ data: reason, mode: 'evaluation' }));
+                    evaluationText = reason;
                 }
 
             }

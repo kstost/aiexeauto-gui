@@ -61,7 +61,8 @@ export async function getModel() {
                 : null;
     return model;
 }
-export async function chatCompletion(systemPrompt, promptList, callMode) {
+export async function chatCompletion(systemPrompt, promptList, callMode, interfaces = {}, stateLabel = '') {
+    const { out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
     async function requestChatCompletion(systemPrompt, promptList, model) {
         const llm = await getConfiguration('llm');
         let claudeApiKey = await getConfiguration('claudeApiKey');
@@ -166,6 +167,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode) {
         const requestAI = async (llm, callMode, data, url, headers) => {
             while (true) {
                 await leaveLog({ callMode, data });
+                let pid6 = await out_state(`${stateLabel}를 ${model}가 처리중...`);
                 let response;
                 try {
                     if (singleton.missionAborting) throw null;
@@ -180,25 +182,40 @@ export async function chatCompletion(systemPrompt, promptList, callMode) {
                     });
                     singleton.abortController = singleton.abortController.filter(c => c !== controller);
                 } catch (err) {
+                    pid6.fail(`${stateLabel} 중단`);
+                    let pid36 = await out_state(`${stateLabel}를 ${model}가 처리중...`);
+                    pid36.fail(err.message);
                     throw new Error('미션 중단');
+                } finally {
+                    pid6.dismiss();
                 }
                 let result = await response.text();
                 await leaveLog({ callMode, data: { resultText: result } });
+                let pid64 = await out_state(`${stateLabel} 처리 데이터 분석 중`);
                 try {
                     result = JSON.parse(result);
                 } catch {
+                    pid64.fail(`${stateLabel} 처리 데이터 분석 실패`);
                     await leaveLog({ callMode, data: { resultErrorJSON: result } });
                     await new Promise(resolve => setTimeout(resolve, 5000));
                     continue;
+                } finally {
+                    pid64.dismiss();
                 }
                 const errorMessage = result?.error?.message || '';
+                let pid65 = await out_state(``);
                 if (errorMessage) {
                     if (errorMessage.includes('rate limit') || errorMessage.includes('Overloaded')) {
+                        pid65.fail(errorMessage);
                         await leaveLog({ callMode, data: { resultErrorSystem: result } });
                         await new Promise(resolve => setTimeout(resolve, 5000));
                         continue;
+                    } else {
+                        pid65.dismiss();
                     }
                     throw new Error(errorMessage);
+                } else {
+                    pid65.dismiss();
                 }
                 if (llm === 'claude') {
                     if (tools) {
