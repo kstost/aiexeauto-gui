@@ -16,14 +16,14 @@ export function makeRealTransaction(processTransactions, multiLineMission, type,
             content: (role === 'user' ? (output ? [
                 'OUTPUT OF THE EXECUTION:',
                 '```shell',
-                `$ node code.js`,
+                // `$ node code.js`,
                 output,
                 '```',
             ] : [
                 'NO OUTPUT. THE EXECUTION COMPLETED WITHOUT ANY OUTPUT.',
                 '```shell',
-                `$ node code.js`,
-                `$`,
+                // `$ node code.js`,
+                // `$`,
                 '```',
             ]) : [
                 'CODE TO EXECUTE:',

@@ -12,15 +12,15 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
                 // '---',
                 'OUTPUT OF THE EXECUTION:',
                 '```shell',
-                `$ node code.js`,
+                // `$ node code.js`,
                 output,
                 '```',
             ] : [
                 // '---',
                 'PROCESS ENDS WITHOUT ANY OUTPUTS:',
                 '```shell',
-                `$ node code.js`,
-                `$`,
+                // `$ node code.js`,
+                // `$`,
                 '```',
             ]) : []
     );
