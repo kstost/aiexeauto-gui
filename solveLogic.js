@@ -136,13 +136,19 @@ const highlightCode = (code, language) => {
 
 // 스피너 생성 함수
 export const createSpinner = (text, spinnerType = 'dots') => {
-    const spinner = ora({
-        text,
-        color: 'cyan',
-        spinner: spinnerType,
-        stream: process.stdout // 명시적으로 출력 스트림 지정
-    }).start();
-    return spinner;
+    return {
+        succeed: () => { },
+        fail: () => { },
+        dismiss: () => { },
+        start: () => { },
+    };
+    // const spinner = ora({
+    //     text,
+    //     color: 'cyan',
+    //     spinner: spinnerType,
+    //     stream: process.stdout // 명시적으로 출력 스트림 지정
+    // }).start();
+    // return spinner;
 };
 
 export function omitMiddlePart(text, length = 1024) {
@@ -270,7 +276,6 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1) {
                     spinners.iter = createSpinner(`${modelName}가 작업 회고 중...`);
-                    await out_state(`${modelName}가 작업 회고 중...`);
                     whatdidwedo = await chatCompletion(
                         'As an AI agent, analyze what has been done so far',
                         makeRealTransaction(processTransactions, multiLineMission, 'whatdidwedo'),

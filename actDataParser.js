@@ -66,12 +66,18 @@ export async function actDataParser({ actData }) {
         ].join('\n');
     } else if (actData.name === 'run_command') {
         javascriptCode = [
-            `const runCommand = require('runCommand');`,
-            `console.log(await runCommand('${actData.input.command}'));`,
+            actData.input.command,
         ].join('\n');
         javascriptCodeBack = [
             `const { spawnSync } = require('child_process');`,
-            `const result = spawnSync('${actData.input.command}', [], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, encoding: 'utf-8' });`,
+            `const fs = require('fs');`,
+            `const outputPath = '/code.sh';`,
+            `fs.writeFileSync(outputPath, '${Buffer.from(actData.input.command, 'utf-8').toString('base64')}');`,
+            `const code = fs.readFileSync(outputPath, 'utf-8');`,
+            `fs.writeFileSync(outputPath, Buffer.from(code, 'base64').toString('utf-8'));`,
+            `// grant execute permission`,
+            `fs.chmodSync(outputPath, '755');`,
+            `const result = spawnSync(outputPath, [], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, encoding: 'utf-8' });`,
             `const output = result.stderr.toString() + result.stdout.toString();`,
             `const outputExists = output.trim().length>0;`,
             `if (result.status === 0) console.log(outputExists?output:'(출력결과는 없지만 문제없이 실행되었습니다)');`,

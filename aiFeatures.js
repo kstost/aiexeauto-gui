@@ -169,6 +169,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 await leaveLog({ callMode, data });
                 let pid6 = await out_state(`${stateLabel}를 ${model}가 처리중...`);
                 let response;
+                let result;
                 try {
                     if (singleton.missionAborting) throw null;
                     const controller = new AbortController();
@@ -181,15 +182,21 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                         signal: controller.signal
                     });
                     singleton.abortController = singleton.abortController.filter(c => c !== controller);
+                    result = await response.text();
                 } catch (err) {
-                    pid6.fail(`${stateLabel} 중단`);
-                    let pid36 = await out_state(`${stateLabel}를 ${model}가 처리중...`);
-                    pid36.fail(err.message);
+                    pid6.fail(`${stateLabel}를 ${model}가 처리 중단 (${err.message})`);
                     throw new Error('미션 중단');
                 } finally {
                     pid6.dismiss();
                 }
-                let result = await response.text();
+                if (!result) {
+                    let pid64 = await out_state(``);
+                    pid64.fail(`${model}가 ${stateLabel} 처리한 결과가 없음`);
+                    let pid643 = await out_state(`${model}가 ${stateLabel} 처리 재시도 대기`);
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    pid643.dismiss();
+                    continue;
+                }
                 await leaveLog({ callMode, data: { resultText: result } });
                 let pid64 = await out_state(`${stateLabel} 처리 데이터 분석 중`);
                 try {
@@ -197,7 +204,9 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 } catch {
                     pid64.fail(`${stateLabel} 처리 데이터 분석 실패`);
                     await leaveLog({ callMode, data: { resultErrorJSON: result } });
+                    let pid643 = await out_state(`${model}가 ${stateLabel} 처리 재시도 대기`);
                     await new Promise(resolve => setTimeout(resolve, 5000));
+                    pid643.dismiss();
                     continue;
                 } finally {
                     pid64.dismiss();
@@ -208,7 +217,9 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     if (errorMessage.includes('rate limit') || errorMessage.includes('Overloaded')) {
                         pid65.fail(errorMessage);
                         await leaveLog({ callMode, data: { resultErrorSystem: result } });
+                        let pid643 = await out_state(`${model}가 ${stateLabel} 처리 재시도 대기`);
                         await new Promise(resolve => setTimeout(resolve, 5000));
+                        pid643.dismiss();
                         continue;
                     } else {
                         pid65.dismiss();
