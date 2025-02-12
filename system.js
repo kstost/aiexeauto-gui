@@ -61,6 +61,8 @@ export async function loadConfiguration() {
         overwriteOutputDir: false, // 덮어쓰기 여부 (false: 덮어쓰지 않음, true: 덮어씀)
         trackLog: false,
         ollamaEndpoint: 'http://localhost:11434',
+        autoCodeExecution: false, // 자동 코드 실행 여부 (false: 자동 실행 안함, true: 자동 실행함)
+        planEditable: false, // AI가 판단한 계획 수정 가능 여부 (false: 수정 불가능, true: 수정 가능)
     }
     let config_ = {};
     try {

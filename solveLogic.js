@@ -306,6 +306,14 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     spinners.iter.succeed(`${modelName}가 다음 계획수립 완료.`);
                 }
                 if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                // console.log('whattodo', whattodo);
+                if (await getConfiguration('planEditable')) {
+                    let confirmed = await await_prompt({ mode: 'whattodo_confirm', actname: 'whattodo_confirm', containerId, dockerWorkDir, whattodo });
+                    if (singleton.missionAborting) throw new Error('미션 중단');
+                    whattodo = confirmed.confirmedCode;
+                    if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                }
+
                 if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                 await out_print({ data: whattodo, mode: 'whattodo' });
                 spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);

@@ -18,6 +18,7 @@ function randomId() {
 }
 const BOTTOM_DISTANCE = 200;
 let aborting_responsed = false;
+let currentConfig = {};
 window.electronAPI.receive('mission_aborting_response', (arg) => {
     aborting_responsed = true;
 });
@@ -543,7 +544,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             const javascriptCodeToRun = body.javascriptCodeToRun;
             const pythonCode = body.pythonCode;
             const actname = body.actname;
-            // console.log(444, body);
+            const whattodo = body.whattodo;
 
             function isCodeRequiredConfirm(actname) {
                 const codeRequiredConfirm = [
@@ -552,6 +553,9 @@ window.addEventListener('DOMContentLoaded', async () => {
                     'generate_python_code',
                     'run_command',
                 ];
+                if (currentConfig['planEditable']) {
+                    codeRequiredConfirm.push('whattodo_confirm');
+                }
                 return codeRequiredConfirm.includes(actname);
             }
             function handleCodeConfirmation(editor, destroy = false) {
@@ -576,33 +580,45 @@ window.addEventListener('DOMContentLoaded', async () => {
             // let confirmed = await await_prompt({ mode: 'run_nodejs_code', actname: actData.name, containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames });
 
             if (!isCodeRequiredConfirm(actname)) {
-                const editor = makeCodeBox(javascriptCodeToRun, 'javascript');
+                const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                 editor.setSize('100%', '100%');
                 handleCodeConfirmation(editor, true);
+                if (currentConfig['autoCodeExecution']) runButton.click();
+            }
+            else if ((mode === 'whattodo_confirm')) {
+                const { editor, runButton } = makeCodeBox(whattodo, 'text');
+                editor.setSize('100%', '100%');
+                editor.setEventOnRun(async (code) => {
+                    handleCodeConfirmation(editor, true).destroy();;
+                });
             }
             else if ((actname === 'run_command' && mode === 'run_nodejs_code')) {
-                const editor = makeCodeBox(javascriptCodeToRun, 'javascript');
+                const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                 editor.setSize('100%', '100%');
                 handleCodeConfirmation(editor, true);
+                if (currentConfig['autoCodeExecution']) runButton.click();
             } else {
                 if (mode === 'run_nodejs_code') {
-                    const editor = makeCodeBox(javascriptCodeToRun, 'javascript');
+                    const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor);
                     });
+                    if (currentConfig['autoCodeExecution']) runButton.click();
                 } else if (mode === 'run_python_code') {
-                    const editor = makeCodeBox(pythonCode, 'python');
+                    const { editor, runButton } = makeCodeBox(pythonCode, 'python');
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor);
                     });
+                    if (currentConfig['autoCodeExecution']) runButton.click();
                 } else if (mode === 'run_command') {
-                    const editor = makeCodeBox(body.command, 'bash');
+                    const { editor, runButton } = makeCodeBox(body.command, 'bash');
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor).destroy();
                     });
+                    if (currentConfig['autoCodeExecution']) runButton.click();
                 }
             }
             if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
@@ -820,6 +836,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     promptInput.setValue('현재 폴더 안에 존재하는 파일 목록을 확인해서 그 목록을 file_list.txt에 기록해줘.');
     promptInput.setValue('print 1 to 1000 in every 1 second');
     promptInput.setValue('make 100 folders and save list of the folders in file_list.txt');
+    promptInput.setValue('sum 4 6 7 3 and save result.txt and zip the txt file and rename the file as todays date.');
     promptInput.setValue('');
     promptInput.setPlaceholder('원하는 작업을 입력하세요');
     // promptInput.container.style.opacity = '0.8';
@@ -830,6 +847,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         operationDoing = true;
         aborting_responsed = false;
         conversations.innerHTML = '';
+        currentConfig['autoCodeExecution'] = await getConfig('autoCodeExecution');
+        currentConfig['planEditable'] = await getConfig('planEditable');
         disableUIElements();
 
 
@@ -1031,7 +1050,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         wrapper.style.border = '0px solid #ccc';
         // wrapper.style.boxShadow = '0 0 10px 0 rgba(0, 0, 0, 0.1)';
 
-        return editor;
+        return { editor, runButton };
     }
     // const editor = makeCodeBox('print("Hello, World!")');
     // editor.setSize('100%', '100%');
@@ -1081,6 +1100,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // displayState.setState({ text: '진행 중...', state: 'loading' });
     // setTimeout(() => displayState.setState({ text: '완료되었습니다', state: 'done' }), 2000);
     // setTimeout(() => displayState.setState({ text: '실패했습니다', state: 'fail' }), 4000);
+
 
 
 
@@ -1456,7 +1476,56 @@ window.addEventListener('DOMContentLoaded', async () => {
             await setConfig('dockerPath', dockerPathInput.value);
         });
 
-        // UI 요소들이 모두 생성된 후 loadConfigurations 함수 구현
+        // Docker Image 설정 다음에 추가
+        const { row: autoCodeRow, inputContainer: autoCodeContainer } = createConfigRow('자동 코드 실행');
+        autoCodeContainer.style.display = 'flex';
+        autoCodeContainer.style.alignItems = 'center';
+        autoCodeContainer.style.gap = '12px';
+
+        const autoCodeCheckbox = document.createElement('input');
+        autoCodeCheckbox.type = 'checkbox';
+        autoCodeCheckbox.style.width = '20px';
+        autoCodeCheckbox.style.height = '20px';
+        autoCodeCheckbox.style.cursor = 'pointer';
+        autoCodeCheckbox.style.accentColor = '#2196F3';
+        autoCodeCheckbox.style.flexShrink = '0';
+        autoCodeContainer.appendChild(autoCodeCheckbox);
+
+        // 설명 추가
+        const autoCodeDescription = document.createElement('div');
+        autoCodeDescription.style.fontSize = '12px';
+        autoCodeDescription.style.color = 'rgba(255, 255, 255, 0.5)';
+        autoCodeDescription.textContent = '체크하면 코드가 자동으로 실행됩니다. 체크하지 않으면 수동으로 실행해야 합니다.';
+        autoCodeDescription.style.flex = '1';
+        autoCodeContainer.appendChild(autoCodeDescription);
+
+        configWrapper.appendChild(autoCodeRow);
+
+        const { row: planEditRow, inputContainer: planEditContainer } = createConfigRow('AI 계획 수정');
+        planEditContainer.style.display = 'flex';
+        planEditContainer.style.alignItems = 'center';
+        planEditContainer.style.gap = '12px';
+
+        const planEditCheckbox = document.createElement('input');
+        planEditCheckbox.type = 'checkbox';
+        planEditCheckbox.style.width = '20px';
+        planEditCheckbox.style.height = '20px';
+        planEditCheckbox.style.cursor = 'pointer';
+        planEditCheckbox.style.accentColor = '#2196F3';
+        planEditCheckbox.style.flexShrink = '0';
+        planEditContainer.appendChild(planEditCheckbox);
+
+        // 설명 추가
+        const planEditDescription = document.createElement('div');
+        planEditDescription.style.fontSize = '12px';
+        planEditDescription.style.color = 'rgba(255, 255, 255, 0.5)';
+        planEditDescription.textContent = '체크하면 AI가 판단한 계획을 수정할 수 있습니다.';
+        planEditDescription.style.flex = '1';
+        planEditContainer.appendChild(planEditDescription);
+
+        configWrapper.appendChild(planEditRow);
+
+        // loadConfigurations 함수 내부에 추가
         loadConfigurations = async function () {
             // LLM 선택 로드
             const selectedLLM = await getConfig('llm');
@@ -1518,6 +1587,18 @@ window.addEventListener('DOMContentLoaded', async () => {
             // Docker Image 설정 로드
             const dockerImage = await getConfig('dockerImage');
             if (dockerImage) dockerImageInput.value = dockerImage;
+
+            // 자동 코드 실행 설정 로드
+            const autoCodeExecution = await getConfig('autoCodeExecution');
+            if (autoCodeExecution !== undefined) {
+                autoCodeCheckbox.checked = autoCodeExecution;
+            }
+
+            // AI 계획 수정 설정 로드
+            const planEditable = await getConfig('planEditable');
+            if (planEditable !== undefined) {
+                planEditCheckbox.checked = planEditable;
+            }
         };
 
         // 초기 설정값 로드
@@ -1643,6 +1724,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // 컨테이너를 configWrapper에 추가
         configWrapper.appendChild(buttonContainer);
+
+        // 이벤트 리스너 추가
+        autoCodeCheckbox.addEventListener('change', async () => {
+            await setConfig('autoCodeExecution', autoCodeCheckbox.checked);
+        });
+
+        planEditCheckbox.addEventListener('change', async () => {
+            await setConfig('planEditable', planEditCheckbox.checked);
+        });
     }
 
     (async () => {
