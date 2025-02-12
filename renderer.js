@@ -268,6 +268,67 @@ window.addEventListener('DOMContentLoaded', async () => {
             this.label.textContent = text;
         }
     }
+
+
+
+    class PercentBar {
+        constructor({ template, total }) {
+            // 컨테이너 생성
+            this.barContainer = document.createElement('div');
+            this.barContainer.style.width = '100%';
+            this.barContainer.style.padding = '15px';
+            this.barContainer.style.backgroundColor = 'rgba(0,0,0,0.2)';
+            this.barContainer.style.borderRadius = '8px';
+            this.barContainer.style.margin = '15px 0';
+            this.barContainer.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            conversations.appendChild(this.barContainer);
+
+            // 라벨 컨테이너
+            this.labelContainer = document.createElement('div');
+            this.labelContainer.style.marginBottom = '8px';
+            this.labelContainer.style.color = '#fff';
+            this.labelContainer.style.fontSize = '14px';
+            this.labelContainer.style.fontWeight = '500';
+            this.barContainer.appendChild(this.labelContainer);
+
+            // 프로그레스 바 컨테이너
+            this.progressContainer = document.createElement('div');
+            this.progressContainer.style.width = '100%';
+            this.progressContainer.style.height = '8px';
+            this.progressContainer.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            this.progressContainer.style.borderRadius = '4px';
+            this.progressContainer.style.overflow = 'hidden';
+            this.barContainer.appendChild(this.progressContainer);
+
+            // 프로그레스 바
+            this.bar = document.createElement('div');
+            this.bar.style.width = '0%';
+            this.bar.style.height = '100%';
+            this.bar.style.backgroundColor = '#4CAF50';
+            this.bar.style.borderRadius = '4px';
+            this.bar.style.transition = 'width 0.3s ease';
+            this.bar.style.boxShadow = '0 0 10px rgba(76,175,80,0.5)';
+            this.progressContainer.appendChild(this.bar);
+
+            this.template = template;
+            this.total = total;
+            this.left = total;
+            this.update({ second: total });
+        }
+
+        update(data) {
+            const percent = (data.second / this.total) * 100;
+            this.bar.style.width = `${percent}%`;
+            const label = this.template.replace('{{second}}', data.second);
+            this.labelContainer.textContent = label;
+        }
+
+        destroy() {
+            this.barContainer.remove();
+        }
+    }
+
+
     class DisplayState {
         constructor() {
             this.state = document.createElement('div');
@@ -484,6 +545,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     const terminalStreamBoxes = {};
+    const percentBar = {};
     const { reqAPI, abortAllTask, abortTask } = callEvent({
         // async selected_folder(body) {
         //     console.log(body);
@@ -507,6 +569,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         async errnotify(body) {
             // console.log(body);
             return 1112;
+        },
+        async percent_bar(body) {
+            const distanceToBottom = getDistanceToBottom();
+            let id = randomId();
+            let waitTime = body.total;
+            percentBar[id] = new PercentBar({ template: body.template, total: waitTime });
+            if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
+            return id;
         },
         async out_print(body) {
             const distanceToBottom = getDistanceToBottom();
@@ -586,10 +656,10 @@ window.addEventListener('DOMContentLoaded', async () => {
                 if (currentConfig['autoCodeExecution']) runButton.click();
             }
             else if ((mode === 'whattodo_confirm')) {
-                const { editor, runButton } = makeCodeBox(whattodo, 'text');
+                const { editor, runButton } = makeCodeBox(whattodo, 'text', false);
                 editor.setSize('100%', '100%');
                 editor.setEventOnRun(async (code) => {
-                    handleCodeConfirmation(editor, true).destroy();;
+                    handleCodeConfirmation(editor, false).destroy();;
                 });
             }
             else if ((actname === 'run_command' && mode === 'run_nodejs_code')) {
@@ -613,7 +683,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     });
                     if (currentConfig['autoCodeExecution']) runButton.click();
                 } else if (mode === 'run_command') {
-                    const { editor, runButton } = makeCodeBox(body.command, 'bash');
+                    const { editor, runButton } = makeCodeBox('# Linux Shell Script\n' + body.command, 'bash', false);
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor).destroy();
@@ -623,6 +693,23 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
             if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
             return promise;
+        },
+        destroypercentbar(body) {
+            let id = body.labelId;
+            if (!percentBar[id]) return;
+            percentBar[id].destroy();
+            delete percentBar[id];
+        },
+        onetick(body) {
+            let id = body.labelId;
+            if (!percentBar[id]) return;
+            percentBar[id].left--;
+            percentBar[id].update({ second: percentBar[id].left });
+            if (percentBar[id].left <= 0) {
+                this.destroypercentbar({ labelId: id });
+                return false;
+            }
+            return true;
         },
         async dismiss(body) {
             let id = body.labelId;
@@ -938,7 +1025,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
     //---------------------------------------
-    function makeCodeBox(code, mode = 'javascript') {
+    function makeCodeBox(code, mode = 'javascript', lineNumbers = true) {
         // 컨테이너 생성
         const container = document.createElement('div');
         container.style.position = 'relative';
@@ -950,11 +1037,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         codebox.value = code;
         const readOnly = false;
         const nonchat = null;
-        const nogutter = false;
         const editor = CodeMirror.fromTextArea(codebox, {
             mode,
             theme: "monokai",
-            lineNumbers: !nogutter,
+            lineNumbers: lineNumbers,
             lineWrapping: true,
             extraKeys: !nonchat ? {
                 "Ctrl-Space": "autocomplete",
@@ -963,10 +1049,18 @@ window.addEventListener('DOMContentLoaded', async () => {
                 "Enter": function (cm) {
                     nonchat(cm, cm.getValue());
                 },
-                "Shift-Enter": "newlineAndIndentContinueMarkdownList"
+                "Shift-Enter": "newlineAndIndentContinueMarkdownList",
+                // "Ctrl-Enter": "newlineAndIndentContinueMarkdownList",
             },
             readOnly: readOnly
         });
+
+        if (!lineNumbers) {
+            // container.style.paddingLeft = '25px';
+            //set codemirror element's paddingLeft to 25px
+            editor.getWrapperElement().style.paddingLeft = '25px';
+        }
+
 
         // 에디터 생성 직후에 setEventOnRun 기능 추가
         editor.runCallback = null;
@@ -1318,9 +1412,41 @@ window.addEventListener('DOMContentLoaded', async () => {
             <option value="deepseek">DeepSeek</option>
             <option value="openai">OpenAI</option>
             <option value="ollama">Ollama</option>
+            <option value="groq">Groq</option>
         `;
         llmContainer.appendChild(llmSelect);
         configWrapper.appendChild(llmRow);
+
+        // Groq 설정 그룹 추가 (LLM 선택 바로 다음에)
+        const groqGroup = document.createElement('div');
+        groqGroup.style.display = 'none';
+        groqGroup.style.flexDirection = 'column';
+        groqGroup.style.gap = '25px';
+        configWrapper.appendChild(groqGroup);
+
+        // Groq API Key 설정
+        const { row: groqKeyRow, inputContainer: groqKeyContainer } = createConfigRow('Groq API Key');
+        const groqApiKeyInput = document.createElement('input');
+        groqApiKeyInput.type = 'password';
+        groqApiKeyInput.placeholder = 'Enter Groq API Key';
+        applyDarkModeInput(groqApiKeyInput);
+        groqKeyContainer.appendChild(groqApiKeyInput);
+        groqGroup.appendChild(groqKeyRow);
+
+        // Groq Model 선택
+        const { row: groqModelRow, inputContainer: groqModelContainer } = createConfigRow('Groq Model');
+        const groqModelSelect = document.createElement('select');
+        applyDarkModeSelect(groqModelSelect);
+        groqModelSelect.innerHTML = `
+            <option value="" disabled selected>모델 선택</option>
+            <option value="qwen-2.5-32b">qwen-2.5-32b</option>
+            <option value="deepseek-r1-distill-qwen-32b">deepseek-r1-distill-qwen-32b</option>
+            <option value="deepseek-r1-distill-llama-70b">deepseek-r1-distill-llama-70b</option>
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+        `;
+        groqModelContainer.appendChild(groqModelSelect);
+        groqGroup.appendChild(groqModelRow);
 
         // Claude 설정
         const claudeGroup = document.createElement('div');
@@ -1525,7 +1651,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         configWrapper.appendChild(planEditRow);
 
-        // loadConfigurations 함수 내부에 추가
+        // loadConfigurations 함수 내부에 Groq 관련 설정 로드 추가
         loadConfigurations = async function () {
             // LLM 선택 로드
             const selectedLLM = await getConfig('llm');
@@ -1536,6 +1662,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 deepseekGroup.style.display = selectedLLM === 'deepseek' ? 'flex' : 'none';
                 openaiGroup.style.display = selectedLLM === 'openai' ? 'flex' : 'none';
                 ollamaGroup.style.display = selectedLLM === 'ollama' ? 'flex' : 'none';
+                groqGroup.style.display = selectedLLM === 'groq' ? 'flex' : 'none';
             }
 
             // Claude 설정 로드
@@ -1599,6 +1726,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (planEditable !== undefined) {
                 planEditCheckbox.checked = planEditable;
             }
+
+            // Groq 설정 로드
+            const groqApiKey = await getConfig('groqApiKey');
+            if (groqApiKey) groqApiKeyInput.value = groqApiKey;
+
+            const groqModel = await getConfig('groqModel');
+            if (groqModel) groqModelSelect.value = groqModel;
         };
 
         // 초기 설정값 로드
@@ -1733,6 +1867,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         planEditCheckbox.addEventListener('change', async () => {
             await setConfig('planEditable', planEditCheckbox.checked);
         });
+
+        // Groq 설정 변경 이벤트 리스너 추가
+        groqApiKeyInput.addEventListener('input', async () => {
+            await setConfig('groqApiKey', groqApiKeyInput.value);
+        });
+
+        groqModelSelect.addEventListener('change', async () => {
+            await setConfig('groqModel', groqModelSelect.value);
+        });
     }
 
     (async () => {
@@ -1744,6 +1887,26 @@ window.addEventListener('DOMContentLoaded', async () => {
             versionUpdate.textContent = `New Version ${latest} is available`;
         }
     })();
+
+
+
+
+
+
+    // {
+    //     let id = randomId();
+    //     let waitTime = 3;
+    //     percentBar[id] = new PercentBar({ template: `대기 {{second}}초 남음`, total: waitTime });
+    //     while (waitTime >= 0) {
+    //         await new Promise(resolve => setTimeout(resolve, 1000));
+    //         waitTime--;
+    //         percentBar[id].update({ second: waitTime });
+    //         if (waitTime <= 0) break;
+    //     }
+    //     percentBar[id].destroy();
+    //     delete percentBar[id];
+    //     // console.log(percentBar[id]);
+    // }
     // console.log(await checkVersion());
     // {
     //     let task = reqAPI('get_version', {});

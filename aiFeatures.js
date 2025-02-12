@@ -3,6 +3,32 @@ import { getAppPath, convertJsonToResponseFormat, getConfiguration, getToolList,
 import { writeEnsuredFile } from './dataHandler.js';
 import fs from 'fs';
 
+function extractWaitTime(errorMessage) {
+    const regex = /Please try again in ([\d.]+)\s*(ms|s|m|h|d)?/i;
+    const match = errorMessage.match(regex);
+    if (match) {
+        const value = parseFloat(match[1]);
+        const unit = match[2] ? match[2].toLowerCase() : 's'; // 기본 단위는 초(s)
+        switch (unit) {
+            case 'ms':
+                return value / 1000; // 밀리초를 초로 변환
+            case 's':
+                return value; // 초 단위는 그대로 반환
+            case 'm':
+                return value * 60; // 분을 초로 변환
+            case 'h':
+                return value * 3600; // 시간을 초로 변환
+            case 'd':
+                return value * 86400; // 일을 초로 변환
+            default:
+                return null;
+        }
+    } else {
+        return null;
+    }
+    // return null;
+}
+
 async function leaveLog({ callMode, data }) {
     const trackLog = await getConfiguration('trackLog');
     if (!trackLog) return;
@@ -72,17 +98,20 @@ export async function getModel() {
                 ? await getConfiguration('openaiModel')
                 : llm === 'ollama'
                     ? await getConfiguration('ollamaModel')
-                    : null;
+                    : llm === 'groq'
+                        ? await getConfiguration('groqModel')
+                        : null;
     return model;
 }
 export async function chatCompletion(systemPrompt, promptList, callMode, interfaces = {}, stateLabel = '') {
-    const { out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
     async function requestChatCompletion(systemPrompt, promptList, model) {
         const llm = await getConfiguration('llm');
         let claudeApiKey = await getConfiguration('claudeApiKey');
         let deepseekApiKey = await getConfiguration('deepseekApiKey');
         let openaiApiKey = await getConfiguration('openaiApiKey');
         let ollamaApiKey = await getConfiguration('ollamaApiKey');
+        let groqApiKey = await getConfiguration('groqApiKey');
 
         let useDocker = await getConfiguration('useDocker');
         let dockerPath = await getConfiguration('dockerPath');
@@ -90,12 +119,15 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
         deepseekApiKey = deepseekApiKey.trim();
         openaiApiKey = openaiApiKey.trim();
         ollamaApiKey = ollamaApiKey.trim();
+        groqApiKey = groqApiKey.trim();
 
         if (llm === 'claude' && !claudeApiKey) throw new Error('Claude API 키가 설정되어 있지 않습니다.');
         if (llm === 'deepseek' && !deepseekApiKey) throw new Error('DeepSeek API 키가 설정되어 있지 않습니다.');
         if (llm === 'openai' && !openaiApiKey) throw new Error('OpenAI API 키가 설정되어 있지 않습니다.');
         if (llm === 'ollama' && !ollamaApiKey && false) throw new Error('Ollama API 키가 설정되어 있지 않습니다.');
+        if (llm === 'groq' && !groqApiKey) throw new Error('Groq API 키가 설정되어 있지 않습니다.');
         if (useDocker && !dockerPath) throw new Error('Docker 경로가 설정되어 있지 않습니다.');
+
 
 
         let tool_choice_list = {
@@ -234,12 +266,20 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 const errorMessage = result?.error?.message || '';
                 let pid65 = await out_state(``);
                 if (errorMessage) {
-                    if (errorMessage.includes('rate limit') || errorMessage.includes('Overloaded')) {
+                    const forRateLimit = errorMessage.includes('Rate limit') || errorMessage.includes('rate limit');
+                    if (forRateLimit || errorMessage.includes('Overloaded')) {
                         pid65.fail(errorMessage);
                         await leaveLog({ callMode, data: { resultErrorSystem: result } });
-                        let pid643 = await out_state(`${model}가 ${stateLabel} 처리 재시도 대기`);
-                        await new Promise(resolve => setTimeout(resolve, 5000));
-                        pid643.dismiss();
+                        let waitTime = Math.ceil(extractWaitTime(errorMessage));
+                        if (!waitTime && waitTime !== 0) waitTime = 5;
+                        let percentBar = await percent_bar({ template: `${model}가 ${stateLabel} 처리 재시도 대기 {{second}}초 남음`, total: waitTime });
+                        while (await percentBar.onetick()) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            if (singleton.missionAborting) {
+                                percentBar.destroypercentbar();
+                                throw null;
+                            }
+                        }
                         continue;
                     } else {
                         pid65.dismiss();
@@ -262,6 +302,23 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     return text || '';
                 }
                 if (llm === 'deepseek') {
+                    if (tools) {
+                        try {
+                            let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
+                            if (!toolCall) throw null;
+                            return {
+                                type: 'tool_use',
+                                name: toolCall.function.name,
+                                input: JSON.parse(toolCall.function.arguments)
+                            };
+                        } catch {
+                            continue;
+                        }
+                    }
+                    let text = result?.choices?.[0]?.message?.content;
+                    return text || '';
+                }
+                if (llm === 'groq') {
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
@@ -361,6 +418,39 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
             const headers = {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${deepseekApiKey}`
+            };
+            if (tools) {
+                tools = JSON.parse(JSON.stringify(tools)).map(function_ => {
+                    function_.parameters = function_.input_schema;
+                    delete function_.input_schema;
+                    return {
+                        "type": "function",
+                        "function": function_
+                    }
+                })
+            }
+            const data = {
+                model: model,
+                messages: promptList.map(p => ({
+                    role: p.role === "assistant" ? "assistant" : "user",
+                    content: p.content
+                })),
+                tools: tools,
+            };
+            data.messages = [
+                {
+                    role: "system",
+                    content: systemPrompt
+                },
+                ...data.messages
+            ];
+            return await requestAI(llm, callMode, data, url, headers);
+        }
+        if (llm === 'groq') {
+            const url = "https://api.groq.com/openai/v1/chat/completions";
+            const headers = {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${groqApiKey}`
             };
             if (tools) {
                 tools = JSON.parse(JSON.stringify(tools)).map(function_ => {

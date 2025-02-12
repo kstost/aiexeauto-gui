@@ -131,6 +131,34 @@ if (prompt === 'version') {
                 // console.log(...data);
                 await reqRenderer('out_print', data)
             },
+            async percent_bar(data) {
+                // console.log(...data);
+                let labelId = await reqRenderer('percent_bar', data)
+
+                // destroy() {
+                //     percentBar[id].destroy();
+                //     delete percentBar[id];
+                // },
+                // onetick() {
+                //     // await new Promise(resolve => setTimeout(resolve, 1000));
+                //     waitTime--;
+                //     percentBar[id].update({ second: waitTime });
+                //     if (waitTime <= 0) {
+                //         this.destroy();
+                //         return false;
+                //     }
+                //     return true;
+                // }
+
+                return {
+                    async onetick() {
+                        return await reqRenderer('onetick', { labelId: labelId })
+                    },
+                    async destroypercentbar() {
+                        await reqRenderer('destroypercentbar', { labelId: labelId })
+                    }
+                }
+            },
             async await_prompt(body) {
                 // return await prompt(data);
                 return await reqRenderer('await_prompt', body)

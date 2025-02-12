@@ -159,7 +159,7 @@ export function omitMiddlePart(text, length = 1024) {
 }
 
 export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath }) {
-    const { out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
 
     // const taskId = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
     // let uniqueSumNumber = 0;
@@ -280,7 +280,6 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             if (!validationMode) {
                 processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1) {
-                    spinners.iter = createSpinner(`${modelName}가 작업 회고 중...`);
                     whatdidwedo = await chatCompletion(
                         'As an AI agent, analyze what has been done so far',
                         makeRealTransaction(processTransactions, multiLineMission, 'whatdidwedo'),
@@ -289,12 +288,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         `작업회고`
                     );
                     if (whatdidwedo) whatdidwedo = whatdidwedo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
-                    if (spinners.iter) {
-                        spinners.iter.succeed('작업 회고 완료.');
-                    }
+                    if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                 }
-                spinners.iter = createSpinner(`${modelName}가 다음 계획수립 중...`);
-
                 whattodo = await chatCompletion(
                     "당신은 미션 완수를 위해 다음으로 해야 할 단 한 가지의 작업만을 제공하는 AI 비서입니다. 지금까지의 진행 상황과 이전 작업의 결과를 고려하세요. 코드나 불필요한 내용은 제외하고, 한국어로 한 문장만 응답하세요. 선택적인 작업은 생략합니다.",
                     makeRealTransaction(processTransactions, multiLineMission, 'whattodo'),
@@ -302,20 +297,16 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     interfaces,
                     `다음 계획수립`
                 );
-                if (spinners.iter) {
-                    spinners.iter.succeed(`${modelName}가 다음 계획수립 완료.`);
-                }
                 if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
-                // console.log('whattodo', whattodo);
                 if (await getConfiguration('planEditable')) {
                     let confirmed = await await_prompt({ mode: 'whattodo_confirm', actname: 'whattodo_confirm', containerId, dockerWorkDir, whattodo });
                     if (singleton.missionAborting) throw new Error('미션 중단');
                     whattodo = confirmed.confirmedCode;
                     if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                } else {
+                    await out_print({ data: whattodo, mode: 'whattodo' });
                 }
 
-                if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
-                await out_print({ data: whattodo, mode: 'whattodo' });
                 spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
                 const systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
                 let promptList = makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, evaluationText);

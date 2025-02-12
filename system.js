@@ -42,9 +42,18 @@ export async function getConfiguration(key) {
 export async function getUseDocker() {
     return await getConfiguration('useDocker');
 }
+//---------------------------------
+// # groq model list
+// - qwen-2.5-32b
+// - deepseek-r1-distill-qwen-32b
+// - deepseek-r1-distill-llama-70b
+// - llama-3.3-70b-versatile
+// - llama-3.1-8b-instant
+//---------------------------------
 export async function loadConfiguration() {
     let config = {
         claudeApiKey: "",
+        groqApiKey: "",
         deepseekApiKey: "",
         openaiApiKey: "",
         ollamaApiKey: "",
@@ -52,6 +61,7 @@ export async function loadConfiguration() {
         deepseekModel: "deepseek-chat",
         openaiModel: "gpt-4o-mini",
         ollamaModel: "qwen2.5:14b",
+        groqModel: "llama-3.3-70b-versatile",
         llm: "claude",
         maxIterations: 0,
         dockerImage: 'my-node-ubuntu',
