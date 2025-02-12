@@ -309,25 +309,34 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                 await out_print({ data: whattodo, mode: 'whattodo' });
                 spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
-                actData = await chatCompletion(
-                    await prompts.systemPrompt(multiLineMission, whattodo, useDocker),
-                    makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, evaluationText),
-                    'generateCode',
-                    interfaces,
-                    `코드생성`
-                );
-                console.log('actData', actData);
-                if (spinners.iter) {
-                    spinners.iter.succeed(`${modelName}가 코드 생성을 완료(${actData.name})했습니다`);
-                }
-                let actDataResult = await actDataParser({ actData });
-                javascriptCode = actDataResult.javascriptCode || '';
-                requiredPackageNames = actDataResult.requiredPackageNames || [];
-                pythonCode = actDataResult.pythonCode || '';
-                javascriptCodeBack = actDataResult.javascriptCodeBack || '';
+                const systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
+                let promptList = makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, evaluationText);
+                promptList = JSON.parse(JSON.stringify(promptList));
 
-                if (!pythonCode && javascriptCode) {
-                } else if (!javascriptCode && pythonCode) {
+                while (true) {
+                    actData = await chatCompletion(
+                        systemPrompt,
+                        promptList,
+                        'generateCode',
+                        interfaces,
+                        `코드생성`
+                    );
+                    console.log('actData', actData);
+                    if (spinners.iter) {
+                        spinners.iter.succeed(`${modelName}가 코드 생성을 완료(${actData.name})했습니다`);
+                    }
+                    let actDataResult = await actDataParser({ actData });
+                    console.log('actDataResult', actDataResult);
+                    javascriptCode = actDataResult.javascriptCode || '';
+                    requiredPackageNames = actDataResult.requiredPackageNames || [];
+                    pythonCode = actDataResult.pythonCode || '';
+                    javascriptCodeBack = actDataResult.javascriptCodeBack || '';
+                    if (!pythonCode && !javascriptCode) {
+                        const pp33 = await out_state('코드 생성 중...');
+                        await pp33.fail('코드 생성 실패');
+                    } else {
+                        break;
+                    }
                 }
 
             } else {
@@ -376,6 +385,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             //------------------------------------------
             let result;
             let killed = false;
+            let brokenAIResponse = false;
             try {
                 console.log('코드 실행 시작');
                 let executionId;
@@ -447,24 +457,15 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     console.log('ddddddddddddddddddddddd');
                     console.log('javascriptCode', javascriptCode);
                     console.log('pythonCode', pythonCode);
+                    brokenAIResponse = true;
                 }
             } catch (error) {
                 console.log('코드 실행 중 에러 발생:', error);
                 killed = true;
                 result = error
             }
-
-            let pid10;
-            if (useDocker) {
-                spinners.iter = createSpinner(`실행 #${iterationCount}차 ${killed ? '중단' : '완료'}`);
-                pid10 = await out_state(`실행 #${iterationCount}차 ${killed ? '중단' : '완료'}`);
-            }
-            if (spinners.iter) {
-                spinners.iter.succeed(`실행 #${iterationCount}차 ${killed ? '중단' : '완료'}`);
-                if (false) await pid10?.succeed(`실행 #${iterationCount}차 ${killed ? '중단' : '완료'}`);
-                await pid10?.dismiss();
-            }
-            {
+            const noCodeExecution = (brokenAIResponse && !result);
+            if (result || killed) {
                 let pid11;
                 if (useDocker) {
                     // spinners.iter = createSpinner(`실행 #${iterationCount}차 ${killed ? '중단' : '완료'}`);
@@ -476,8 +477,21 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     }
                 }
             }
+            if (noCodeExecution) {
+                result = {
+                    stdout: '',
+                    stderr: '',
+                    output: '',
+                    code: 0,
+                    error: null
+                };
+            }
             await operation_done({});
-            await pushProcessTransactions({ class: 'code', data: javascriptCode });
+            if (javascriptCode) {
+                await pushProcessTransactions({ class: 'code', data: javascriptCode });
+            } else if (pythonCode) {
+                await pushProcessTransactions({ class: 'code', data: pythonCode });
+            }
 
             if (singleton.missionAborting) throw new Error('미션 중단');
 
@@ -491,7 +505,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
                 await out_print({ data: outputPreview, mode: 'outputPreview' });
             }
-            if (result.output.trim().length === 0) {
+            if (!noCodeExecution && result.output.trim().length === 0) {
                 await out_print({ data: '❌ 실행결과 출력된 내용이 존재하지 않습니다', mode: 'outputPreview' });
             }
 
