@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url';
 import * as tar from 'tar';
 import ora from 'ora';
 import { runDockerContainer, getDockerInfo, importToDocker, exportFromDocker } from './docker.js';
-import { getAppPath, getOSPathSeparator } from './system.js';
+import { getAppPath, getHomePath, getOSPathSeparator } from './system.js';
+import os from 'os';
 export async function validateAndCreatePaths(dataSourcePath) {
     // Validate data source path
     try {
@@ -22,16 +23,22 @@ export async function getOutputPath(taskId) {
     return path.join(outputMotherDir, taskId);
 }
 
-export function isAbsolute(path) {
-    return linuxStyleSlash(path).startsWith('/');
+export function ensureAppsHomePath(path) {
+    const check1 = linuxStyleRemoveDblSlashes(path).startsWith(linuxStyleRemoveDblSlashes(os.homedir() + '/.aiexeauto/'));
+    const check2 = path.startsWith(getHomePath('.aiexeauto'));
+    const check3 = !dotdotIn(path);
+    return check1 && check2 && check3;
 }
-export function dotdotIn(path) {
-    return linuxStyleSlash(path).includes('..');
+function dotdotIn(path) {
+    return linuxStyleRemoveDblSlashes(path).includes('..');
 }
-export function linuxStyleSlash(path) {
+export function linuxStyleRemoveDblSlashes(path) {
     if (!path) return path;
     while (path.split('\\').length > 1) {
         path = path.split('\\').join('/');
+    }
+    while (path.split('//').length > 1) {
+        path = path.split('//').join('/');
     }
     return path;
 }
@@ -47,13 +54,28 @@ export async function serializeFolder(folderPath) {
             const chunk = tarContent.subarray(i, i + CHUNK_SIZE);
             chunks.push(chunk.toString('base64'));
         }
-        console.log(`[remove.006] unlink - ${tempTarPath}`);
-        await fs.promises.unlink(tempTarPath);
+        if (ensureAppsHomePath(tempTarPath)) {
+            console.log(`[remove.006] unlink - ${tempTarPath}`);
+            await fs.promises.unlink(tempTarPath);
+        } else {
+            console.log(`[remove.006!] unlink - ${tempTarPath}`);
+        }
         return chunks;
     } catch (error) {
-        console.log(`[remove.007] unlink - ${tempTarPath}`);
-        try { await fs.promises.unlink(tempTarPath); } catch (cleanupError) { }
+        if (ensureAppsHomePath(tempTarPath)) {
+            console.log(`[remove.007] unlink - ${tempTarPath}`);
+            try { await fs.promises.unlink(tempTarPath); } catch (cleanupError) { }
+        } else {
+            console.log(`[remove.007!] unlink - ${tempTarPath}`);
+        }
         throw error;
+    }
+}
+export async function writeEnsuredFile(path, content) {
+    if (ensureAppsHomePath(path)) {
+        await fs.promises.writeFile(path, content);
+    } else {
+        console.log(`[remove.055!] writeFile - ${path}`);
     }
 }
 
@@ -217,12 +239,12 @@ export async function exportData(page, dataSourcePath, dataOutputPath) {
         for (const chunkName of chunkedNames) {
             const chunkContentBase64 = await page.evaluate(async (chunkName) => await window._electrons.spawn('cat', [chunkName]), chunkName);
             if (!fs.existsSync(dataOutputPath)) fs.mkdirSync(dataOutputPath, { recursive: true });
-            fs.writeFileSync(path.join(dataOutputPath, chunkName), chunkContentBase64.output.trim());
+            await writeEnsuredFile(path.join(dataOutputPath, chunkName), chunkContentBase64.output.trim());
             fileList.push(path.join(dataOutputPath, chunkName));
         }
         // base64 청크들을 하나의 tar 파일로 결합
         const tmpTarFile = 'AIEXE-data-handling-tmpfile.tar';
-        fs.writeFileSync(path.join(dataOutputPath, tmpTarFile), '');
+        await writeEnsuredFile(path.join(dataOutputPath, tmpTarFile), '');
         for (const name of fileList) {
             const chunk = fs.readFileSync(name, 'utf8');
             const buffer = Buffer.from(chunk, 'base64');
@@ -237,11 +259,19 @@ export async function exportData(page, dataSourcePath, dataOutputPath) {
         });
 
         // 임시 파일 정리
-        console.log(`[remove.008] unlinkSync - ${path.join(dataOutputPath, tmpTarFile)}`);
-        fs.unlinkSync(path.join(dataOutputPath, tmpTarFile));
+        if (ensureAppsHomePath(path.join(dataOutputPath, tmpTarFile))) {
+            console.log(`[remove.008] unlinkSync - ${path.join(dataOutputPath, tmpTarFile)}`);
+            fs.unlinkSync(path.join(dataOutputPath, tmpTarFile));
+        } else {
+            console.log(`[remove.008!] unlinkSync - ${path.join(dataOutputPath, tmpTarFile)}`);
+        }
         for (const name of fileList) {
-            console.log(`[remove.009] unlinkSync - ${name}`);
-            fs.unlinkSync(name);
+            if (ensureAppsHomePath(name)) {
+                console.log(`[remove.009] unlinkSync - ${name}`);
+                fs.unlinkSync(name);
+            } else {
+                console.log(`[remove.009!] unlinkSync - ${name}`);
+            }
         }
         const name = getLastDirectoryName(dataOutputPath);
         const resultPath = path.join(dataOutputPath, name);

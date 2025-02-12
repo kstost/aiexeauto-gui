@@ -1,5 +1,6 @@
 import singleton from './singleton.js';
 import { getAppPath, convertJsonToResponseFormat, getConfiguration, getToolList, getToolData } from './system.js';
+import { writeEnsuredFile } from './dataHandler.js';
 import fs from 'fs';
 
 async function leaveLog({ callMode, data }) {
@@ -11,12 +12,12 @@ async function leaveLog({ callMode, data }) {
         const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
         let contentToLeave = `## callMode: ${callMode}\n\n`;
         {
-            fs.writeFileSync(`${aiLogFolder}/${date}.json`, JSON.stringify(data));
+            await writeEnsuredFile(`${aiLogFolder}/${date}.json`, JSON.stringify(data));
             let messages = data.messages;
             for (let i = 0; i < messages.length; i++) {
                 contentToLeave += `${'-'.repeat(800)}\n## ${messages[i].role} ##\n${messages[i].content}\n\n`;
             }
-            fs.writeFileSync(`${aiLogFolder}/${date}.txt`, contentToLeave);
+            await writeEnsuredFile(`${aiLogFolder}/${date}.txt`, contentToLeave);
         }
     } else {
         if (true) {
@@ -25,7 +26,7 @@ async function leaveLog({ callMode, data }) {
             const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
             data = JSON.parse(JSON.stringify(data));
             data.callMode = callMode;
-            fs.writeFileSync(`${aiLogFolder}/${date}.json`, JSON.stringify(data, undefined, 3));
+            await writeEnsuredFile(`${aiLogFolder}/${date}.json`, JSON.stringify(data, undefined, 3));
         }
         if (true) {
             const aiLogFolder = getAppPath('logs.txt');
@@ -39,13 +40,13 @@ async function leaveLog({ callMode, data }) {
                 for (let i = 0; i < data.messages.length; i++) {
                     contentToLeave += `${'-'.repeat(120)}\n## ${data.messages[i].role} ##\n${data.messages[i].content}\n\n`;
                 }
-                fs.writeFileSync(`${aiLogFolder}/${date}.txt`, contentToLeave);
+                await writeEnsuredFile(`${aiLogFolder}/${date}.txt`, contentToLeave);
             } else {
                 // {
                 //     "resultText": "{\n  \"id\": \"chatcmpl-Az1gp3Z4RtTj8zw2KFLlfgTiSKfaH\",\n  \"object\": \"chat.completion\",\n  \"created\": 1739107867,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"현재 폴더의 목록을 확인할게요.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 209,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 222,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n",
                 //     "callMode": "whatToDo"
                 //  }
-                fs.writeFileSync(`${aiLogFolder}/${date}.response.txt`, data.resultText);
+                await writeEnsuredFile(`${aiLogFolder}/${date}.response.txt`, data.resultText);
             }
         }
     }

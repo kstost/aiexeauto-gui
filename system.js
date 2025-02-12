@@ -7,6 +7,7 @@ import path from 'path';
 import os from 'os';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+import { writeEnsuredFile, ensureAppsHomePath } from './dataHandler.js';
 
 
 // function asfasdff(){
@@ -32,7 +33,7 @@ export async function setConfiguration(key, value) {
         value = JSON.parse(value);
     } catch { }
     config[key] = value;
-    await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2));
+    await writeEnsuredFile(configPath, JSON.stringify(config, null, 2));
 }
 export async function getConfiguration(key) {
     const config = await loadConfiguration();
@@ -219,8 +220,12 @@ export async function prepareOutputDir(outputDir, overwrite, doNotCreate = false
         if (!doNotCreate) await fs.promises.mkdir(targetDir, { recursive: true });
         return targetDir;
     } else {
-        console.log(`[remove.005] rm - ${targetDir}`);
-        await fs.promises.rm(targetDir, { recursive: true, force: true });
+        if (ensureAppsHomePath(targetDir)) {
+            console.log(`[remove.005] rm - ${targetDir}`);
+            await fs.promises.rm(targetDir, { recursive: true, force: true });
+        } else {
+            console.log(`[remove.005!] rm - ${targetDir}`);
+        }
         if (!doNotCreate) await fs.promises.mkdir(targetDir, { recursive: true });
         return targetDir;
     }

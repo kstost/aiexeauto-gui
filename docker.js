@@ -5,8 +5,9 @@ import { spawn, spawnSync } from 'child_process';
 import { getAbsolutePath, getAppPath, isWindows, getConfiguration, getHomePath } from './system.js';
 import chalk from 'chalk';
 import { setHandler, removeHandler } from './sigintManager.js';
-import { linuxStyleSlash, isAbsolute, dotdotIn } from './dataHandler.js';
+import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { is_file } from './codeExecution.js';
+import { writeEnsuredFile } from './dataHandler.js';
 
 export async function executeInContainer(containerId, command, streamGetter = null) {
     if (command.includes('"')) {
@@ -265,7 +266,7 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
         code
     ].join('\n');
 
-    await fs.promises.writeFile(tmpPyFile, code);
+    await writeEnsuredFile(tmpPyFile, code);
 
     {
         let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpPyFile + '" "' + containerId + ':' + workDir + '/' + pyFileName + '"');
@@ -273,7 +274,7 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
         if (result.code !== 0) throw new Error('임시 PY 파일 복사 실패');
     }
     // [remove.003] unlink - /Users/kst/.aiexeauto/workspace/.code_0.7196721389583982.py
-    if ((!dotdotIn(tmpPyFile) && isAbsolute(tmpPyFile)) && linuxStyleSlash(tmpPyFile).includes('/.aiexeauto/workspace/') && await is_file(tmpPyFile) && tmpPyFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
+    if ((ensureAppsHomePath(tmpPyFile)) && linuxStyleRemoveDblSlashes(tmpPyFile).includes('/.aiexeauto/workspace/') && await is_file(tmpPyFile) && tmpPyFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
         console.log(`[remove.003] unlink - ${tmpPyFile}`);
         await fs.promises.unlink(tmpPyFile);
     } else {
@@ -299,7 +300,7 @@ export async function runNodeJSCode(containerId, workDir, code, requiredPackageN
         code
     ].join('\n');
 
-    await fs.promises.writeFile(tmpJsFile, code);
+    await writeEnsuredFile(tmpJsFile, code);
 
     {
         let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpJsFile + '" "' + containerId + ':' + workDir + '/' + jsFileName + '"');
@@ -307,7 +308,7 @@ export async function runNodeJSCode(containerId, workDir, code, requiredPackageN
         if (result.code !== 0) throw new Error('임시 JS 파일 복사 실패');
     }
     // [remove.004] unlink - /Users/kst/.aiexeauto/workspace/.code_0.10591924509577666.js
-    if ((!dotdotIn(tmpJsFile) && isAbsolute(tmpJsFile)) && linuxStyleSlash(tmpJsFile).includes('/.aiexeauto/workspace/') && await is_file(tmpJsFile) && tmpJsFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
+    if ((ensureAppsHomePath(tmpJsFile)) && linuxStyleRemoveDblSlashes(tmpJsFile).includes('/.aiexeauto/workspace/') && await is_file(tmpJsFile) && tmpJsFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
         console.log(`[remove.004] unlink - ${tmpJsFile}`);
         await fs.promises.unlink(tmpJsFile);
     } else {

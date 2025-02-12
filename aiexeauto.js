@@ -14,8 +14,8 @@ import { join } from 'path';
 import singleton from './singleton.js';
 import { installProcess, shell_exec } from './codeExecution.js';
 import { fileURLToPath } from 'url';
-import { linuxStyleSlash, isAbsolute, dotdotIn } from './dataHandler.js';
-import { is_file, is_dir } from './codeExecution.js';
+import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
+import { is_dir } from './codeExecution.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function reqRenderer(mode, arg) {
@@ -52,7 +52,7 @@ if (prompt === 'version') {
             let outputPath = getAppPath('outputs');
             if (fs.existsSync(outputPath)) {
                 // [remove.001] rm - /Users/kst/.aiexeauto/workspace/outputs
-                if ((!dotdotIn(outputPath) && isAbsolute(outputPath)) && linuxStyleSlash(outputPath).includes('/.aiexeauto/workspace/') && await is_dir(outputPath) && outputPath.startsWith(getHomePath('.aiexeauto/workspace'))) {
+                if ((ensureAppsHomePath(outputPath)) && linuxStyleRemoveDblSlashes(outputPath).includes('/.aiexeauto/workspace/') && await is_dir(outputPath) && outputPath.startsWith(getHomePath('.aiexeauto/workspace'))) {
                     console.log(`[remove.001] rm - ${outputPath}`);
                     await fs.promises.rm(outputPath, { recursive: true });
                 } else {
@@ -163,25 +163,20 @@ if (prompt === 'version') {
                 await flushFolder([dataOutputPath]);
             }
             if (fs.existsSync(dataOutputPath)) {
-                let outputCandidate;
                 let over = false;
-                if (odrPath) {
-                    outputCandidate = odrPath
-                } else {
-                    if (dataSourceNotAssigned) {
-                        outputCandidate = path.join(process.cwd(), 'output')
-                    } else {
-                        outputCandidate = dataSourcePath
-                    }
-                }
+                let outputCandidate = odrPath;
                 let outputPath = await prepareOutputDir(outputCandidate, over, true);
                 try {
                     await fs.promises.rename(dataOutputPath, outputPath);
                 } catch (err) {
                     if (err.code === 'EXDEV') {
-                        await fs.promises.cp(dataOutputPath, outputPath, { recursive: true });
-                        console.log(`[remove.002] rm - ${dataOutputPath}`);
-                        await fs.promises.rm(dataOutputPath, { recursive: true });
+                        if (ensureAppsHomePath(dataOutputPath) && ensureAppsHomePath(outputPath)) {
+                            console.log(`[remove.002] cp,rm - ${dataOutputPath}`);
+                            await fs.promises.cp(dataOutputPath, outputPath, { recursive: true });
+                            await fs.promises.rm(dataOutputPath, { recursive: true });
+                        } else {
+                            console.log(`[remove.002!] cp,rm - ${dataOutputPath}`);
+                        }
                     }
                 }
                 try {
