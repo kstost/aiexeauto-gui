@@ -60,6 +60,7 @@ export async function loadConfiguration() {
         dockerWorkDir: '/home/ubuntu/work',
         overwriteOutputDir: false, // 덮어쓰기 여부 (false: 덮어쓰지 않음, true: 덮어씀)
         trackLog: false,
+        ollamaEndpoint: 'http://localhost:11434',
     }
     let config_ = {};
     try {

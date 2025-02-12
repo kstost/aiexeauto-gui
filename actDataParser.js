@@ -1,5 +1,7 @@
 import axios from 'axios';
 export async function actDataParser({ actData }) {
+    const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
+    let toolingFailed = false;
     function shellCommander(shellCommand) {
         return [
             `const { spawnSync, spawn } = require('child_process');`,
@@ -212,6 +214,14 @@ export async function actDataParser({ actData }) {
             `console.log('🌏 CDN Library URL of ${actData.input.package_name}');`,
             `console.log((${JSON.stringify({ printData })}).printData);`,
         ].join('\n');
+    } else {
+        // no tool found
     }
-    return { javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack };
+    /*
+        코드 수행결과 javascriptCode || pythonCode 둘중에 하나는 존재해야해.
+        둘다 없다면 LLM이 Tooling 실패했다고 봐야해.
+        실패했다면 actData 어떤 모습인지 확인할 수 있도록 actDataCloneBackedUp 준비했어.
+    */
+    if (!javascriptCode && !pythonCode) toolingFailed = true;
+    return { javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, toolingFailed, actDataCloneBackedUp };
 }

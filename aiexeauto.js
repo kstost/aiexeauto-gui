@@ -86,6 +86,17 @@ if (prompt === 'version') {
         //     // console.log('aborting...................');
         //     // return true;
         // },
+        async get_version() {
+            const currentVersion = app.getVersion();
+            try {
+                const packageUrl = `https://raw.githubusercontent.com/kstost/aiexeauto-gui/refs/heads/main/package.json`;
+                const response = await fetch(packageUrl);
+                const data = await response.json();
+                return { latest: data.version, client: currentVersion };
+            } catch (err) {
+                return null;
+            }
+        },
         async ve1nppvpath(body) {
             // ㅊ...
             console.log(body);

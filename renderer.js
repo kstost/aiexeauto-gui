@@ -90,6 +90,30 @@ window.addEventListener('DOMContentLoaded', async () => {
         menuContainer.appendChild(menuItemElement);
     });
 
+    // 구분선 추가
+    const menuDivider = document.createElement('hr');
+    menuDivider.style.margin = '15px 10px';
+    menuDivider.style.border = 'none';
+    menuDivider.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
+    menuContainer.appendChild(menuDivider);
+
+    // 버전 정보 추가
+    const versionInfo = document.createElement('div');
+    versionInfo.textContent = '';
+    versionInfo.style.color = 'rgba(255, 255, 255, 0.5)';
+    versionInfo.style.fontSize = '12px';
+    versionInfo.style.textAlign = 'center';
+    versionInfo.style.padding = '0 10px';
+    menuContainer.appendChild(versionInfo);
+
+    const versionUpdate = document.createElement('div');
+    versionUpdate.textContent = '';
+    versionUpdate.style.color = 'yellow';
+    versionUpdate.style.fontSize = '12px';
+    versionUpdate.style.textAlign = 'center';
+    versionUpdate.style.padding = '0 10px';
+    menuContainer.appendChild(versionUpdate);
+
     const missionSolvingContainer = document.createElement('div');
     missionSolvingContainer.classList.add('right-side');
     missionSolvingContainer[Symbol.for('mode')] = 'missionSolving';
@@ -876,7 +900,16 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
 
+    async function checkVersion() {
+        let task = reqAPI('get_version', {});
+        let taskId = task.taskId;
+        // if (false) await abortTask(taskId);
+        // console.log(await task.promise);
+        let resultPath = await task.promise;
+        return resultPath;
+        // console.log(resultPath);
 
+    }
 
 
 
@@ -1371,6 +1404,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         ollamaModelInfo.innerHTML = `Tools 지원 모델만 사용 가능합니다. 지원 모델 목록: <a href="https://ollama.com/search?c=tools" style="color: #64B5F6; text-decoration: none;" target="_blank">https://ollama.com/search?c=tools</a>`;
         ollamaModelContainer.appendChild(ollamaModelInfo);
 
+        // Endpoint 설정 추가
+        const { row: ollamaEndpointRow, inputContainer: ollamaEndpointContainer } = createConfigRow('Ollama Endpoint');
+        const ollamaEndpointInput = document.createElement('input');
+        ollamaEndpointInput.type = 'text';
+        ollamaEndpointInput.placeholder = 'Enter Ollama API Endpoint (e.g., http://localhost:11434)';
+        applyDarkModeInput(ollamaEndpointInput);
+        ollamaEndpointContainer.appendChild(ollamaEndpointInput);
+        ollamaGroup.appendChild(ollamaEndpointRow);
+
         // Docker 설정 부분을 수정
         // Docker 사용 여부 설정
         const { row: useDockerRow, inputContainer: useDockerContainer } = createConfigRow('Docker 사용');
@@ -1452,6 +1494,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             const ollamaModel = await getConfig('ollamaModel');
             if (ollamaModel) ollamaModelInput.value = ollamaModel;
 
+            // Ollama endpoint 설정 로드
+            const ollamaEndpoint = await getConfig('ollamaEndpoint');
+            if (ollamaEndpoint) ollamaEndpointInput.value = ollamaEndpoint;
+
             // Docker Path 설정 로드
             const dockerPath = await getConfig('dockerPath');
             if (dockerPath) dockerPathInput.value = dockerPath;
@@ -1513,6 +1559,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         dockerImageInput.addEventListener('input', async () => {
             await setConfig('dockerImage', dockerImageInput.value);
+        });
+
+        // Ollama endpoint 입력 이벤트 리스너 추가
+        ollamaEndpointInput.addEventListener('input', async () => {
+            await setConfig('ollamaEndpoint', ollamaEndpointInput.value);
         });
 
         // 구분선 추가
@@ -1593,4 +1644,23 @@ window.addEventListener('DOMContentLoaded', async () => {
         // 컨테이너를 configWrapper에 추가
         configWrapper.appendChild(buttonContainer);
     }
+
+    (async () => {
+        const result = await checkVersion();
+        if (!result) return;
+        const { latest, client } = result;
+        versionInfo.textContent = `Version ${client}`;
+        if (latest > client) {
+            versionUpdate.textContent = `New Version ${latest} is available`;
+        }
+    })();
+    // console.log(await checkVersion());
+    // {
+    //     let task = reqAPI('get_version', {});
+    //     let taskId = task.taskId;
+    //     // if (false) await abortTask(taskId);
+    //     // console.log(await task.promise);
+    //     let resultPath = await task.promise;
+    //     console.log(resultPath);
+    // }
 });

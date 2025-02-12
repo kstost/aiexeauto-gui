@@ -200,7 +200,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         if (await getConfiguration('llm') === 'ollama') {
             let ollamaModel = await getConfiguration('ollamaModel');
             if (!ollamaModel) throw new Error('Ollama 모델이 설정되지 않았습니다.');
-            if (!(await isOllamaRunning())) throw new Error('Ollama가 실행되지 않았습니다. 컴퓨터에서 Ollama를 실행해주세요.');
+            if (!(await isOllamaRunning())) throw new Error('Ollama API서버 확인에 문제가 있습니다.');
         }
         {
             let prompt = multiLineMission;

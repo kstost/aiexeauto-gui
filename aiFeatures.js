@@ -52,7 +52,7 @@ async function leaveLog({ callMode, data }) {
     }
 }
 export async function isOllamaRunning() {
-    const url = 'http://localhost:11434'; // Ollama의 기본 API 서버 주소
+    const url = await getConfiguration('ollamaEndpoint'); // Ollama의 기본 API 서버 주소
     try {
         const response = await fetch(url, { method: 'GET' });
         const body = await response.text();
@@ -184,7 +184,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
         const requestAI = async (llm, callMode, data, url, headers) => {
             while (true) {
                 if (llm === 'ollama' && !(await isOllamaRunning())) {
-                    throw new Error('Ollama가 실행되지 않았습니다. 컴퓨터에서 Ollama를 실행해주세요.');
+                    throw new Error('Ollama API서버 확인에 문제가 있습니다.');
                 }
                 await leaveLog({ callMode, data });
                 let pid6 = await out_state(`${stateLabel}를 ${model}가 처리중...`);
@@ -390,7 +390,8 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
             return await requestAI(llm, callMode, data, url, headers);
         }
         if (llm === 'ollama') {
-            const url = 'http://localhost:11434/v1/chat/completions';
+            const endpoint = await getConfiguration('ollamaEndpoint');
+            const url = `${endpoint}/v1/chat/completions`;
             const headers = {
                 "Content-Type": "application/json",
             };
