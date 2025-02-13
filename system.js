@@ -64,7 +64,7 @@ export async function loadConfiguration() {
         openaiModel: "gpt-4o-mini",
         ollamaModel: "qwen2.5:14b",
         groqModel: "llama-3.3-70b-versatile",
-        llm: "claude",
+        llm: "gemini",
         maxIterations: 0,
         dockerImage: 'my-node-ubuntu',
         useDocker: true, // Docker 사용 여부 (false: 도커 아닌 웹컨테이너 사용, true: 도커 사용함)

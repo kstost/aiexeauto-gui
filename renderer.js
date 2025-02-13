@@ -1521,7 +1521,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         geminiModelSelect.innerHTML = `
             <option value="" disabled selected>모델 선택</option>
             <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-            <option value="gemini-2.0-flash-latest">gemini-2.0-flash-latest</option>
+            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
         `;
         geminiModelContainer.appendChild(geminiModelSelect);
         geminiGroup.appendChild(geminiModelRow);
