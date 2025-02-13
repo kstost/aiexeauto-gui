@@ -2,7 +2,7 @@ import singleton from './singleton.js';
 import { getAppPath, convertJsonToResponseFormat, getConfiguration, getToolList, getToolData } from './system.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import fs from 'fs';
-
+import { useTools } from './solveLogic.js';
 function extractWaitTime(errorMessage) {
     const regex = /Please try again in ([\d.]+)\s*(ms|s|m|h|d)?/i;
     const match = errorMessage.match(regex);
@@ -164,37 +164,37 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     "description": "List a directory.",
                     "input_schema": convertJsonToResponseFormat({ directory_path: "" }, { directory_path: "directory path to list, e.g, ./program" }).json_schema.schema
                 },
-                {
+                useTools.read_url ? {
                     "name": "read_url",
                     "description": "Read a URL.",
                     "input_schema": convertJsonToResponseFormat({ url: "" }, { url: "url to read, e.g, https://cokac.com/robots.txt" }).json_schema.schema
-                },
-                {
+                } : null,
+                useTools.rename_file_or_directory ? {
                     "name": "rename_file_or_directory",
                     "description": "Rename a file or directory.",
                     "input_schema": convertJsonToResponseFormat({ old_path: "", new_path: "" }, { old_path: "old file or directory path to rename, e.g, ./program/package.json", new_path: "new file or directory path to rename, e.g, ./program/package2.json" }).json_schema.schema
-                },
-                {
+                } : null,
+                useTools.remove_file ? {
                     "name": "remove_file",
                     "description": "Remove a file.",
                     "input_schema": convertJsonToResponseFormat({ file_path: "" }, { file_path: "file path to remove, e.g, ./program/package.json" }).json_schema.schema
-                },
-                {
+                } : null,
+                useTools.remove_directory_recursively ? {
                     "name": "remove_directory_recursively",
                     "description": "Remove a directory recursively.",
                     "input_schema": convertJsonToResponseFormat({ directory_path: "" }, { directory_path: "directory path to remove recursively, e.g, ./program" }).json_schema.schema
-                },
+                } : null,
                 useDocker ? {
                     "name": "apt_install",
                     "description": "Install a package using apt.",
                     "input_schema": convertJsonToResponseFormat({ package_name: "" }, { package_name: "package name to install, e.g, ffmpeg" }).json_schema.schema
                 } : null,
-                true ? {
+                useTools.which_command ? {
                     "name": "which_command",
                     "description": "Check if a command exists.",
                     "input_schema": convertJsonToResponseFormat({ command: "" }, { command: "command to check, e.g, ffmpeg" }).json_schema.schema
                 } : null,
-                true ? {
+                useTools.run_command ? {
                     "name": "run_command",
                     "description": "Run a shell command.",
                     "input_schema": convertJsonToResponseFormat({ command: "" }, { command: "shell command to run, e.g, ls -al" }).json_schema.schema
