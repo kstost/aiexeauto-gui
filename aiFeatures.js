@@ -223,6 +223,13 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 let response;
                 let result;
                 //\n\n---\nTOOL NAME TO USE:\ngenerate_python_code\n
+                function setDefaultToolName() {
+                    if (callMode === 'generateCode') {
+                        toolNameForce = 'generate_python_code';
+                    } else {
+                        toolNameForce = tools[0].name;
+                    }
+                }
                 function dataPayload(data) {
                     if (!toolNameForce) return data;
                     const dataCloned = JSON.parse(JSON.stringify(data));
@@ -323,7 +330,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
-                            toolNameForce = 'generate_python_code';
+                            setDefaultToolName();
                             continue;
                         }
                     }
@@ -341,7 +348,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
-                            toolNameForce = 'generate_python_code';
+                            setDefaultToolName();
                             continue;
                         }
                     }
@@ -359,7 +366,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
-                            toolNameForce = 'generate_python_code';
+                            setDefaultToolName();
                             continue;
                         }
                     }
@@ -379,7 +386,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
-                            toolNameForce = 'generate_python_code';
+                            setDefaultToolName();
                             continue;
                         }
                     }
