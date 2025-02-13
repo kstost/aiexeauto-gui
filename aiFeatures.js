@@ -214,6 +214,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
         let tools = toolsList[callMode];
 
         const requestAI = async (llm, callMode, data, url, headers) => {
+            let toolNameForce = ''; // 페이로드에 tool을 지정해줬음에도 무시해버리는 경우가 있다. 그런경우는 toolNameForce에 지정해주면 지정해준 툴을 사용할 확률이 올라감.
             while (true) {
                 if (llm === 'ollama' && !(await isOllamaRunning())) {
                     throw new Error('Ollama API서버 확인에 문제가 있습니다.');
@@ -222,7 +223,6 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 let response;
                 let result;
                 //\n\n---\nTOOL NAME TO USE:\ngenerate_python_code\n
-                let toolNameForce = ''; // 페이로드에 tool을 지정해줬음에도 무시해버리는 경우가 있다. 그런경우는 toolNameForce에 지정해주면 지정해준 툴을 사용할 확률이 올라감.
                 function dataPayload(data) {
                     if (!toolNameForce) return data;
                     const dataCloned = JSON.parse(JSON.stringify(data));
