@@ -88,7 +88,7 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
         return {
             role: "user",
             content: [
-                '바로 직후 다음으로 수행할 **오직 절대로 딱 하나의** 작업이 무엇인지 말해!',
+                '바로 직후 다음으로 수행할 작업이 무엇인지 말해!',
                 '',
                 '',
                 ...last,
@@ -96,7 +96,7 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
                 `MISSION: "${mission}"`,
                 '',
                 'INSTRUCTION:',
-                '- 미션과 지금까지의 진행 상황을 고려하여 다음으로 해야 할 단 한 가지 작업만 제공하세요.',
+                '- 미션과 지금까지의 진행 상황을 고려하여 다음으로 해야 할 작업이 무엇인지 판단하세요.',
                 '- 해야할 일을 논리적으로 판단하세요.',
                 '- 선택적인 작업은 생략합니다.',
                 '- 코드 포함하지 마세요.',

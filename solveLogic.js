@@ -300,7 +300,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                 }
                 whattodo = await chatCompletion(
-                    "당신은 미션 완수를 위해 다음으로 해야 할 단 한 가지의 작업만을 제공하는 AI 비서입니다. 지금까지의 진행 상황과 이전 작업의 결과를 고려하세요. 코드나 불필요한 내용은 제외하고, 한국어로 한 문장만 응답하세요. 선택적인 작업은 생략합니다.",
+                    "당신은 미션 완수를 위해 다음으로 해야 할 일의 계획을 수립하는 비서입니다. 지금까지의 진행 상황과 이전 작업의 결과를 고려하세요. 코드나 불필요한 내용은 제외하고, 한국어로 한 문장만 응답하세요. 선택적인 작업은 생략합니다.",
                     makeRealTransaction(processTransactions, multiLineMission, 'whattodo'),
                     'whatToDo',
                     interfaces,

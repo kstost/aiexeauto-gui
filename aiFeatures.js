@@ -218,19 +218,30 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 if (llm === 'ollama' && !(await isOllamaRunning())) {
                     throw new Error('Ollama API서버 확인에 문제가 있습니다.');
                 }
-                await leaveLog({ callMode, data });
                 let pid6 = await out_state(`${stateLabel}를 ${model}가 처리중...`);
                 let response;
                 let result;
+                //\n\n---\nTOOL NAME TO USE:\ngenerate_python_code\n
+                let toolNameForce = ''; // 페이로드에 tool을 지정해줬음에도 무시해버리는 경우가 있다. 그런경우는 toolNameForce에 지정해주면 지정해준 툴을 사용할 확률이 올라감.
+                function dataPayload(data) {
+                    if (!toolNameForce) return data;
+                    const dataCloned = JSON.parse(JSON.stringify(data));
+                    let lastMessage = dataCloned.messages[dataCloned.messages.length - 1];
+                    lastMessage.content += `\n\n---\nTOOL NAME TO USE:\n${toolNameForce}\n`;
+                    return dataCloned;
+                }
                 try {
                     if (singleton.missionAborting) throw null;
                     const controller = new AbortController();
                     if (!singleton.abortController) singleton.abortController = [];
                     singleton.abortController.push(controller);
+                    console.log('url', url);
+                    const body = dataPayload(data);
+                    await leaveLog({ callMode, data: body });
                     response = await fetch(url, {
                         method: 'POST',
                         headers: headers,
-                        body: JSON.stringify(data),
+                        body: JSON.stringify(body),
                         signal: controller.signal
                     });
                     singleton.abortController = singleton.abortController.filter(c => c !== controller);
@@ -312,6 +323,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
+                            toolNameForce = 'generate_python_code';
                             continue;
                         }
                     }
@@ -329,6 +341,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
+                            toolNameForce = 'generate_python_code';
                             continue;
                         }
                     }
@@ -346,6 +359,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
+                            toolNameForce = 'generate_python_code';
                             continue;
                         }
                     }
@@ -365,6 +379,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
+                            toolNameForce = 'generate_python_code';
                             continue;
                         }
                     }

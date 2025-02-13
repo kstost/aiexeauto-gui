@@ -1,7 +1,6 @@
    ### generate_nodejs_code_for_puppeteer
    - NodeJS 코드를 생성하여 작업을 수행합니다.
       #### INSTRUCTION
-      - **단 한가지 일**만 수행.
       - 앞선 과정에서 수행한 일은 반복하지 말아.
       - 코드는 단일 JavaScript 파일로 완전하고 실행 가능해야 합니다.
       - --no-sandbox 옵션을 사용하여 실행.
