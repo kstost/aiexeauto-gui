@@ -1413,6 +1413,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             <option value="openai">OpenAI</option>
             <option value="ollama">Ollama</option>
             <option value="groq">Groq</option>
+            <option value="gemini">Gemini</option>
         `;
         llmContainer.appendChild(llmSelect);
         configWrapper.appendChild(llmRow);
@@ -1498,6 +1499,38 @@ window.addEventListener('DOMContentLoaded', async () => {
         `;
         deepseekModelContainer.appendChild(deepseekModelSelect);
         deepseekGroup.appendChild(deepseekModelRow);
+
+        // Gemini 설정
+        const geminiGroup = document.createElement('div');
+        geminiGroup.style.display = 'none';
+        geminiGroup.style.flexDirection = 'column';
+        geminiGroup.style.gap = '25px';
+        configWrapper.appendChild(geminiGroup);
+
+        const { row: geminiKeyRow, inputContainer: geminiKeyContainer } = createConfigRow('Gemini API Key');
+        const geminiApiKeyInput = document.createElement('input');
+        geminiApiKeyInput.type = 'password';
+        geminiApiKeyInput.placeholder = 'Enter Gemini API Key';
+        applyDarkModeInput(geminiApiKeyInput);
+        geminiKeyContainer.appendChild(geminiApiKeyInput);
+        geminiGroup.appendChild(geminiKeyRow);
+
+        const { row: geminiModelRow, inputContainer: geminiModelContainer } = createConfigRow('Gemini Model');
+        const geminiModelSelect = document.createElement('select');
+        applyDarkModeSelect(geminiModelSelect);
+        geminiModelSelect.innerHTML = `
+            <option value="" disabled selected>모델 선택</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+            <option value="gemini-2.0-flash-latest">gemini-2.0-flash-latest</option>
+        `;
+        geminiModelContainer.appendChild(geminiModelSelect);
+        geminiGroup.appendChild(geminiModelRow);
+
+
+
+
+
+
 
         // OpenAI 설정
         const openaiGroup = document.createElement('div');
@@ -1663,6 +1696,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 openaiGroup.style.display = selectedLLM === 'openai' ? 'flex' : 'none';
                 ollamaGroup.style.display = selectedLLM === 'ollama' ? 'flex' : 'none';
                 groqGroup.style.display = selectedLLM === 'groq' ? 'flex' : 'none';
+                geminiGroup.style.display = selectedLLM === 'gemini' ? 'flex' : 'none';
             }
 
             // Claude 설정 로드
@@ -1678,6 +1712,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const deepseekModel = await getConfig('deepseekModel');
             if (deepseekModel) deepseekModelSelect.value = deepseekModel;
+
+            // Gemini 설정 로드
+            const geminiApiKey = await getConfig('geminiApiKey');
+            if (geminiApiKey) geminiApiKeyInput.value = geminiApiKey;
+
+            const geminiModel = await getConfig('geminiModel');
+            if (geminiModel) geminiModelSelect.value = geminiModel;
 
             // OpenAI 설정 로드
             const openaiApiKey = await getConfig('openaiApiKey');
@@ -1758,6 +1799,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         deepseekModelSelect.addEventListener('change', async () => {
             await setConfig('deepseekModel', deepseekModelSelect.value);
+        });
+
+        geminiApiKeyInput.addEventListener('input', async () => {
+            await setConfig('geminiApiKey', geminiApiKeyInput.value);
+        });
+
+        geminiModelSelect.addEventListener('change', async () => {
+            await setConfig('geminiModel', geminiModelSelect.value);
         });
 
         openaiApiKeyInput.addEventListener('input', async () => {

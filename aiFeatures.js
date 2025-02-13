@@ -60,18 +60,22 @@ async function leaveLog({ callMode, data }) {
             const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
             data = JSON.parse(JSON.stringify(data));
             data.callMode = callMode;
-            // if (!data.messages) return;
-            if (data.messages) {
+            if (data.messages || data.contents) {
                 let contentToLeave = `## callMode: ${callMode}\n\n`;
-                for (let i = 0; i < data.messages.length; i++) {
-                    contentToLeave += `${'-'.repeat(120)}\n## ${data.messages[i].role} ##\n${data.messages[i].content}\n\n`;
+                if (data.messages) {
+                    for (let i = 0; i < data.messages.length; i++) {
+                        contentToLeave += `${'-'.repeat(120)}\n## ${data.messages[i].role} ##\n${data.messages[i].content}\n\n`;
+                    }
+                } else if (data.contents) {
+                    if (data.system_instruction) {
+                        contentToLeave += `${'-'.repeat(120)}\n## system ##\n${data.system_instruction.parts[0].text}\n\n`;
+                    }
+                    for (let i = 0; i < data.contents.length; i++) {
+                        contentToLeave += `${'-'.repeat(120)}\n## ${data.contents[i].role} ##\n${data.contents[i].parts[0].text}\n\n`;
+                    }
                 }
                 await writeEnsuredFile(`${aiLogFolder}/${date}.txt`, contentToLeave);
             } else {
-                // {
-                //     "resultText": "{\n  \"id\": \"chatcmpl-Az1gp3Z4RtTj8zw2KFLlfgTiSKfaH\",\n  \"object\": \"chat.completion\",\n  \"created\": 1739107867,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"현재 폴더의 목록을 확인할게요.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 209,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 222,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n",
-                //     "callMode": "whatToDo"
-                //  }
                 await writeEnsuredFile(`${aiLogFolder}/${date}.response.txt`, data.resultText);
             }
         }
@@ -100,7 +104,9 @@ export async function getModel() {
                     ? await getConfiguration('ollamaModel')
                     : llm === 'groq'
                         ? await getConfiguration('groqModel')
-                        : null;
+                        : llm === 'gemini'
+                            ? await getConfiguration('geminiModel')
+                            : null;
     return model;
 }
 export async function chatCompletion(systemPrompt, promptList, callMode, interfaces = {}, stateLabel = '') {
@@ -112,6 +118,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
         let openaiApiKey = await getConfiguration('openaiApiKey');
         let ollamaApiKey = await getConfiguration('ollamaApiKey');
         let groqApiKey = await getConfiguration('groqApiKey');
+        let geminiApiKey = await getConfiguration('geminiApiKey');
 
         let useDocker = await getConfiguration('useDocker');
         let dockerPath = await getConfiguration('dockerPath');
@@ -120,15 +127,15 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
         openaiApiKey = openaiApiKey.trim();
         ollamaApiKey = ollamaApiKey.trim();
         groqApiKey = groqApiKey.trim();
+        geminiApiKey = geminiApiKey.trim();
 
         if (llm === 'claude' && !claudeApiKey) throw new Error('Claude API 키가 설정되어 있지 않습니다.');
         if (llm === 'deepseek' && !deepseekApiKey) throw new Error('DeepSeek API 키가 설정되어 있지 않습니다.');
         if (llm === 'openai' && !openaiApiKey) throw new Error('OpenAI API 키가 설정되어 있지 않습니다.');
         if (llm === 'ollama' && !ollamaApiKey && false) throw new Error('Ollama API 키가 설정되어 있지 않습니다.');
         if (llm === 'groq' && !groqApiKey) throw new Error('Groq API 키가 설정되어 있지 않습니다.');
+        if (llm === 'gemini' && !geminiApiKey) throw new Error('Gemini API 키가 설정되어 있지 않습니다.');
         if (useDocker && !dockerPath) throw new Error('Docker 경로가 설정되어 있지 않습니다.');
-
-
 
         let tool_choice_list = {
             getRequiredPackageNames: { type: "tool", name: "npm_package_names" },
@@ -233,8 +240,17 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 function dataPayload(data) {
                     if (!toolNameForce) return data;
                     const dataCloned = JSON.parse(JSON.stringify(data));
-                    let lastMessage = dataCloned.messages[dataCloned.messages.length - 1];
-                    lastMessage.content += `\n\n---\nTOOL NAME TO USE:\n${toolNameForce}\n`;
+
+                    // Gemini API 형식 처리
+                    if (dataCloned.contents) {
+                        let lastMessage = dataCloned.contents[dataCloned.contents.length - 1];
+                        lastMessage.parts[0].text += `\n\n---\nTOOL NAME TO USE:\n${toolNameForce}\n`;
+                    }
+                    // 다른 API 형식 처리
+                    else if (dataCloned.messages) {
+                        let lastMessage = dataCloned.messages[dataCloned.messages.length - 1];
+                        lastMessage.content += `\n\n---\nTOOL NAME TO USE:\n${toolNameForce}\n`;
+                    }
                     return dataCloned;
                 }
                 try {
@@ -393,10 +409,30 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     let text = result?.choices?.[0]?.message?.content;
                     return text || '';
                 }
+
+                if (llm === 'gemini') {
+                    //------------------------------------------------------
+                    if (tools) {
+                        try {
+                            const parts = result?.candidates?.[0]?.content?.parts;
+                            let toolCall = parts.filter(part => part.functionCall)[0].functionCall;
+                            if (!toolCall) throw null;
+                            return {
+                                type: 'tool_use',
+                                name: toolCall.name,
+                                input: toolCall.args
+                            };
+                        } catch {
+                            setDefaultToolName();
+                            continue;
+                        }
+                    }
+                    let text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    return text || '';
+                }
             }
 
         };
-
 
         // => Now for openai:
         if (llm === 'openai') {
@@ -433,7 +469,6 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
             ];
             return await requestAI(llm, callMode, data, url, headers);
         }
-
 
         if (llm === 'deepseek') {
             const url = "https://api.deepseek.com/chat/completions";
@@ -553,6 +588,59 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 tools: tools,
                 tool_choice: tool_choice_list[callMode]
             };
+            return await requestAI(llm, callMode, data, url, headers);
+        }
+
+        // Gemini API 통합
+        if (llm === 'gemini') {
+            const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+            const url = `${baseUrl}/models/${model}:generateContent?key=${geminiApiKey}`;
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            // Gemini API 형식에 맞게 메시지 변환 
+            const messages = promptList.map(p => ({
+                role: p.role === "assistant" ? "model" : "user",
+                parts: [{ text: p.content }]
+            }));
+
+            // tools가 있는 경우 Gemini 형식으로 변환
+            let toolConfig = null;
+            if (tools) {
+                toolConfig = {
+                    tools: [{
+                        function_declarations: tools.map(tool => ({
+                            name: tool.name,
+                            description: tool.description,
+                            parameters: {
+                                type: "object",
+                                properties: tool.input_schema.properties || {},
+                                required: tool.input_schema.required || []
+                            }
+                        }))
+                    }],
+                    tool_config: {
+                        function_calling_config: {
+                            mode: "auto"
+                        }
+                    }
+                };
+            }
+
+            const data = {
+                system_instruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                contents: messages,
+                ...toolConfig,
+                generationConfig: {
+                    temperature: 0.7,
+                    topP: 0.8,
+                    topK: 40
+                }
+            };
+            console.log('data', JSON.stringify(data, null, 2));
             return await requestAI(llm, callMode, data, url, headers);
         }
     }

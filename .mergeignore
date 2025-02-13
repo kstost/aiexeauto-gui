@@ -34,5 +34,7 @@ package-lock.json
 *.ico
 *.pdf
 
-LICENSE
-README.md
+static/
+assets/
+my-docker-app/
+memo.txt
