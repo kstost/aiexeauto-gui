@@ -46,39 +46,41 @@ async function leaveLog({ callMode, data }) {
             await writeEnsuredFile(`${aiLogFolder}/${date}.txt`, contentToLeave);
         }
     } else {
-        if (true) {
-            const aiLogFolder = getAppPath('logs');
-            if (!fs.existsSync(aiLogFolder)) fs.mkdirSync(aiLogFolder);
-            const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
-            data = JSON.parse(JSON.stringify(data));
-            data.callMode = callMode;
-            await writeEnsuredFile(`${aiLogFolder}/${date}.json`, JSON.stringify(data, undefined, 3));
-        }
-        if (true) {
-            const aiLogFolder = getAppPath('logs.txt');
-            if (!fs.existsSync(aiLogFolder)) fs.mkdirSync(aiLogFolder);
-            const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
-            data = JSON.parse(JSON.stringify(data));
-            data.callMode = callMode;
-            if (data.messages || data.contents) {
-                let contentToLeave = `## callMode: ${callMode}\n\n`;
-                if (data.messages) {
-                    for (let i = 0; i < data.messages.length; i++) {
-                        contentToLeave += `${'-'.repeat(120)}\n## ${data.messages[i].role} ##\n${data.messages[i].content}\n\n`;
-                    }
-                } else if (data.contents) {
-                    if (data.system_instruction) {
-                        contentToLeave += `${'-'.repeat(120)}\n## system ##\n${data.system_instruction.parts[0].text}\n\n`;
-                    }
-                    for (let i = 0; i < data.contents.length; i++) {
-                        contentToLeave += `${'-'.repeat(120)}\n## ${data.contents[i].role} ##\n${data.contents[i].parts[0].text}\n\n`;
-                    }
-                }
-                await writeEnsuredFile(`${aiLogFolder}/${date}.txt`, contentToLeave);
-            } else {
-                await writeEnsuredFile(`${aiLogFolder}/${date}.response.txt`, data.resultText);
+        try {
+            if (true) {
+                const aiLogFolder = getAppPath('logs');
+                if (!fs.existsSync(aiLogFolder)) fs.mkdirSync(aiLogFolder);
+                const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
+                data = JSON.parse(JSON.stringify(data));
+                data.callMode = callMode;
+                await writeEnsuredFile(`${aiLogFolder}/${date}.json`, JSON.stringify(data, undefined, 3));
             }
-        }
+            if (true) {
+                const aiLogFolder = getAppPath('logs.txt');
+                if (!fs.existsSync(aiLogFolder)) fs.mkdirSync(aiLogFolder);
+                const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
+                data = JSON.parse(JSON.stringify(data));
+                data.callMode = callMode;
+                if (data.messages || data.contents) {
+                    let contentToLeave = `## callMode: ${callMode}\n\n`;
+                    if (data.messages) {
+                        for (let i = 0; i < data.messages.length; i++) {
+                            contentToLeave += `${'-'.repeat(120)}\n## ${data.messages[i].role} ##\n${data.messages[i].content}\n\n`;
+                        }
+                    } else if (data.contents) {
+                        if (data.system_instruction) {
+                            contentToLeave += `${'-'.repeat(120)}\n## system ##\n${data.system_instruction.parts[0].text}\n\n`;
+                        }
+                        for (let i = 0; i < data.contents.length; i++) {
+                            contentToLeave += `${'-'.repeat(120)}\n## ${data.contents[i].role} ##\n${data.contents[i].parts[0].text}\n\n`;
+                        }
+                    }
+                    await writeEnsuredFile(`${aiLogFolder}/${date}.txt`, contentToLeave);
+                } else {
+                    await writeEnsuredFile(`${aiLogFolder}/${date}.response.txt`, data.resultText);
+                }
+            }
+        } catch { }
     }
 }
 export async function isOllamaRunning() {
@@ -91,6 +93,139 @@ export async function isOllamaRunning() {
     } catch (err) {
         return false; // 연결 실패 시 실행 중이 아님
     }
+}
+/**
+ * 주어진 문자열에서 가장 첫 번째 Fenced Code Block(3개 이상의 백틱) 안에 있는
+ * 언어명과 소스코드를 함께 추출하여 반환합니다.
+ *
+ * 예: 
+ *    ```javascript
+ *    console.log("Hello");
+ *    ```
+ *
+ * - 3개 이상의 백틱(```이상)으로 시작하고 동일한 수의 백틱으로 끝나는 부분을 찾습니다.
+ * - 백틱 뒤에 붙어 있는 텍스트(언어명, 옵션 등)를 추출합니다.
+ * - 그 내부에 있는 전체 소스코드를 추출합니다.
+ *
+ * @param {string} text - 코드 블록을 포함할 수 있는 원본 문자열
+ * @returns {{ languageName: string, code: string } | null}
+ *          - { languageName, code } 형태의 객체
+ *          - 코드 블록이 없으면 null
+ */
+function stripSourceCodeInFencedCodeBlock(text) {
+    // 1. `(`{3,}) 로 3개 이상의 백틱을 탐색 (캡처 그룹 1)
+    // 2. ([^\n\r]*) 는 "```" 다음에 오는 언어명 혹은 다른 문자(옵션)를 캡처 (캡처 그룹 2)
+    // 3. [\r\n]+ 다음 줄로 넘어감
+    // 4. ([\s\S]*?) 실제 코드 내용(개행 포함) 캡처 (non-greedy) (캡처 그룹 3)
+    // 5. [\r\n]+ 다음 줄로 넘어감
+    // 6. \1 로 같은 개수의 백틱이 다시 나오는지 확인
+    const regex = /(`{3,})([^\n\r]*)[\r\n]+([\s\S]*?)[\r\n]+\1/;
+    const match = regex.exec(text);
+
+    // match:
+    //   0 전체 매칭된 문자열
+    //   1 백틱들 (예: "```")
+    //   2 언어명 또는 기타 옵션 (예: "javascript")
+    //   3 코드 내용
+    if (match) {
+        const languageName = match[2].trim(); // "javascript" 등
+        const code = match[3];               // 실제 코드 내용
+
+        return {
+            languageName,
+            code
+        };
+    }
+
+    // 코드 블록을 찾지 못한 경우
+    return null;
+}
+function plainParser(text, callMode) {
+    let plain = langParser(text, callMode);
+    if (plain) {
+        if (callMode === 'generateCode') {
+            return {
+                type: 'tool_use',
+                name: plain.name,
+                input: plain.args
+            }
+        } else if (callMode === 'evaluateCode') {
+            return {
+                type: 'tool_use',
+                name: 'completion_verdict',
+                input: {
+                    evaluation: plain.args.evaluation || '',
+                    reason: plain.args.reason || ''
+                }
+            }
+        }
+    }
+}
+function langParser(text, callMode) {
+    try {
+        let { languageName, code } = stripSourceCodeInFencedCodeBlock(text);
+        let toolCall = {
+            name: null,
+            args: null
+        }
+        if (callMode === 'generateCode') {
+            if (['python', 'py'].includes(languageName.toLowerCase())) {
+                toolCall.name = 'generate_python_code';
+                toolCall.args = {
+                    python_code: code,
+                    pip_package_list: []
+                }
+            }
+            else if (['json'].includes(languageName.toLowerCase())) {
+                toolCall.name = 'generate_python_code';
+                toolCall.args = {
+                    python_code: code,
+                    pip_package_list: []
+                }
+            }
+            else if (['javascript', 'js'].includes(languageName.toLowerCase())) {
+                toolCall.name = 'generate_nodejs_code';
+                toolCall.args = {
+                    nodejs_code: code,
+                    npm_package_list: []
+                }
+            } else {
+                function isValidJavaScriptUsingNewFunction(code) {
+                    try {
+                        new Function(code);
+                        return true;  // 문법적으로 유효
+                    } catch (e) {
+                        return false; // 문법 오류
+                    }
+                }
+                if (isValidJavaScriptUsingNewFunction(code)) {  
+                    toolCall.name = 'generate_nodejs_code';
+                    toolCall.args = {
+                        nodejs_code: code,
+                        npm_package_list: []
+                    }
+                } else {
+                    toolCall.name = 'generate_python_code';
+                    toolCall.args = {
+                        python_code: code,
+                        pip_package_list: []
+                    }
+                    // throw new Error('Invalid JavaScript code');
+                }
+            }
+        } else if (callMode === 'evaluateCode') {
+            let parsed = {};
+            try {
+                parsed = JSON.parse(code);
+            } catch { }
+            toolCall.name = 'completion_verdict';
+            toolCall.args = {
+                evaluation: parsed.evaluation || '',
+                reason: parsed.reason || ''
+            }
+        }
+        return toolCall;
+    } catch { }
 }
 export async function getModel() {
     const llm = await getConfiguration('llm');
@@ -109,7 +244,18 @@ export async function getModel() {
                             : null;
     return model;
 }
-export async function chatCompletion(systemPrompt, promptList, callMode, interfaces = {}, stateLabel = '') {
+export async function chatCompletion(systemPrompt_, promptList, callMode, interfaces = {}, stateLabel = '') {
+    let systemPrompt;
+    let systemPromptForGemini;
+    let malformed_function_called = false;
+    if (systemPrompt_.constructor === String) {
+        systemPrompt = systemPrompt_;
+    } else {
+        systemPrompt = systemPrompt_.systemPrompt;
+        systemPromptForGemini = systemPrompt_.systemPromptForGemini;
+    }
+    if (!systemPromptForGemini) systemPromptForGemini = systemPrompt;
+
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
     async function requestChatCompletion(systemPrompt, promptList, model) {
         const llm = await getConfiguration('llm');
@@ -222,7 +368,19 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
 
         const requestAI = async (llm, callMode, data, url, headers) => {
             let toolNameForce = ''; // 페이로드에 tool을 지정해줬음에도 무시해버리는 경우가 있다. 그런경우는 toolNameForce에 지정해주면 지정해준 툴을 사용할 확률이 올라감.
+            let forRetry = 0;
             while (true) {
+                if (llm === 'gemini' && malformed_function_called) {
+                    console.log('mallformed fix');
+                    delete data.tools;
+                    delete data.tool_config;
+                    data = {
+                        ...data,
+                        system_instruction: {
+                            parts: [{ text: systemPromptForGemini }]
+                        },
+                    };
+                }
                 if (llm === 'ollama' && !(await isOllamaRunning())) {
                     throw new Error('Ollama API서버 확인에 문제가 있습니다.');
                 }
@@ -231,6 +389,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 let result;
                 //\n\n---\nTOOL NAME TO USE:\ngenerate_python_code\n
                 function setDefaultToolName() {
+                    forRetry++;
                     if (callMode === 'generateCode') {
                         toolNameForce = 'generate_python_code';
                     } else {
@@ -269,6 +428,7 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     });
                     singleton.abortController = singleton.abortController.filter(c => c !== controller);
                     result = await response.text();
+                    console.log('result', result);
                 } catch (err) {
                     pid6.fail(`${stateLabel}를 ${model}가 처리 중단 (${err.message})`);
                     throw new Error('미션 중단');
@@ -298,14 +458,24 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     pid64.dismiss();
                 }
                 const errorMessage = result?.error?.message || '';
+                const errorStatus = result?.error?.status || '';
+                const finishReason = result?.candidates?.[0]?.finishReason || '';
+                const RESOURCE_EXHAUSTED = errorStatus === 'RESOURCE_EXHAUSTED';
+                const MALFORMED_FUNCTION_CALL = finishReason === 'MALFORMED_FUNCTION_CALL';
+                if (MALFORMED_FUNCTION_CALL) {
+                    malformed_function_called = true;
+                    // no_use_tool
+                    continue;
+                }
                 let pid65 = await out_state(``);
                 if (errorMessage) {
                     const forRateLimit = errorMessage.includes('Rate limit') || errorMessage.includes('rate limit');
-                    if (forRateLimit || errorMessage.includes('Overloaded')) {
+                    if (forRateLimit || errorMessage.includes('Overloaded') || RESOURCE_EXHAUSTED) {
                         pid65.fail(errorMessage);
                         await leaveLog({ callMode, data: { resultErrorSystem: result } });
                         let waitTime = Math.ceil(extractWaitTime(errorMessage));
                         if (!waitTime && waitTime !== 0) waitTime = 5;
+                        if (RESOURCE_EXHAUSTED) waitTime = 15;
                         let percentBar = await percent_bar({ template: `${model}가 ${stateLabel} 처리 재시도 대기 {{second}}초 남음`, total: waitTime });
                         while (await percentBar.onetick()) {
                             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -326,7 +496,9 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     if (tools) {
                         try {
                             let data = result?.content?.filter(c => c.type === 'tool_use')[0];
-                            if (!data) throw null;
+                            let rt = !data ? plainParser(result?.content?.[0]?.text, callMode) : null;
+                            if (rt) return rt;
+                            if (!data && forRetry < 1) throw null;
                             return data;
                         } catch {
                             continue;
@@ -339,7 +511,9 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            if (!toolCall) throw null;
+                            let rt = !toolCall ? plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            if (rt) return rt;
+                            if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
                                 name: toolCall.function.name,
@@ -357,7 +531,9 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            if (!toolCall) throw null;
+                            let rt = !toolCall ? plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            if (rt) return rt;
+                            if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
                                 name: toolCall.function.name,
@@ -375,7 +551,9 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            if (!toolCall) throw null;
+                            let rt = !toolCall ? plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            if (rt) return rt;
+                            if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
                                 name: toolCall.function.name,
@@ -395,7 +573,9 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            if (!toolCall) throw null;
+                            let rt = !toolCall ? plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            if (rt) return rt;
+                            if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
                                 name: toolCall.function.name,
@@ -411,12 +591,13 @@ export async function chatCompletion(systemPrompt, promptList, callMode, interfa
                 }
 
                 if (llm === 'gemini') {
-                    //------------------------------------------------------
                     if (tools) {
                         try {
                             const parts = result?.candidates?.[0]?.content?.parts;
-                            let toolCall = parts.filter(part => part.functionCall)[0].functionCall;
-                            if (!toolCall) throw null;
+                            let toolCall = parts.filter(part => part.functionCall)[0]?.functionCall;
+                            let rt = !toolCall ? plainParser(parts.filter(part => part.text)[0].text, callMode) : null;
+                            if (rt) return rt;
+                            if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
                                 name: toolCall.name,

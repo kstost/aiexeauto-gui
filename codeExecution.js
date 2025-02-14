@@ -107,23 +107,6 @@ export async function runCode(page, code, requiredPackageNames) {
     return result;
 }
 
-export async function getRequiredPackageNames(javascriptCode, prompts) {
-    let requiredPackageNames = [];
-    const packageNamesResponse = await chatCompletion(
-        prompts.packageNamesPrompt,
-        [{ role: "user", content: javascriptCode }],
-        'getRequiredPackageNames'
-    );
-    let npmList = packageNamesResponse?.input?.npm_package_list;
-    if (!npmList) npmList = [];
-    if (npmList.constructor !== Array) npmList = [];
-    try {
-        requiredPackageNames = npmList.filter(name => typeof name === 'string' && name.trim() !== '');
-    } catch (e) {
-        requiredPackageNames = [];
-    }
-    return requiredPackageNames;
-}
 
 
 
@@ -1097,3 +1080,6 @@ function oraStart() { }
 function oraFail() { }
 function strout() { }
 function isTaskAborted() { }
+
+
+export function getRequiredPackageNames(javascriptCode, prompts) { }

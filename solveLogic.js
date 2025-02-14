@@ -44,85 +44,114 @@ export const useTools = {
 
 // Collecting prompts in one place
 const prompts = {
-    systemPrompt: async (mission, whattodo, useDocker) => [
-        '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
-        '',
-        `- MAIN MISSION: "${mission}"`,
-        `- SUB MISSION: "${whattodo}"`,
-        '',
-        '## INSTRUCTION',
-        '- 작업 수행을 위한 도구는 다음과 같이 준비되어있으며 임무 수행에 가장 적합한 도구를 선택해서 수행하세요.',
-        '',
-        '## Tools',
-        '   ### read_file',
-        '   - 파일의 내용을 읽어옵니다.',
-        '      #### INSTRUCTION',
-        '      - 파일의 경로를 제공해주세요',
-        '   ',
-        '   ### list_directory',
-        '   - 디렉토리의 파일/폴더 목록을 가져옵니다.',
-        '      #### INSTRUCTION',
-        '      - 디렉토리의 경로를 제공해주세요',
-        '   ',
-        useTools.read_url ? '   ### read_url' : '',
-        useTools.read_url ? '   - URL의 내용을 읽어옵니다.' : '',
-        useTools.read_url ? '      #### INSTRUCTION' : '',
-        useTools.read_url ? '      - URL을 제공해주세요' : '',
-        useTools.read_url ? '   ' : '',
-        useTools.rename_file_or_directory ? '   ### rename_file_or_directory' : '',
-        useTools.rename_file_or_directory ? '   - 파일 또는 디렉토리의 이름을 변경합니다.' : '',
-        useTools.rename_file_or_directory ? '      #### INSTRUCTION' : '',
-        useTools.rename_file_or_directory ? '      - 변경할 파일 또는 디렉토리의 경로와 변경할 이름을 제공해주세요' : '',
-        useTools.rename_file_or_directory ? '   ' : '',
-        useTools.remove_file ? '   ### remove_file' : '',
-        useTools.remove_file ? '   - 파일을 삭제합니다.' : '',
-        useTools.remove_file ? '      #### INSTRUCTION' : '',
-        useTools.remove_file ? '      - 삭제할 파일의 경로를 제공해주세요' : '',
-        useTools.remove_file ? '   ' : '',
-        useTools.remove_directory_recursively ? '   ### remove_directory_recursively' : '',
-        useTools.remove_directory_recursively ? '   - 디렉토리를 재귀적으로 삭제합니다.' : '',
-        useTools.remove_directory_recursively ? '      #### INSTRUCTION' : '',
-        useTools.remove_directory_recursively ? '      - 삭제할 디렉토리의 경로를 제공해주세요' : '',
-        useTools.remove_directory_recursively ? '   ' : '',
-        // '   ### cdnjs_finder',
-        // '   - CDN 라이브러리 URL을 찾습니다.',
-        // '      #### INSTRUCTION',
-        // '      - 패키지 이름을 제공해주세요',
-        // '   ',
-        useDocker ? '   ### apt_install' : '[REMOVE]',
-        useDocker ? '   - apt 패키지를 설치합니다.' : '[REMOVE]',
-        useDocker ? '      #### INSTRUCTION' : '[REMOVE]',
-        useDocker ? '      - 설치할 패키지 이름을 제공해주세요' : '[REMOVE]',
-        useDocker ? '   ' : '[REMOVE]',
-        useTools.which_command ? '   ### which_command' : '[REMOVE]',
-        useTools.which_command ? '   - 쉘 명령어가 존재하는지 확인합니다.' : '[REMOVE]',
-        useTools.which_command ? '      #### INSTRUCTION' : '[REMOVE]',
-        useTools.which_command ? '      - which로 확인할 쉘 명령어를 제공해주세요' : '[REMOVE]',
-        useTools.which_command ? '   ' : '[REMOVE]',
-        useTools.run_command ? '   ### run_command' : '[REMOVE]',
-        useTools.run_command ? '   - 쉘 명령어를 실행합니다.' : '[REMOVE]',
-        useTools.run_command ? '      #### INSTRUCTION' : '[REMOVE]',
-        useTools.run_command ? '      - 실행할 쉘 명령어를 제공해주세요' : '[REMOVE]',
-        useTools.run_command ? '   ' : '[REMOVE]',
-        '   ',
-        `${await (async () => {
-            const toolList = await getToolList();
-            let toolPrompts = [];
-            for (let tool of toolList) {
-                const toolData = await getToolData(tool);
-                toolPrompts.push(toolData.prompt);
-            }
-            return toolPrompts.join('\n\t\n');
-        })()}`,
-    ].filter(line => line.trim() !== '[REMOVE]').join('\n'),
-    systemEvaluationPrompt: (mission) => [
-        '컴퓨터 작업 실행 에이전트로서, MISSION이 완전하게 완료되었는지 엄격고 논리적으로 검증하고 평가하기 위해 필요한 작업을 수행합니다.',
-        '이미 검증을 위한 충분한 OUTPUT이 존재하고 미션이 완수되었다고 판단되면 ENDOFMISSION을 응답하고 그것이 아니라면 NOTSOLVED를 응답.',
-        '만약 해결할 수 없는 미션이라면 GIVEUPTHEMISSION을 응답하세요.',
-        '',
-        `- MISSION: "${mission}"`,
-        '',
-    ].join('\n'),
+    systemPrompt: async (mission, whattodo, useDocker, forGemini = false) => {
+        if (forGemini) {
+            return [
+                '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
+                '수행을 위한 파이썬 코드를 작성하시오.',
+                '',
+                `- MAIN MISSION: "${mission}"`,
+                `- SUB MISSION: "${whattodo}"`,
+                '',
+                'OUTPUT FORMAT:',
+                '```python\n(..code..)\n```',
+            ].filter(line => line.trim() !== '[REMOVE]').join('\n')
+        }
+        return [
+            '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
+            '',
+            `- MAIN MISSION: "${mission}"`,
+            `- SUB MISSION: "${whattodo}"`,
+            '',
+            '## INSTRUCTION',
+            '- 작업 수행을 위한 도구는 다음과 같이 준비되어있으며 임무 수행에 가장 적합한 도구를 선택해서 수행하세요.',
+            '',
+            '## Tools',
+            '   ### read_file',
+            '   - 파일의 내용을 읽어옵니다.',
+            '      #### INSTRUCTION',
+            '      - 파일의 경로를 제공해주세요',
+            '   ',
+            '   ### list_directory',
+            '   - 디렉토리의 파일/폴더 목록을 가져옵니다.',
+            '      #### INSTRUCTION',
+            '      - 디렉토리의 경로를 제공해주세요',
+            '   ',
+            useTools.read_url ? '   ### read_url' : '',
+            useTools.read_url ? '   - URL의 내용을 읽어옵니다.' : '',
+            useTools.read_url ? '      #### INSTRUCTION' : '',
+            useTools.read_url ? '      - URL을 제공해주세요' : '',
+            useTools.read_url ? '   ' : '',
+            useTools.rename_file_or_directory ? '   ### rename_file_or_directory' : '',
+            useTools.rename_file_or_directory ? '   - 파일 또는 디렉토리의 이름을 변경합니다.' : '',
+            useTools.rename_file_or_directory ? '      #### INSTRUCTION' : '',
+            useTools.rename_file_or_directory ? '      - 변경할 파일 또는 디렉토리의 경로와 변경할 이름을 제공해주세요' : '',
+            useTools.rename_file_or_directory ? '   ' : '',
+            useTools.remove_file ? '   ### remove_file' : '',
+            useTools.remove_file ? '   - 파일을 삭제합니다.' : '',
+            useTools.remove_file ? '      #### INSTRUCTION' : '',
+            useTools.remove_file ? '      - 삭제할 파일의 경로를 제공해주세요' : '',
+            useTools.remove_file ? '   ' : '',
+            useTools.remove_directory_recursively ? '   ### remove_directory_recursively' : '',
+            useTools.remove_directory_recursively ? '   - 디렉토리를 재귀적으로 삭제합니다.' : '',
+            useTools.remove_directory_recursively ? '      #### INSTRUCTION' : '',
+            useTools.remove_directory_recursively ? '      - 삭제할 디렉토리의 경로를 제공해주세요' : '',
+            useTools.remove_directory_recursively ? '   ' : '',
+            // '   ### cdnjs_finder',
+            // '   - CDN 라이브러리 URL을 찾습니다.',
+            // '      #### INSTRUCTION',
+            // '      - 패키지 이름을 제공해주세요',
+            // '   ',
+            useDocker ? '   ### apt_install' : '[REMOVE]',
+            useDocker ? '   - apt 패키지를 설치합니다.' : '[REMOVE]',
+            useDocker ? '      #### INSTRUCTION' : '[REMOVE]',
+            useDocker ? '      - 설치할 패키지 이름을 제공해주세요' : '[REMOVE]',
+            useDocker ? '   ' : '[REMOVE]',
+            useTools.which_command ? '   ### which_command' : '[REMOVE]',
+            useTools.which_command ? '   - 쉘 명령어가 존재하는지 확인합니다.' : '[REMOVE]',
+            useTools.which_command ? '      #### INSTRUCTION' : '[REMOVE]',
+            useTools.which_command ? '      - which로 확인할 쉘 명령어를 제공해주세요' : '[REMOVE]',
+            useTools.which_command ? '   ' : '[REMOVE]',
+            useTools.run_command ? '   ### run_command' : '[REMOVE]',
+            useTools.run_command ? '   - 쉘 명령어를 실행합니다.' : '[REMOVE]',
+            useTools.run_command ? '      #### INSTRUCTION' : '[REMOVE]',
+            useTools.run_command ? '      - 실행할 쉘 명령어를 제공해주세요' : '[REMOVE]',
+            useTools.run_command ? '   ' : '[REMOVE]',
+            '   ',
+            `${await (async () => {
+                const toolList = await getToolList();
+                let toolPrompts = [];
+                for (let tool of toolList) {
+                    const toolData = await getToolData(tool);
+                    toolPrompts.push(toolData.prompt);
+                }
+                return toolPrompts.join('\n\t\n');
+            })()}`,
+        ].filter(line => line.trim() !== '[REMOVE]').join('\n');
+    },
+    systemEvaluationPrompt: (mission, forGemini = false) => {
+        if (forGemini) {
+            return [
+                '컴퓨터 작업 실행 에이전트로서, MISSION이 완전하게 완료되었는지 엄격고 논리적으로 검증하고 평가하기 위해 필요한 작업을 수행합니다.',
+                '이미 검증을 위한 충분한 OUTPUT이 존재하고 미션이 완수되었다고 판단되면 ENDOFMISSION을 응답하고 그것이 아니라면 NOTSOLVED를 응답.',
+                '만약 해결할 수 없는 미션이라면 GIVEUPTHEMISSION을 응답하세요.',
+                '',
+                `- MISSION: "${mission}"`,
+                '',
+                'OUTPUT FORMAT:',
+                '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED or GIVEUPTHEMISSION", "reason": "Explain the reason for the verdict in korean of short length" }\n```',
+                '',
+            ].join('\n')
+        }
+        return [
+            '컴퓨터 작업 실행 에이전트로서, MISSION이 완전하게 완료되었는지 엄격고 논리적으로 검증하고 평가하기 위해 필요한 작업을 수행합니다.',
+            '이미 검증을 위한 충분한 OUTPUT이 존재하고 미션이 완수되었다고 판단되면 ENDOFMISSION을 응답하고 그것이 아니라면 NOTSOLVED를 응답.',
+            '만약 해결할 수 없는 미션이라면 GIVEUPTHEMISSION을 응답하세요.',
+            '',
+            `- MISSION: "${mission}"`,
+            '',
+        ].join('\n')
+    },
 
     packageNamesPrompt: [
         '주어진 Node.js 코드를 실행하기 위해 필요한 npm 패키지들을 파악하는 역할을 합니다.',
@@ -290,7 +319,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1) {
                     whatdidwedo = await chatCompletion(
-                        'As an AI agent, analyze what has been done so far',
+                        {
+                            systemPrompt: 'As an AI agent, analyze what has been done so far',
+                            systemPromptForGemini: 'As an AI agent, analyze what has been done so far',
+                        },
                         makeRealTransaction(processTransactions, multiLineMission, 'whatdidwedo'),
                         'whatDidWeDo',
                         interfaces,
@@ -300,7 +332,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                 }
                 whattodo = await chatCompletion(
-                    "당신은 미션 완수를 위해 다음으로 해야 할 일의 계획을 수립하는 비서입니다. 지금까지의 진행 상황과 이전 작업의 결과를 고려하세요. 코드나 불필요한 내용은 제외하고, 한국어로 한 문장만 응답하세요. 선택적인 작업은 생략합니다.",
+                    {
+                        systemPrompt: "당신은 미션 완수를 위해 다음으로 해야 할 일의 계획을 수립하는 비서입니다. 지금까지의 진행 상황과 이전 작업의 결과를 고려하세요. 코드나 불필요한 내용은 제외하고, 한국어로 한 문장만 응답하세요. 선택적인 작업은 생략합니다.",
+                        systemPromptForGemini: "당신은 미션 완수를 위해 다음으로 해야 할 일의 계획을 수립하는 비서입니다. 지금까지의 진행 상황과 이전 작업의 결과를 고려하세요. 코드나 불필요한 내용은 제외하고, 한국어로 한 문장만 응답하세요. 선택적인 작업은 생략합니다.",
+                    },
                     makeRealTransaction(processTransactions, multiLineMission, 'whattodo'),
                     'whatToDo',
                     interfaces,
@@ -318,12 +353,13 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
                 spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
                 const systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
+                const systemPromptForGemini = await prompts.systemPrompt(multiLineMission, whattodo, useDocker, true);
                 let promptList = makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, evaluationText);
                 promptList = JSON.parse(JSON.stringify(promptList));
 
                 while (true) {
                     actData = await chatCompletion(
-                        systemPrompt,
+                        { systemPrompt, systemPromptForGemini },
                         promptList,
                         'generateCode',
                         interfaces,
@@ -527,7 +563,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 spinners.iter = createSpinner('작업 검증중입니다.');
 
                 let actData = await chatCompletion(
-                    prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath),
+                    {
+                        systemPrompt: prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath),
+                        systemPromptForGemini: prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath, true),
+                    },
                     makeRealTransaction(processTransactions, multiLineMission, 'evaluation'),
                     'evaluateCode',
                     interfaces,
