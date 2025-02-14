@@ -26,6 +26,72 @@
     <link rel="stylesheet" href="./static/show-hint.min.css">
 
     <style>
+        @font-face {
+            font-family: 'intelone-mono-font-family-regular';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-1@1.1/intelone-mono-font-family-regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap');
+
+        .noto-sans-kr-font-family-regular {
+            font-family: "Noto Sans KR", serif;
+            font-optical-sizing: auto;
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        .extra-bold {
+            font-family: "Noto Sans KR", serif;
+            font-weight: 900;
+        }
+
+        .thin {
+            font-family: "Noto Sans KR", serif;
+            font-weight: 100;
+        }
+
+        .coding-font {
+            font-family: "intelone-mono-font-family-regular";
+            font-optical-sizing: auto;
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        input,
+        textarea,
+        select {
+            font-family: "intelone-mono-font-family-regular";
+            font-optical-sizing: auto;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 16px;
+        }
+
+        .CodeMirror,
+        .CodeMirror * {
+            font-family: 'intelone-mono-font-family-regular' !important;
+            font-size: 16px;
+        }
+
+        * {
+            /* font-family: 'noto-sans-kr-font-family-regular'; */
+            font-family: "Noto Sans KR", serif;
+            font-optical-sizing: auto;
+            font-weight: 400;
+            font-size: 16px;
+            font-style: normal;
+        }
+
+        .basic-font {
+            font-family: "Noto Sans KR", serif;
+            font-optical-sizing: auto;
+            font-weight: 400;
+            font-size: 16px;
+            font-style: normal;
+        }
+
         /* 추가: html과 body의 기본 여백 제거 및 전체화면 사용 */
         html,
         body {
@@ -81,6 +147,25 @@
             font-size: 22px;
         }
 
+        .conversation-container {
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px;
+            /* display: flex; */
+            /* flex-direction: column; */
+            /* gap: 15px; */
+        }
+
+        .conversation-container>h2 {
+            margin: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+            font-size: 22px;
+        }
+
+
         .config-group {
             display: flex;
             align-items: center;
@@ -131,7 +216,6 @@
             color: #ffffff;
             cursor: pointer;
         }
-
     </style>
 </head>
 

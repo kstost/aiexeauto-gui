@@ -33,11 +33,22 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // 새롭게 추가: 앱 제목 "AIEXE"를 상단에 추가
     const appTitle = document.createElement('h1');
-    appTitle.textContent = 'AIEXEAUTO';
+    const titleSpan1 = document.createElement('span');
+    titleSpan1.textContent = 'AIEXE';
+    titleSpan1.classList.add('extra-bold');
+    titleSpan1.style.fontSize = '24px';
+    const titleSpan2 = document.createElement('span');
+    titleSpan2.textContent = 'AUTO';
+    titleSpan2.classList.add('thin');
+    titleSpan2.style.fontSize = '24px';
+    appTitle.appendChild(titleSpan1);
+    appTitle.appendChild(titleSpan2);
     appTitle.style.color = '#ffffff';
-    appTitle.style.fontSize = '24px';
     appTitle.style.textAlign = 'center';
     appTitle.style.padding = '20px 0 10px';
+    appTitle.style.borderBottom = '5px solid rgba(255, 255, 255, 0.1)';
+    appTitle.style.marginLeft = '30px';
+    appTitle.style.marginRight = '30px';
     leftSide.appendChild(appTitle);
 
     // 새롭게 추가: 메뉴 컨테이너 생성
@@ -119,6 +130,38 @@ window.addEventListener('DOMContentLoaded', async () => {
     missionSolvingContainer.classList.add('right-side');
     missionSolvingContainer[Symbol.for('mode')] = 'missionSolving';
     document.body.appendChild(missionSolvingContainer);
+
+    const parentContainer = document.createElement('div');
+    parentContainer.className = 'conversation-container';
+    parentContainer.style.padding = '30px';
+    // parentContainer.style.display = 'flex';
+    // parentContainer.style.flexDirection = 'column';
+    // parentContainer.style.gap = '25px'; // 모든 직계 자식 요소 사이의 간격을 25px로 통일
+    missionSolvingContainer.appendChild(parentContainer);
+
+    {
+        const conversationTitle = document.createElement('h2');
+        conversationTitle.textContent = '미션수행';
+        conversationTitle.style.margin = '0'; // 기존 margin 제거
+        conversationTitle.style.marginBottom = '5px'; // 제목 아래 간격만 추가
+        parentContainer.appendChild(conversationTitle);
+
+    }
+
+    // config-container
+    let isBottom = false;
+    // function scrollEvent(e) {
+
+    // }
+    missionSolvingContainer.addEventListener('scroll', (e) => {
+        if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 100) {
+            isBottom = true;
+        } else if (e.target.scrollTop <= 100) {
+            isBottom = false;
+        } else {
+            isBottom = false;
+        }
+    });
 
     const configurationContainer = document.createElement('div');
     configurationContainer.classList.add('right-side');
@@ -287,7 +330,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             this.labelContainer = document.createElement('div');
             this.labelContainer.style.marginBottom = '8px';
             this.labelContainer.style.color = '#fff';
-            this.labelContainer.style.fontSize = '14px';
+            this.labelContainer.style.fontSize = '16px';
             this.labelContainer.style.fontWeight = '500';
             this.barContainer.appendChild(this.labelContainer);
 
@@ -342,8 +385,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             this.state.style.backgroundColor = '#333333';
             this.state.style.transition = 'all 0.3s cubic-bezier(.25,.8,.25,1)';
             this.state.style.marginTop = '5px';
-            this.state.style.fontFamily = 'Roboto, sans-serif';
-            this.state.style.fontSize = '14px';
+            this.state.style.fontSize = '16px';
 
             // 아이콘 컨테이너
             this.iconContainer = document.createElement('span');
@@ -352,7 +394,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             // 텍스트 컨테이너
             this.textContainer = document.createElement('span');
-            this.textContainer.style.fontWeight = '500';
+            this.textContainer.style.fontWeight = '400';
+            this.textContainer.style.fontFamily = 'Noto Sans KR, serif';
+            this.textContainer.style.marginTop = '-3px';
 
             this.state.appendChild(this.iconContainer);
             this.state.appendChild(this.textContainer);
@@ -405,15 +449,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             this.container.style.padding = '12px';
             this.container.style.marginTop = '10px';
             this.container.style.borderRadius = '6px';
-            this.container.style.fontFamily = 'Consolas, monospace';
-            this.container.style.fontSize = '14px';
+            this.container.style.fontSize = '16px';
             this.container.style.border = '1px solid #333';
             this.container.style.position = 'relative'; // 상대 위치 설정
             conversations.appendChild(this.container);
 
             // 중지 버튼 생성
             this.stopButton = document.createElement('button');
-            // this.stopButton.classList.add('mdc-button');
             this.stopButton.style.position = 'absolute';
             this.stopButton.style.right = '10px';
             this.stopButton.style.bottom = '10px';
@@ -429,7 +471,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             this.stopButton.style.fontSize = '12px';
             this.stopButton.innerHTML = `
                 <span class="material-icons" style="font-size: 20px;">stop</span>
-                <span>중지</span>
+                <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">중지</span>
             `;
             this.container.appendChild(this.stopButton);
             this.stopButton.addEventListener('click', async () => {
@@ -475,10 +517,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             const streamBox = document.createElement('div');
             streamBox.classList.add('terminal-stream-box');
             streamBox.textContent = stream;
-            streamBox.style.padding = '3px';
+            streamBox.style.padding = '2px';
             streamBox.style.paddingLeft = '10px';
-            streamBox.style.marginBottom = '1.5px';
-            streamBox.style.marginTop = '1.5px';
+            streamBox.style.marginBottom = '1px';
+            streamBox.style.marginTop = '1px';
+            // streamBox.style.marginBottom = '0px';
+            // streamBox.style.marginTop = '0px';
+            streamBox.style.fontFamily = 'intelone-mono-font-family-regular';
             // streamBox.style.wordBreak = 'break-all';
             switch (state) {
                 case 'stdout':
@@ -495,6 +540,11 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
 
             this.container.appendChild(streamBox);
+            // streamBox.style.opacity = '0';
+            // streamBox.style.transition = 'opacity 0.15s ease';
+            // window.requestAnimationFrame(() => {
+            //     streamBox.style.opacity = '1';
+            // });
 
             // streamBox 하위의 모든 요소 브레이크 올.
             // streamBox.style.wordBreak = 'break-all';
@@ -511,23 +561,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     function getOutputFolderPath() {
         return outputPathDisplay[Symbol.for('path')] || '';
     }
-    function getDistanceToBottom() {
-        const body = document.body;
-        const html = document.documentElement;
-
-        const maxScroll = Math.max(
-            body.scrollHeight,
-            body.offsetHeight,
-            html.clientHeight,
-            html.scrollHeight,
-            html.offsetHeight
-        );
-
-        const currentScroll = window.scrollY + window.innerHeight;
-        const distanceToBottom = maxScroll - currentScroll;
-        return distanceToBottom;
-    }
     function scrollBodyToBottomSmoothly(animation = true) {
+        if (!isBottom) return;
         const body = missionSolvingContainer;
         const html = document.documentElement;
 
@@ -557,52 +592,52 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         },
         async out_stream(body) {
-            const distanceToBottom = getDistanceToBottom();
+
             const { str, type } = JSON.parse(body.stream);
             const id = body.executionId;
             str.split('\n').forEach(line => {
                 if (line.trim() === '') return;
                 terminalStreamBoxes[id].addStream(line, type);
             });
-            if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly(false);
+            scrollBodyToBottomSmoothly(false);
         },
         async errnotify(body) {
             // console.log(body);
             return 1112;
         },
         async percent_bar(body) {
-            const distanceToBottom = getDistanceToBottom();
+
             let id = randomId();
             let waitTime = body.total;
             percentBar[id] = new PercentBar({ template: body.template, total: waitTime });
-            if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
+            scrollBodyToBottomSmoothly();
             return id;
         },
         async out_print(body) {
-            const distanceToBottom = getDistanceToBottom();
+
             const message = body.data;// body.message[0];
             const mode = body.mode;
             const inputBox = new ContentBox();
             const resultContainer = inputBox.getContainer();
             resultContainer.textContent = `${message}`;
-            if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
+            scrollBodyToBottomSmoothly();
         },
         async out_state(body) {
-            const distanceToBottom = getDistanceToBottom();
+
 
             // console.log(10, body);
             // displayState = new DisplayState();
             let id = randomId();
             displayState[id] = new DisplayState();
             displayState[id].setState({ text: body.stateLabel, state: 'loading' });
-            if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
+            scrollBodyToBottomSmoothly();
             // setTimeout(() => displayState[id].setState({ text: '완료되었습니다', state: 'done' }), 2000);
             // setTimeout(() => displayState[id].setState({ text: '실패했습니다', state: 'fail' }), 4000);
             return id;
             // return 1112;
         },
         async await_prompt(body) {
-            const distanceToBottom = getDistanceToBottom();
+
             let _resolve = null;
             let _reject = null;
             let promise = new Promise((resolve, reject) => {
@@ -629,11 +664,11 @@ window.addEventListener('DOMContentLoaded', async () => {
                 return codeRequiredConfirm.includes(actname);
             }
             function handleCodeConfirmation(editor, destroy = false) {
-                const distanceToBottom = getDistanceToBottom();
+
                 const executionId = randomId();
                 terminalStreamBoxes[executionId] = new TerminalStreamBox();
                 const sourceCode = editor.getValue();
-                if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
+                scrollBodyToBottomSmoothly();
                 _resolve({ confirmedCode: sourceCode, executionId });
                 if (destroy) {
                     // console.log(editor);
@@ -691,7 +726,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     if (currentConfig['autoCodeExecution']) runButton.click();
                 }
             }
-            if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
+            scrollBodyToBottomSmoothly();
             return promise;
         },
         destroypercentbar(body) {
@@ -720,17 +755,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         async succeed(body) {
             let id = body.labelId;
             if (!displayState[id]) return;
-            const distanceToBottom = getDistanceToBottom();
+
             displayState[id].setState({ text: body.stateLabel, state: 'done' });
-            if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
+            scrollBodyToBottomSmoothly();
             delete displayState[id];
         },
         async fail(body) {
             let id = body.labelId;
             if (!displayState[id]) return;
-            const distanceToBottom = getDistanceToBottom();
+
             displayState[id].setState({ text: body.stateLabel, state: 'fail' });
-            if (distanceToBottom < BOTTOM_DISTANCE) scrollBodyToBottomSmoothly();
+            scrollBodyToBottomSmoothly();
             delete displayState[id];
         },
     });
@@ -740,67 +775,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
 
-
-    //---------------------------------------
-    // const fileElement = document.createElement('input');
-    // fileElement.type = 'file';
-    // fileElement.webkitdirectory = true; // 폴더 선택 활성화
-    // fileElement.style.display = 'none';
-    // rightSideContainer.appendChild(fileElement);
-
-    // const selectFolderButton = document.createElement('button');
-    // selectFolderButton.classList.add('mdc-button', 'mdc-button--raised');
-    // selectFolderButton.style.backgroundColor = '#808080';
-    // selectFolderButton.style.color = '#ffffff';
-    // selectFolderButton.innerHTML = `
-    //     <span class="mdc-button__ripple"></span>
-    //     <span class="material-icons mdc-button__icon">folder</span>
-    //     <span class="mdc-button__label">폴더 선택</span>
-    // `;
-    // rightSideContainer.appendChild(selectFolderButton);
-
-    // selectFolderButton.addEventListener('click', () => {
-    //     fileElement.click();
-    // });
-
-    // fileElement.addEventListener('change', (e) => {
-    //     const files = e.target.files;
-
-    //     // 첫 번째 파일이 있는 경우 해당 파일의 경로에서 폴더 경로 추출
-    //     if (files.length > 0) {
-    //         let folderPath = files[0].path.split('/');
-    //         folderPath.pop();
-    //         folderPath = folderPath.join('/');
-
-    //         console.log('선택된 폴더:', folderPath);
-    //         console.log('폴더 내 파일 수:', files.length);
-
-    //         Array.from(files).forEach(file => {
-    //             console.log('파일:', file.webkitRelativePath);
-    //         });
-    //     } else {
-    //         // 빈 폴더인 경우 fileElement의 value에서 경로 추출
-    //         const folderPath = fileElement.value;
-    //         console.log('선택된 폴더:', folderPath);
-    //         console.log('폴더가 비어있습니다');
-    //     }
-    // });
-    // async function pickFolder() {
-    //     try {
-    //         // 폴더 선택 다이얼로그를 띄워 폴더 핸들을 얻음
-    //         const directoryHandle = await window.showDirectoryPicker();
-    //         console.log('선택한 폴더 핸들:', directoryHandle);
-
-    //         // 폴더 내의 항목들을 열거(빈 폴더인 경우 아무 항목도 없을 수 있음)
-    //         for await (const entry of directoryHandle.values()) {
-    //             console.log('항목:', entry.kind, entry.name);
-    //         }
-
-    //         console.log('Full Path:', directoryHandle.name);
-    //     } catch (err) {
-    //         console.error('폴더 선택 중 오류 발생:', err);
-    //     }
-    // }
 
     function setFolderPath(path, displayElement) {
         displayElement[Symbol.for('path')] = '';
@@ -826,7 +800,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     selectFolderButton.style.color = 'rgba(255,255,255,0.7)';
     selectFolderButton.innerHTML = `
         <span class="material-icons mdc-button__icon">folder</span>
-        <span class="mdc-button__label">입력 폴더</span>
+        <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">입력폴더</span>
     `;
     selectFolderButton.style.flexShrink = '0'; // 버튼 크기 고정
 
@@ -834,11 +808,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const pathDisplay = document.createElement('input');
     pathDisplay.placeholder = '폴더의 절대경로를 입력해주세요';
     pathDisplay.style.padding = '9px';
-    pathDisplay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    pathDisplay.style.backgroundColor = 'rgba(0,0,0,0.3)';
     pathDisplay.style.borderRadius = '4px';
     pathDisplay.style.color = '#888';
-    pathDisplay.style.fontSize = '14px';
-    pathDisplay.style.fontFamily = 'monospace';
+    pathDisplay.style.fontSize = '16px';
     pathDisplay.style.flexGrow = '1';
     pathDisplay.style.overflow = 'hidden';
     pathDisplay.style.textOverflow = 'ellipsis';
@@ -850,7 +823,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 컨테이너에 요소들 추가
     folderSelectContainer.appendChild(selectFolderButton);
     folderSelectContainer.appendChild(pathDisplay);
-    missionSolvingContainer.appendChild(folderSelectContainer);
+    parentContainer.appendChild(folderSelectContainer);
 
     selectFolderButton.addEventListener('click', async () => {
         let task = reqAPI('selector_folder', {});
@@ -876,7 +849,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     selectOutputButton.style.color = '#ffffff';
     selectOutputButton.innerHTML = `
         <span class="material-icons mdc-button__icon">folder</span>
-        <span class="mdc-button__label">출력 폴더</span>
+        <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">출력폴더</span>
     `;
     selectOutputButton.style.flexShrink = '0';
 
@@ -886,8 +859,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     outputPathDisplay.style.backgroundColor = 'rgba(255,255,255,0.5)';
     outputPathDisplay.style.borderRadius = '4px';
     outputPathDisplay.style.color = '#666';
-    outputPathDisplay.style.fontSize = '14px';
-    outputPathDisplay.style.fontFamily = 'monospace';
+    outputPathDisplay.style.fontSize = '16px';
     outputPathDisplay.style.flexGrow = '1';
     outputPathDisplay.style.overflow = 'hidden';
     outputPathDisplay.style.textOverflow = 'ellipsis';
@@ -897,7 +869,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 컨테이너에 요소들 추가
     outputFolderContainer.appendChild(selectOutputButton);
     outputFolderContainer.appendChild(outputPathDisplay);
-    missionSolvingContainer.appendChild(outputFolderContainer);
+    parentContainer.appendChild(outputFolderContainer);
 
     selectOutputButton.addEventListener('click', async () => {
         let task = reqAPI('selector_folder', {});
@@ -911,7 +883,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
     const promptInput = new PromptInput();
-    missionSolvingContainer.appendChild(promptInput.container);
+    parentContainer.appendChild(promptInput.container);
     promptInput.setFocus();
     promptInput.setValue('3,4를 더하고 거기서 2를 빼고 그리고 3을 곱하고 거기서 5나눠. 각 단계를 1초마다 출력. 파이썬코드로 만들어줘.');
     promptInput.setValue('현재 폴더의 목록을 확인해줘. 무엇이 있는지 확인하고 그 목록을 list.txt 파일로 만들어줘.');
@@ -962,7 +934,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         abortButton.style.zIndex = '9999';
         abortButton.innerHTML = `
             <span class="material-icons" style="font-size: 20px;">stop</span>
-            <span>미션중지</span>
+            <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">미션중지</span>
         `;
         document.body.appendChild(abortButton);
 
@@ -1002,7 +974,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
     const conversations = document.createElement('div');
-    missionSolvingContainer.appendChild(conversations);
+    parentContainer.appendChild(conversations);
 
 
 
@@ -1052,8 +1024,20 @@ window.addEventListener('DOMContentLoaded', async () => {
                 "Shift-Enter": "newlineAndIndentContinueMarkdownList",
                 // "Ctrl-Enter": "newlineAndIndentContinueMarkdownList",
             },
-            readOnly: readOnly
+            readOnly: readOnly,
+            // 폰트 패밀리 설정 추가
+            // styleActiveLine: true,
+            // styleSelectedText: true,
+            // CodeMirror의 기본 스타일링 옵션으로 폰트 설정
+            // theme: "monokai intelone-mono"  // 기존 monokai 테마에 폰트 클래스 추가
         });
+
+        // editor.getWrapperElement().style.fontFamily = 'intelone-mono-font-family-regular';
+        // [...editor.getWrapperElement().querySelectorAll('*')].forEach(element => {
+        //     element.style.fontFamily = 'intelone-mono-font-family-regular';
+        // })
+
+
 
         if (!lineNumbers) {
             // container.style.paddingLeft = '25px';
@@ -1109,7 +1093,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         runButton.style.color = '#ffffff'; // 흰색 텍스트
         runButton.innerHTML = `
             <span class="material-icons mdc-button__icon" style="font-size:20px;">play_arrow</span>
-            <span class="mdc-button__label">실행</span>
+            <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">실행</span>
         `;
         buttonContainer.appendChild(runButton);
         // new mdc.ripple.MDCRipple(runButton);
@@ -1352,7 +1336,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             label.style.width = '200px';
             label.style.flexShrink = '0';
             label.style.color = '#ffffff';
-            label.style.fontSize = '14px';
+            label.style.fontSize = '16px';
 
             const inputContainer = document.createElement('div');
             inputContainer.style.flex = '1';
@@ -1371,7 +1355,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             select.style.border = '1px solid #3A3A3A';
             select.style.borderRadius = '4px';
             select.style.color = '#E0E0E0';
-            select.style.fontSize = '14px';
+            select.style.fontSize = '16px';
             select.style.outline = 'none';
             // 포커스 효과 제거
             select.style.transition = 'background-color 0.2s';
@@ -1390,7 +1374,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             input.style.border = '1px solid #3A3A3A';
             input.style.borderRadius = '4px';
             input.style.color = '#E0E0E0';
-            input.style.fontSize = '14px';
+            input.style.fontSize = '16px';
             input.style.outline = 'none';
             // 포커스 효과 제거
             input.style.transition = 'background-color 0.2s';
@@ -1653,7 +1637,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // 설명 추가
         const autoCodeDescription = document.createElement('div');
-        autoCodeDescription.style.fontSize = '12px';
+        autoCodeDescription.style.fontSize = '14px';
         autoCodeDescription.style.color = 'rgba(255, 255, 255, 0.5)';
         autoCodeDescription.textContent = '체크하면 코드가 자동으로 실행됩니다. 체크하지 않으면 수동으로 실행해야 합니다.';
         autoCodeDescription.style.flex = '1';
@@ -1677,7 +1661,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // 설명 추가
         const planEditDescription = document.createElement('div');
-        planEditDescription.style.fontSize = '12px';
+        planEditDescription.style.fontSize = '14px';
         planEditDescription.style.color = 'rgba(255, 255, 255, 0.5)';
         planEditDescription.textContent = '체크하면 AI가 판단한 계획을 수정할 수 있습니다.';
         planEditDescription.style.flex = '1';
@@ -1854,7 +1838,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         clearDataButton.style.border = 'none';
         clearDataButton.style.borderRadius = '4px';
         clearDataButton.style.cursor = 'pointer';
-        clearDataButton.style.fontSize = '14px';
+        clearDataButton.style.fontSize = '16px';
         clearDataButton.style.fontWeight = '500';
 
         // Output Data 폴더 열기 버튼
@@ -1867,7 +1851,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         openFolderButton.style.border = 'none';
         openFolderButton.style.borderRadius = '4px';
         openFolderButton.style.cursor = 'pointer';
-        openFolderButton.style.fontSize = '14px';
+        openFolderButton.style.fontSize = '16px';
         openFolderButton.style.fontWeight = '500';
 
         // 호버 효과
@@ -1966,4 +1950,26 @@ window.addEventListener('DOMContentLoaded', async () => {
     //     let resultPath = await task.promise;
     //     console.log(resultPath);
     // }
+    for (let i = 0; i < 0; i++) {
+        const element = document.createElement('div');
+        element.style.width = '100px';
+        element.style.height = '100px';
+        element.style.backgroundColor = 'red';
+        parentContainer.appendChild(element);
+        //missionSolvingContainer
+    }
+
+    missionSolvingContainer.dispatchEvent(new CustomEvent('scroll', { detail: {} }));
+    // console.log(isBottom);
+
 });
+
+
+
+
+
+
+
+
+
+

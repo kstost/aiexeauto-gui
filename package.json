@@ -1,6 +1,6 @@
 {
   "name": "aiexeauto",
-  "version": "1.0.48",
+  "version": "1.0.49",
   "main": "aiexeauto.js",
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
   },
   "keywords": [],
   "author": {
-    "name": "Kim seungtae", 
+    "name": "Kim seungtae",
     "email": "monogatree@gmail.com",
     "url": "https://www.youtube.com/@%EC%BD%94%EB%93%9C%EA%B9%8E%EB%8A%94%EB%85%B8%EC%9D%B8"
   },
