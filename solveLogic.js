@@ -34,6 +34,7 @@ export function getSpinners() {
 }
 
 export const useTools = {
+    apt_install: false,
     remove_directory_recursively: false,
     rename_file_or_directory: false,
     remove_file: false,
@@ -57,6 +58,7 @@ const prompts = {
                 '```python\n(..code..)\n```',
             ].filter(line => line.trim() !== '[REMOVE]').join('\n')
         }
+        const REMOVED = '[REMOVE]';
         return [
             '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
             '',
@@ -77,46 +79,41 @@ const prompts = {
             '      #### INSTRUCTION',
             '      - 디렉토리의 경로를 제공해주세요',
             '   ',
-            useTools.read_url ? '   ### read_url' : '',
-            useTools.read_url ? '   - URL의 내용을 읽어옵니다.' : '',
-            useTools.read_url ? '      #### INSTRUCTION' : '',
-            useTools.read_url ? '      - URL을 제공해주세요' : '',
-            useTools.read_url ? '   ' : '',
-            useTools.rename_file_or_directory ? '   ### rename_file_or_directory' : '',
-            useTools.rename_file_or_directory ? '   - 파일 또는 디렉토리의 이름을 변경합니다.' : '',
-            useTools.rename_file_or_directory ? '      #### INSTRUCTION' : '',
-            useTools.rename_file_or_directory ? '      - 변경할 파일 또는 디렉토리의 경로와 변경할 이름을 제공해주세요' : '',
-            useTools.rename_file_or_directory ? '   ' : '',
-            useTools.remove_file ? '   ### remove_file' : '',
-            useTools.remove_file ? '   - 파일을 삭제합니다.' : '',
-            useTools.remove_file ? '      #### INSTRUCTION' : '',
-            useTools.remove_file ? '      - 삭제할 파일의 경로를 제공해주세요' : '',
-            useTools.remove_file ? '   ' : '',
-            useTools.remove_directory_recursively ? '   ### remove_directory_recursively' : '',
-            useTools.remove_directory_recursively ? '   - 디렉토리를 재귀적으로 삭제합니다.' : '',
-            useTools.remove_directory_recursively ? '      #### INSTRUCTION' : '',
-            useTools.remove_directory_recursively ? '      - 삭제할 디렉토리의 경로를 제공해주세요' : '',
-            useTools.remove_directory_recursively ? '   ' : '',
-            // '   ### cdnjs_finder',
-            // '   - CDN 라이브러리 URL을 찾습니다.',
-            // '      #### INSTRUCTION',
-            // '      - 패키지 이름을 제공해주세요',
-            // '   ',
-            useDocker ? '   ### apt_install' : '[REMOVE]',
-            useDocker ? '   - apt 패키지를 설치합니다.' : '[REMOVE]',
-            useDocker ? '      #### INSTRUCTION' : '[REMOVE]',
-            useDocker ? '      - 설치할 패키지 이름을 제공해주세요' : '[REMOVE]',
-            useDocker ? '   ' : '[REMOVE]',
-            useTools.which_command ? '   ### which_command' : '[REMOVE]',
-            useTools.which_command ? '   - 쉘 명령어가 존재하는지 확인합니다.' : '[REMOVE]',
-            useTools.which_command ? '      #### INSTRUCTION' : '[REMOVE]',
-            useTools.which_command ? '      - which로 확인할 쉘 명령어를 제공해주세요' : '[REMOVE]',
-            useTools.which_command ? '   ' : '[REMOVE]',
-            useTools.run_command ? '   ### run_command' : '[REMOVE]',
-            useTools.run_command ? '   - 쉘 명령어를 실행합니다.' : '[REMOVE]',
-            useTools.run_command ? '      #### INSTRUCTION' : '[REMOVE]',
-            useTools.run_command ? '      - 실행할 쉘 명령어를 제공해주세요' : '[REMOVE]',
-            useTools.run_command ? '   ' : '[REMOVE]',
+            useTools.read_url ? '   ### read_url' : REMOVED,
+            useTools.read_url ? '   - URL의 내용을 읽어옵니다.' : REMOVED,
+            useTools.read_url ? '      #### INSTRUCTION' : REMOVED,
+            useTools.read_url ? '      - URL을 제공해주세요' : REMOVED,
+            useTools.read_url ? '   ' : REMOVED,
+            useTools.rename_file_or_directory ? '   ### rename_file_or_directory' : REMOVED,
+            useTools.rename_file_or_directory ? '   - 파일 또는 디렉토리의 이름을 변경합니다.' : REMOVED,
+            useTools.rename_file_or_directory ? '      #### INSTRUCTION' : REMOVED,
+            useTools.rename_file_or_directory ? '      - 변경할 파일 또는 디렉토리의 경로와 변경할 이름을 제공해주세요' : REMOVED,
+            useTools.rename_file_or_directory ? '   ' : REMOVED,
+            useTools.remove_file ? '   ### remove_file' : REMOVED,
+            useTools.remove_file ? '   - 파일을 삭제합니다.' : REMOVED,
+            useTools.remove_file ? '      #### INSTRUCTION' : REMOVED,
+            useTools.remove_file ? '      - 삭제할 파일의 경로를 제공해주세요' : REMOVED,
+            useTools.remove_file ? '   ' : REMOVED,
+            useTools.remove_directory_recursively ? '   ### remove_directory_recursively' : REMOVED,
+            useTools.remove_directory_recursively ? '   - 디렉토리를 재귀적으로 삭제합니다.' : REMOVED,
+            useTools.remove_directory_recursively ? '      #### INSTRUCTION' : REMOVED,
+            useTools.remove_directory_recursively ? '      - 삭제할 디렉토리의 경로를 제공해주세요' : REMOVED,
+            useTools.remove_directory_recursively ? '   ' : REMOVED,
+            useTools.apt_install && useDocker ? '   ### apt_install' : REMOVED,
+            useTools.apt_install && useDocker ? '   - apt 패키지를 설치합니다.' : REMOVED,
+            useTools.apt_install && useDocker ? '      #### INSTRUCTION' : REMOVED,
+            useTools.apt_install && useDocker ? '      - 설치할 패키지 이름을 제공해주세요' : REMOVED,
+            useTools.apt_install && useDocker ? '   ' : REMOVED,
+            useTools.which_command ? '   ### which_command' : REMOVED,
+            useTools.which_command ? '   - 쉘 명령어가 존재하는지 확인합니다.' : REMOVED,
+            useTools.which_command ? '      #### INSTRUCTION' : REMOVED,
+            useTools.which_command ? '      - which로 확인할 쉘 명령어를 제공해주세요' : REMOVED,
+            useTools.which_command ? '   ' : REMOVED,
+            useTools.run_command ? '   ### run_command' : REMOVED,
+            useTools.run_command ? '   - 쉘 명령어를 실행합니다.' : REMOVED,
+            useTools.run_command ? '      #### INSTRUCTION' : REMOVED,
+            useTools.run_command ? '      - 실행할 쉘 명령어를 제공해주세요' : REMOVED,
+            useTools.run_command ? '   ' : REMOVED,
             '   ',
             `${await (async () => {
                 const toolList = await getToolList();
@@ -330,6 +327,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     );
                     if (whatdidwedo) whatdidwedo = whatdidwedo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
                     if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
+                    processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
                 }
                 whattodo = await chatCompletion(
                     {
@@ -350,6 +348,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 } else {
                     await out_print({ data: whattodo, mode: 'whattodo' });
                 }
+                processTransactions[processTransactions.length - 1].whattodo = whattodo;
 
                 spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
                 const systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
@@ -553,7 +552,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 await out_print({ data: '❌ 실행결과 출력된 내용이 존재하지 않습니다', mode: 'outputPreview' });
             }
 
-            await pushProcessTransactions({ class: 'output', data: result.output });
+
+            const outputData = { class: 'output', data: result.output };
+            await pushProcessTransactions(outputData);
 
             // if (false) {
             // const review = await retriver.retrieve(taskId, '지금까지 수행한 모든 작업을 회고하세요.');

@@ -133,10 +133,16 @@ export async function loadConfiguration() {
     return config_;
 }
 export async function getToolList() {
+    const llm = await getConfiguration('llm');
     const useDocker = await getConfiguration('useDocker');
     const container = useDocker ? 'docker' : 'localenv';
     const toolList = await fs.promises.readdir(getCodePath(`prompt_tools/${container}`));
-    return toolList.filter(tool => tool.endsWith('.toolspec.json')).map(tool => tool.replace(/\.toolspec\.json$/, ''));
+    let candidateList;
+    candidateList = toolList.filter(tool => tool.endsWith('.toolspec.json')).map(tool => tool.replace(/\.toolspec\.json$/, ''));
+    if (llm === 'gemini') {
+        candidateList = candidateList.filter(tool => tool.includes('_python_'));
+    }
+    return candidateList;
 }
 export async function getToolData(toolName) {
     const useDocker = await getConfiguration('useDocker');

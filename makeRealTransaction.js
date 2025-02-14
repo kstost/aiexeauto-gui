@@ -6,6 +6,8 @@ export function makeRealTransaction(processTransactions, multiLineMission, type,
         const role = processTransactions[i].class === 'output' ? 'user' : 'assistant';
         const code = processTransactions[i].class === 'code' ? processTransactions[i].data : null;
         let output = processTransactions[i].class === 'output' ? processTransactions[i].data : null;
+        let whattodo = processTransactions[i].whattodo;
+        let whatdidwedo = processTransactions[i].whatdidwedo;
         if (output) {
             output = omitMiddlePart(output);
             output = output.trim();
@@ -19,17 +21,35 @@ export function makeRealTransaction(processTransactions, multiLineMission, type,
                 // `$ node code.js`,
                 output,
                 '```',
+                '',
+                whatdidwedo ? 'WHAT DID WE DO:' : '',
+                whatdidwedo ? whatdidwedo : '',
+                '',
+                'WHAT TO DO:',
+                whattodo,
             ] : [
                 'NO OUTPUT. THE EXECUTION COMPLETED WITHOUT ANY OUTPUT.',
                 '```shell',
                 // `$ node code.js`,
                 // `$`,
                 '```',
+                '',
+                whatdidwedo ? 'WHAT DID WE DO:' : '',
+                whatdidwedo ? whatdidwedo : '',
+                '',
+                'WHAT TO DO:',
+                whattodo,
             ]) : [
                 'CODE TO EXECUTE:',
                 '```',
                 code,
                 '```',
+                // '',
+                // whatdidwedo ? 'WHAT DID WE DO:' : '',
+                // whatdidwedo ? whatdidwedo : '',
+                // '',
+                // 'WHAT TO DO:',
+                // whattodo,
             ]).join('\n'),
         };
         realTransactions.push(data);

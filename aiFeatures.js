@@ -28,7 +28,57 @@ function extractWaitTime(errorMessage) {
     }
     // return null;
 }
-
+export function unifiedStructure(data) {
+    const gemini = !!data.system_instruction;
+    const claude = !!data.system;
+    function getModel() {
+        if (gemini) {
+            return 'gemini'
+        } else if (claude) {
+            return data.model
+        } else {
+            return data.model
+        }
+    }
+    function getTool() {
+        if (gemini) {
+            return { tools: data.tools, tool_config: data.tool_config }
+        } else if (claude) {
+            return { tools: data.tools, tool_config: data.tool_choice }
+        } else {
+            return { tools: data.tools }
+        }
+    }
+    function getSystemPrompt() {
+        if (gemini) {
+            return data.system_instruction.parts[0].text
+        } else if (claude) {
+            return data.system;
+        } else {
+            return data.messages.filter(m => m.role === 'system')[0].content;
+        }
+    }
+    function getMessages() {
+        if (gemini) {
+            return data.contents.map(talk => {
+                return {
+                    role: talk.role === 'user' ? 'user' : 'assistant',
+                    content: talk.parts[0].text
+                };
+            });
+        } else if (claude) {
+            return data.messages;
+        } else {
+            return data.messages.filter(m => m.role !== 'system');
+        }
+    }
+    return {
+        model: getModel(),
+        tool: getTool(),
+        systemPrompt: getSystemPrompt(),
+        messages: getMessages()
+    }
+}
 async function leaveLog({ callMode, data }) {
     const trackLog = await getConfiguration('trackLog');
     if (!trackLog) return;
@@ -47,38 +97,121 @@ async function leaveLog({ callMode, data }) {
         }
     } else {
         try {
-            if (true) {
-                const aiLogFolder = getAppPath('logs');
-                if (!fs.existsSync(aiLogFolder)) fs.mkdirSync(aiLogFolder);
-                const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
+            const aiLogFolder = getAppPath('logs_txt');
+            if (!fs.existsSync(aiLogFolder)) fs.mkdirSync(aiLogFolder);
+            const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
+            if (!data.resultText) {
                 data = JSON.parse(JSON.stringify(data));
                 data.callMode = callMode;
-                await writeEnsuredFile(`${aiLogFolder}/${date}.json`, JSON.stringify(data, undefined, 3));
-            }
-            if (true) {
-                const aiLogFolder = getAppPath('logs.txt');
-                if (!fs.existsSync(aiLogFolder)) fs.mkdirSync(aiLogFolder);
-                const date = new Date().toISOString().replace(/[:.]/g, '-') + '-' + Date.now();
-                data = JSON.parse(JSON.stringify(data));
-                data.callMode = callMode;
-                if (data.messages || data.contents) {
-                    let contentToLeave = `## callMode: ${callMode}\n\n`;
-                    if (data.messages) {
-                        for (let i = 0; i < data.messages.length; i++) {
-                            contentToLeave += `${'-'.repeat(120)}\n## ${data.messages[i].role} ##\n${data.messages[i].content}\n\n`;
+                //---------
+                let unified = unifiedStructure(data);
+                let contentToLeave = `## callMode: ${callMode}\n\n`;
+                contentToLeave += `${'-'.repeat(120)}\n## system ##\n${unified.systemPrompt}\n\n`;
+                for (let i = 0; i < unified.messages.length; i++) {
+                    contentToLeave += `${'-'.repeat(120)}\n## ${unified.messages[i].role} ##\n${unified.messages[i].content}\n\n`;
+                }
+                if (false) {
+                    contentToLeave += '\n\n';
+                    contentToLeave += '----------------\n';
+                    contentToLeave += JSON.stringify(data, undefined, 3);
+                    contentToLeave += '\n\n';
+                    contentToLeave += '----------------\n';
+                    contentToLeave += JSON.stringify(unified, undefined, 3);
+                }
+                await writeEnsuredFile(`${aiLogFolder}/${date}_REQ_${unified.model}_${callMode}.txt`, contentToLeave);
+            } else {
+                let contentToLeave = '';
+                let parsed = JSON.parse(data.resultText);
+                let llm;
+                if (parsed?.candidates) llm = 'gemini';
+                else if (parsed?.type === 'message' && parsed?.role === 'assistant') llm = 'claude';
+                else llm = '';
+                // "type": "message",
+                // "role": "assistant",
+
+                if (llm === 'gemini') {
+                    let parts = parsed?.candidates?.[0]?.content?.parts;
+                    for (let i = 0; i < parts.length; i++) {
+                        if (!parts[i]) continue;
+                        contentToLeave += '-------------------\n';
+                        contentToLeave += `[[type]]: ${parts[i].functionCall ? 'functionCall' : 'text'}\n`;
+                        contentToLeave += '-------------------\n';
+                        if (parts[i].functionCall) {
+                            let name = parts[i].functionCall?.name
+                            let args = parts[i].functionCall?.args
+                            contentToLeave += `[[name]]: ${name}\n`;
+                            Object.keys(args).forEach(key => {
+                                contentToLeave += ` - key: "${key}"\n${args[key]}\n`;
+                            });
                         }
-                    } else if (data.contents) {
-                        if (data.system_instruction) {
-                            contentToLeave += `${'-'.repeat(120)}\n## system ##\n${data.system_instruction.parts[0].text}\n\n`;
-                        }
-                        for (let i = 0; i < data.contents.length; i++) {
-                            contentToLeave += `${'-'.repeat(120)}\n## ${data.contents[i].role} ##\n${data.contents[i].parts[0].text}\n\n`;
+                        if (parts[i].text) {
+                            contentToLeave += `${parts[i].text}\n`;
                         }
                     }
-                    await writeEnsuredFile(`${aiLogFolder}/${date}.txt`, contentToLeave);
+                } else if (llm === 'claude') {
+                    let parts = [parsed?.content?.[0]];//?.content?.parts;
+                    for (let i = 0; i < parts.length; i++) {
+                        if (!parts[i]) continue;
+                        const type = parts[i].type; // tool_use, text
+                        const text = parts[i].text;
+                        const name = parts[i].name;
+                        const input = parts[i].input;
+                        contentToLeave += '-------------------\n';
+                        contentToLeave += `[[type]]: ${type}\n`;
+                        contentToLeave += '-------------------\n';
+                        if (type === 'tool_use') {
+                            contentToLeave += `[[name]]: ${name}\n`;
+                            Object.keys(input).forEach(key => {
+                                contentToLeave += ` - key: "${key}"\n${input[key]}\n`;
+                            });
+                        }
+                        if (type === 'text') {
+                            contentToLeave += `${text}\n`;
+                        }
+                    }
+                    // contentToLeave = `\n\n\n------------------\n${JSON.stringify(JSON.parse(data.resultText), undefined, 3)}`;
                 } else {
-                    await writeEnsuredFile(`${aiLogFolder}/${date}.response.txt`, data.resultText);
+                    let parts = [parsed?.choices?.[0]?.message];//?.content?.parts;
+                    for (let i = 0; i < parts.length; i++) {
+                        if (!parts[i]) continue;
+                        const name = parts[i].tool_calls?.[0]?.function?.name;
+                        const type = name ? 'tool_calls' : 'text';
+                        let input = parts[i].tool_calls?.[0]?.function?.arguments;
+                        const text = parts[i].content;
+                        try {
+                            input = JSON.parse(input);
+                        } catch { }
+                        contentToLeave += '-------------------\n';
+                        contentToLeave += `[[type]]: ${type}\n`;
+                        contentToLeave += '-------------------\n';
+                        if (type === 'tool_calls') {
+                            contentToLeave += `[[name]]: ${name}\n`;
+                            if (input) {
+                                if (input.constructor === Object) {
+                                    Object.keys(input).forEach(key => {
+                                        contentToLeave += ` - key: "${key}"\n${input[key]}\n`;
+                                    });
+                                } else {
+                                    contentToLeave += `** input is not Object **`;
+                                }
+                            } else {
+                                contentToLeave += `** input is undefined or null **`;
+                            }
+                        }
+                        if (type === 'text') {
+                            contentToLeave += `${text}\n`;
+                        }
+                    }
                 }
+                // if (parsed.type === 'tool_use') {
+                //     contentToLeave += `## tool_use ##\n${parsed.name}\n${JSON.stringify(parsed.input, undefined, 3)}\n\n`;
+                // } else if (parsed.type === 'tool_result') {
+                //     contentToLeave += `## tool_result ##\n${parsed.name}\n${JSON.stringify(parsed.input, undefined, 3)}\n\n`;
+                // }
+                // if(data.resultText)
+                contentToLeave += `\n\n\n------------------\n${JSON.stringify(JSON.parse(data.resultText), undefined, 3)}`;
+                await writeEnsuredFile(`${aiLogFolder}/${date}_RES_${callMode}.txt`, contentToLeave);
+                if (false) await writeEnsuredFile(`${aiLogFolder}/${date}_RES_${callMode}.json`, JSON.stringify(JSON.parse(data.resultText), undefined, 3));
             }
         } catch { }
     }
@@ -198,7 +331,7 @@ function langParser(text, callMode) {
                         return false; // 문법 오류
                     }
                 }
-                if (isValidJavaScriptUsingNewFunction(code)) {  
+                if (2 < Math.random() && isValidJavaScriptUsingNewFunction(code)) {
                     toolCall.name = 'generate_nodejs_code';
                     toolCall.args = {
                         nodejs_code: code,
@@ -337,7 +470,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     "description": "Remove a directory recursively.",
                     "input_schema": convertJsonToResponseFormat({ directory_path: "" }, { directory_path: "directory path to remove recursively, e.g, ./program" }).json_schema.schema
                 } : null,
-                useDocker ? {
+                useTools.apt_install && useDocker ? {
                     "name": "apt_install",
                     "description": "Install a package using apt.",
                     "input_schema": convertJsonToResponseFormat({ package_name: "" }, { package_name: "package name to install, e.g, ffmpeg" }).json_schema.schema
@@ -369,6 +502,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
         const requestAI = async (llm, callMode, data, url, headers) => {
             let toolNameForce = ''; // 페이로드에 tool을 지정해줬음에도 무시해버리는 경우가 있다. 그런경우는 toolNameForce에 지정해주면 지정해준 툴을 사용할 확률이 올라감.
             let forRetry = 0;
+            let exponentialBackoffCount = 1;
             while (true) {
                 if (llm === 'gemini' && malformed_function_called) {
                     console.log('mallformed fix');
@@ -475,7 +609,10 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                         await leaveLog({ callMode, data: { resultErrorSystem: result } });
                         let waitTime = Math.ceil(extractWaitTime(errorMessage));
                         if (!waitTime && waitTime !== 0) waitTime = 5;
-                        if (RESOURCE_EXHAUSTED) waitTime = 15;
+                        if (RESOURCE_EXHAUSTED) waitTime = 5;
+                        exponentialBackoffCount *= 1.5;
+                        waitTime *= exponentialBackoffCount;
+                        waitTime = Math.ceil(waitTime);
                         let percentBar = await percent_bar({ template: `${model}가 ${stateLabel} 처리 재시도 대기 {{second}}초 남음`, total: waitTime });
                         while (await percentBar.onetick()) {
                             await new Promise(resolve => setTimeout(resolve, 1000));
