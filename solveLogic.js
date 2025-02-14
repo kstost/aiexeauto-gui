@@ -15,7 +15,7 @@ import { getToolList, getToolData, getAppPath, getUseDocker } from './system.js'
 import fs from 'fs';
 import { getConfiguration } from './system.js';
 import { actDataParser } from './actDataParser.js';
-import { makeCodePrompt } from './makeCodePrompt.js';
+import { makeCodePrompt, indention } from './makeCodePrompt.js';
 import { makeRealTransaction } from './makeRealTransaction.js';
 import path from 'path';
 // getAppPath
@@ -24,6 +24,7 @@ import singleton from './singleton.js';
 import { validatePath } from './system.js';
 import { getAbsolutePath } from './system.js';
 import { validateAndCreatePaths } from './dataHandler.js';
+
 
 
 
@@ -51,24 +52,40 @@ const prompts = {
                 '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
                 '수행을 위한 파이썬 코드를 작성하시오.',
                 '',
-                `- MAIN MISSION: "${mission}"`,
-                `- SUB MISSION: "${whattodo}"`,
+                '<MainMission>',
+                indention(1, mission),
+                '</MainMission>',
                 '',
-                'OUTPUT FORMAT:',
-                '```python\n(..code..)\n```',
+                '<SubMission>',
+                indention(1, whattodo),
+                '</SubMission>',
+                '',
+                '<OutputFormat>',
+                '  ```python',
+                '  (..code..)',
+                '  ```',
+                '</OutputFormat>',
             ].filter(line => line.trim() !== '[REMOVE]').join('\n')
         }
         const REMOVED = '[REMOVE]';
         return [
             '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
             '',
-            `- MAIN MISSION: "${mission}"`,
-            `- SUB MISSION: "${whattodo}"`,
+            // `- MAIN MISSION: "${mission}"`,
+            // `- SUB MISSION: "${whattodo}"`,
+            '<MainMission>',
+            indention(1, mission),
+            '</MainMission>',
             '',
-            '## INSTRUCTION',
-            '- 작업 수행을 위한 도구는 다음과 같이 준비되어있으며 임무 수행에 가장 적합한 도구를 선택해서 수행하세요.',
+            '<SubMission>',
+            indention(1, whattodo),
+            '</SubMission>',
             '',
-            '## Tools',
+            '<Instructions>',
+            '  작업 수행을 위한 도구는 다음과 같이 준비되어있으며 임무 수행에 가장 적합한 도구를 선택해서 수행하세요.',
+            '</Instructions>',
+            '',
+            '<Tools>',
             '   ### read_file',
             '   - 파일의 내용을 읽어옵니다.',
             '      #### INSTRUCTION',
@@ -124,6 +141,7 @@ const prompts = {
                 }
                 return toolPrompts.join('\n\t\n');
             })()}`,
+            '</Tools>',
         ].filter(line => line.trim() !== '[REMOVE]').join('\n');
     },
     systemEvaluationPrompt: (mission, forGemini = false) => {
@@ -133,10 +151,13 @@ const prompts = {
                 '이미 검증을 위한 충분한 OUTPUT이 존재하고 미션이 완수되었다고 판단되면 ENDOFMISSION을 응답하고 그것이 아니라면 NOTSOLVED를 응답.',
                 '만약 해결할 수 없는 미션이라면 GIVEUPTHEMISSION을 응답하세요.',
                 '',
-                `- MISSION: "${mission}"`,
+                '<Mission>',
+                indention(1, mission),
+                '</Mission>',
                 '',
-                'OUTPUT FORMAT:',
+                '<OutputFormat>',
                 '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED or GIVEUPTHEMISSION", "reason": "Explain the reason for the verdict in korean of short length" }\n```',
+                '</OutputFormat>',
                 '',
             ].join('\n')
         }
@@ -145,7 +166,9 @@ const prompts = {
             '이미 검증을 위한 충분한 OUTPUT이 존재하고 미션이 완수되었다고 판단되면 ENDOFMISSION을 응답하고 그것이 아니라면 NOTSOLVED를 응답.',
             '만약 해결할 수 없는 미션이라면 GIVEUPTHEMISSION을 응답하세요.',
             '',
-            `- MISSION: "${mission}"`,
+            '<Mission>',
+            indention(1, mission),
+            '</Mission>',
             '',
         ].join('\n')
     },

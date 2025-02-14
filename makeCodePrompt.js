@@ -1,4 +1,12 @@
 import { omitMiddlePart } from './solveLogic.js';
+
+export function indention(num = 1, string = null) {
+    if (string) {
+        return string.split('\n').map(line => ' '.repeat(num * 2) + line).join('\n');
+    } else {
+        return ' '.repeat(num * 2);
+    }
+}
 export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationText, processTransactions) {
 
     let output = processTransactions.at(-1).data;
@@ -10,18 +18,18 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
         processTransactions.at(-1).data !== null ?
             (output ? [
                 // '---',
-                'OUTPUT OF THE EXECUTION:',
-                '```shell',
-                // `$ node code.js`,
-                output,
-                '```',
+                '<CodeExecutionOutput>',
+                // indention() + '```shell',
+                indention(1, output),
+                // indention() + '```',
+                '</CodeExecutionOutput>',
             ] : [
                 // '---',
-                'PROCESS ENDS WITHOUT ANY OUTPUTS:',
-                '```shell',
-                // `$ node code.js`,
-                // `$`,
-                '```',
+                '<CodeExecutionOutput>',
+                // indention() + '```shell',
+                // indention() + '```',
+                indention(1, '(no output)'),
+                '</CodeExecutionOutput>',
             ]) : []
     );
     if (type === 'coding') {
@@ -37,18 +45,22 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
                 '',
                 ...last,
                 '',
-                evaluationText ? '---' : '',
-                evaluationText ? 'EVALUATION OF THE PREVIOUS TASKS:' : '',
-                evaluationText ? `${evaluationText}` : '',
+                evaluationText ? '' : '',
+                evaluationText ? '<EvaluationOfPreviousTasks>' : '',
+                evaluationText ? indention(1, evaluationText) : '',
+                evaluationText ? '</EvaluationOfPreviousTasks>' : '',
                 '',
-                whatdidwedo ? '---' : '',
-                whatdidwedo ? `DID SO FAR:` : '',
-                whatdidwedo ? `${whatdidwedo}` : '',
+                whatdidwedo ? '' : '',
+                whatdidwedo ? '<WorkDoneSoFar>' : '',
+                whatdidwedo ? indention(1, whatdidwedo) : '',
+                whatdidwedo ? '</WorkDoneSoFar>' : '',
                 '',
-                '---',
-                `TASK TO DO NEXT STEP:`,
-                `${whattodo.split('\n').join(' ')}`,
+                whattodo ? '' : '',
+                whattodo ? '<NextTasks>' : '',
+                whattodo ? indention(1, whattodo) : '',
+                whattodo ? '</NextTasks>' : '',
                 '',
+                'Make the code.',
                 // '---',
                 // '',
                 // 'To do this, choose proper action.',
@@ -60,12 +72,16 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
             content: [
                 ...last,
                 '',
-                'Does the progress so far and current output indicate mission completion?',
-                'Judge what to do to complete the mission by the Output of the Execution and the history we did so far',
-                // 'Judge what to do in among verdict or generate_validation_code or give_up_the_mission for the mission by Output of the Execution, We we did so far',
-                '',
-                `MISSION: "${mission}"`,
-                '',
+                `<MissionEvaluation>`,
+                `   <CompletionCheck>`,
+                `      Does the progress so far and current output indicate mission completion?`,
+                `   </CompletionCheck>`,
+                `   <ActionDetermination>`,
+                `      Judge what to do to complete the mission by the Output of the Execution and the history we did so far.`,
+                `   </ActionDetermination>`,
+                `</MissionEvaluation>`,
+                ``,
+                `Determine mission completion and decide next steps.`,
             ].join('\n'),
         };
     } else if (type === 'whatdidwedo') {
@@ -74,36 +90,46 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
             content: [
                 ...last,
                 '',
-                `MISSION: "${mission}"`,
+                `<OurGoal>`,
+                indention(1, mission),
+                `</OurGoal>`,
                 '',
-                '인공지능 에이전트로써 지금까지 수행한 작업을 요약해서 알려줘.',
+                '<WritingGuidelines>',
+                '  <Rule>Summarize the tasks performed so far.</Rule>',
+                '  <Rule>Write only the core content in a concise manner.</Rule>',
+                '  <Rule>Use only simple and plain expressions.</Rule>',
+                '  <Rule>Do not include code.</Rule>',
+                '  <Rule>Respond in one sentence in Korean.</Rule>',
+                '</WritingGuidelines>',
                 '',
-                '작성 지침:',
-                '- 핵심적인 내용만 짧게 작성해.',
-                '- 핵심적 담백한 표현만 사용해.',
-                '- 코드는 포함하지 마세요.',
+                'As an AI agent, please summarize the tasks performed so far.',
             ].join('\n'),
         };
     } else if (type === 'whattodo') {
         return {
             role: "user",
             content: [
-                '바로 직후 다음으로 수행할 작업이 무엇인지 말해!',
                 '',
                 '',
                 ...last,
                 '',
-                `MISSION: "${mission}"`,
+                `<OurGoal>`,
+                indention(1, mission),
+                `</OurGoal>`,
                 '',
-                'INSTRUCTION:',
-                '- 미션과 지금까지의 진행 상황을 고려하여 다음으로 해야 할 작업이 무엇인지 판단하세요.',
-                '- 해야할 일을 논리적으로 판단하세요.',
-                '- 선택적인 작업은 생략합니다.',
-                '- 코드 포함하지 마세요.',
-                '- 한국어로 한 문장만 응답하세요.',
+                '<Instructions>',
+                '  <Rule>Consider the mission and the current progress so far.</Rule>',
+                '  <Rule>Determine what to do next logically.</Rule>',
+                '  <Rule>Skip optional tasks.</Rule>',
+                '  <Rule>Do not include code.</Rule>',
+                '  <Rule>Respond in one sentence in Korean.</Rule>',
+                '</Instructions>',
                 '',
-                'OUTPUT',
-                '...를 할게요.',
+                '<OutputFormat>',
+                '  ...를 할게요.',
+                '</OutputFormat>',
+                '',
+                'Tell me what task to perform next right away!',
             ].join('\n'),
         };
     }
