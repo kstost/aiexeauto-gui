@@ -602,6 +602,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     continue;
                 }
                 let pid65 = await out_state(``);
+
+                // 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit (https://docs.anthropic.com/en/api/rate-limits); see the response headers for current usage. Please reduce the prompt length or the maximum tokens requested, or try again later. You may also contact sales at https://www.anthropic.com/contact-sales to discuss your options for a rate limit increase."}}                
                 if (errorMessage) {
                     const forRateLimit = errorMessage.includes('Rate limit') || errorMessage.includes('rate limit');
                     if (forRateLimit || errorMessage.includes('Overloaded') || RESOURCE_EXHAUSTED) {
@@ -953,9 +955,9 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 contents: messages,
                 ...toolConfig,
                 generationConfig: {
-                    temperature: 0.7,
-                    topP: 0.8,
-                    topK: 40
+                    temperature: 0.1,
+                    topP: 0.6,
+                    topK: 10
                 }
             };
             console.log('data', JSON.stringify(data, null, 2));

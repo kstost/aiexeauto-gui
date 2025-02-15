@@ -561,8 +561,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     function getOutputFolderPath() {
         return outputPathDisplay[Symbol.for('path')] || '';
     }
+    let forceScroll = true;
+    function setForceScroll() {
+        forceScroll = missionSolvingContainer.scrollHeight > parentContainer.getBoundingClientRect().height;
+    }
     function scrollBodyToBottomSmoothly(animation = true) {
-        if (!isBottom) return;
+        if (!isBottom && !forceScroll) return;
         const body = missionSolvingContainer;
         const html = document.documentElement;
 
@@ -573,6 +577,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             html.scrollHeight,
             html.offsetHeight
         );
+        setForceScroll();
         body.scrollTo({
             top: maxScroll,
             behavior: animation ? 'smooth' : 'instant'
@@ -906,6 +911,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         operationDoing = true;
         aborting_responsed = false;
         conversations.innerHTML = '';
+        // await new Promise(resolve => window.requestAnimationFrame(resolve));
+        setForceScroll();
         currentConfig['autoCodeExecution'] = await getConfig('autoCodeExecution');
         currentConfig['planEditable'] = await getConfig('planEditable');
         disableUIElements();

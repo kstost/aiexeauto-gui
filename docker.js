@@ -237,8 +237,9 @@ export async function installNodeModules(containerId, workDir, moduleName) {
     }
 }
 export async function isInstalledPythonModule(containerId, workDir, moduleName) {
-    let piplist = await executeInContainer(containerId, 'cd ' + workDir + ' && pip show ' + moduleName + '');
-    return (!!piplist.stdout.trim()) && piplist.code === 0;
+    return await checkIfPythonModuleInstalled(containerId, moduleName);
+    // let piplist = await executeInContainer(containerId, 'cd ' + workDir + ' && pip show ' + moduleName + '');
+    // return (!!piplist.stdout.trim()) && piplist.code === 0;
 }
 export async function initPythonProject(containerId, workDir) {
     if (pipInit) return;
@@ -254,6 +255,47 @@ export async function installPythonModules(containerId, workDir, moduleName) {
         let result = await executeInContainer(containerId, 'cd ' + workDir + ' && pip install ' + moduleName + '');
         return true;
     }
+}
+export async function checkIfPythonModuleInstalled(containerId, moduleName) {
+
+    const workDir = await getConfiguration('dockerWorkDir');
+    let code = [
+        `import ${moduleName}`,
+        `try:`,
+        `    exit(0)`,
+        `except ImportError:`,
+        `    exit(1)`,
+    ].join('\n');
+    const streamGetter = null;
+    const tmpPyFile = getAppPath('.code_module_checker_' + Math.random() + '.py');
+    const pyFileName = 'AIEXE-data-handling-operation-module_checker.py';
+
+    code = [
+        `import os`,
+        `os.remove('${pyFileName}')`,
+        code
+    ].join('\n');
+
+    await writeEnsuredFile(tmpPyFile, code);
+
+    {
+        let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpPyFile + '" "' + containerId + ':' + workDir + '/' + pyFileName + '"');
+
+        if (result.code !== 0) throw new Error('임시 PY 파일 복사 실패');
+    }
+    // [remove.073] unlink - /Users/kst/.aiexeauto/workspace/.code_0.7196721389583982.py
+    if ((ensureAppsHomePath(tmpPyFile)) && linuxStyleRemoveDblSlashes(tmpPyFile).includes('/.aiexeauto/workspace/') && await is_file(tmpPyFile) && tmpPyFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
+        console.log(`[remove.073] unlink - ${tmpPyFile}`);
+        await fs.promises.unlink(tmpPyFile);
+    } else {
+        console.log(`[remove.073!] unlink - ${tmpPyFile}`);
+    }
+
+
+    let result = await executeInContainer(containerId, 'cd ' + workDir + ' && python -u ' + pyFileName, streamGetter);
+    result.output = `${result.stderr}\n\n${result.stdout}`;
+    return result.code === 0;
+
 }
 export async function runPythonCode(containerId, workDir, code, requiredPackageNames = [], streamGetter = null) {
     for (const packageName of requiredPackageNames) await installPythonModules(containerId, workDir, packageName);
