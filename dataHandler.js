@@ -6,6 +6,37 @@ import ora from 'ora';
 import { runDockerContainer, getDockerInfo, importToDocker, exportFromDocker } from './docker.js';
 import { getAppPath, getHomePath, getOSPathSeparator } from './system.js';
 import os from 'os';
+
+export async function getDetailDirectoryStructure(directoryPath, basePath = directoryPath) {
+    let fsPromise = fs.promises;
+    const entries = await fsPromise.readdir(directoryPath);
+    entries.sort((a, b) => a.localeCompare(b));
+    const result = [];
+
+    for (const entry of entries) {
+        const fullPath = path.join(directoryPath, entry);
+        const stats = await fsPromise.stat(fullPath);
+
+        if (stats.isFile()) {
+            // 파일인 경우
+            result.push({
+                type: 'file',
+                // 최상위 directoryPath 로부터의 상대 경로
+                path: path.relative(basePath, fullPath),
+                size: stats.size,
+            });
+        } else if (stats.isDirectory()) {
+            // 디렉터리인 경우 재귀적으로 children 생성
+            const children = await getDetailDirectoryStructure(fullPath, basePath);
+            result.push({
+                type: 'directory',
+                path: path.relative(basePath, fullPath),
+                children,
+            });
+        }
+    }
+    return result;
+}
 export async function validateAndCreatePaths(dataSourcePath) {
     // Validate data source path
     try {

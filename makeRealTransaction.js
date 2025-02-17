@@ -1,6 +1,6 @@
 import { omitMiddlePart } from './solveLogic.js';
 import { makeCodePrompt, indention } from './makeCodePrompt.js';
-export function makeRealTransaction(processTransactions, multiLineMission, type, whatdidwedo, whattodo, evaluationText) {
+export async function makeRealTransaction(processTransactions, multiLineMission, type, whatdidwedo, whattodo, evaluationText) {
     let realTransactions = [];
     for (let i = 0; i < processTransactions.length; i++) {
         const role = processTransactions[i].class === 'output' ? 'user' : 'assistant';
@@ -77,6 +77,6 @@ export function makeRealTransaction(processTransactions, multiLineMission, type,
             realTransactions[0].content = 'Response the first code for the first step of the mission.';
         }
     }
-    realTransactions[realTransactions.length - 1] = makeCodePrompt(multiLineMission, type, whatdidwedo, whattodo, evaluationText, processTransactions);
+    realTransactions[realTransactions.length - 1] = await makeCodePrompt(multiLineMission, type, whatdidwedo, whattodo, evaluationText, processTransactions);
     return realTransactions;
 }

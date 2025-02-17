@@ -38,3 +38,6 @@ static/
 assets/
 my-docker-app/
 memo.txt
+
+captionValidator.js
+tmp.captionValidator.md

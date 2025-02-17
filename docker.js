@@ -188,7 +188,7 @@ export async function importToDocker(containerId, workDir, inputDir) {
     if (result.code !== 0) throw new Error('input 폴더 복사 실패');
 }
 
-export async function exportFromDocker(containerId, workDir, outputDir) {
+export async function exportFromDocker(containerId, workDir, outputDir, directoryStructureBeforeOperation) {
     const prefixName = 'AIEXE-data-handling-';
     const removeList = [
         'node_modules', '.git', '.vscode',
@@ -208,9 +208,71 @@ export async function exportFromDocker(containerId, workDir, outputDir) {
     result = await executeInContainer(containerId, `rm -rf ${workDir}/${prefixName}*`);
     if (result.code !== 0) throw new Error('임시 파일 삭제 실패');
 
+    let structure;
+    {
+        const tmpJsFile = getAppPath('.code_' + Math.random() + '.js');
+        const jsFileName = 'AIEXE-data-handling-operation.js';
+        let code = [
+            `
+            import fs from 'fs';
+            import path from 'path';
+            export async function getDetailDirectoryStructure(directoryPath, basePath = directoryPath) {
+                let fsPromise = fs.promises;
+                const entries = await fsPromise.readdir(directoryPath);
+                entries.sort((a, b) => a.localeCompare(b));
+                const result = [];
 
-    result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + outputDir + '"');
-    if (result.code !== 0) throw new Error('output 폴더로 복사 실패');
+                for (const entry of entries) {
+                    const fullPath = path.join(directoryPath, entry);
+                    const stats = await fsPromise.stat(fullPath);
+
+                    if (stats.isFile()) {
+                        // 파일인 경우
+                        result.push({
+                            type: 'file',
+                            // 최상위 directoryPath 로부터의 상대 경로
+                            path: path.relative(basePath, fullPath),
+                            size: stats.size,
+                        });
+                    } else if (stats.isDirectory()) {
+                        // 디렉터리인 경우 재귀적으로 children 생성
+                        const children = await getDetailDirectoryStructure(fullPath, basePath);
+                        result.push({
+                            type: 'directory',
+                            path: path.relative(basePath, fullPath),
+                            children,
+                        });
+                    }
+                }
+                return result;
+            }
+            (async()=>{
+                console.log(JSON.stringify(await getDetailDirectoryStructure('${workDir}')));
+            })();
+            `
+        ].join('\n');
+        await writeEnsuredFile(tmpJsFile, code);
+        {
+            await executeInContainer(containerId, "mkdir -p /nodework/ && cd /nodework/ && npm init -y es6");
+            let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpJsFile + '" "' + containerId + ':' + '/nodework/' + '/' + jsFileName + '"');
+            if (result.code !== 0) throw new Error('임시 JS 파일 복사 실패');
+        }
+        // [remove.004] unlink - /Users/kst/.aiexeauto/workspace/.code_0.10591924509577666.js
+        if ((ensureAppsHomePath(tmpJsFile)) && linuxStyleRemoveDblSlashes(tmpJsFile).includes('/.aiexeauto/workspace/') && await is_file(tmpJsFile) && tmpJsFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
+            console.log(`[remove.004] unlink - ${tmpJsFile}`);
+            await fs.promises.unlink(tmpJsFile);
+        } else {
+            console.log(`[remove.004!] unlink - ${tmpJsFile}`);
+        }
+        let result = await executeInContainer(containerId, 'cd ' + '/nodework/' + ' && node ' + jsFileName);
+        structure = (result.stdout || '').trim();
+    }
+    if (directoryStructureBeforeOperation && JSON.stringify(directoryStructureBeforeOperation) !== structure) {
+        result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + outputDir + '"');
+        if (result.code !== 0) throw new Error('output 폴더로 복사 실패');
+        return true;
+    }
+    return false;
 }
 
 export async function initNodeProject(containerId, workDir) {

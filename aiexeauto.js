@@ -87,6 +87,7 @@ if (prompt === 'version') {
         //     // return true;
         // },
         async get_version() {
+            singleton.lang = await getConfiguration('captionLanguage');
             const currentVersion = app.getVersion();
             try {
                 const packageUrl = `https://raw.githubusercontent.com/kstost/aiexeauto-gui/refs/heads/main/package.json`;
@@ -96,6 +97,10 @@ if (prompt === 'version') {
             } catch (err) {
                 return null;
             }
+        },
+        async openFolder(body) {
+            await open(body.resultPath);
+            return true;
         },
         async ve1nppvpath(body) {
             // ㅊ...
@@ -165,17 +170,20 @@ if (prompt === 'version') {
 
             },
             async out_state(data) {
-                // console.log(...data);
                 let labelId = await reqRenderer('out_state', { stateLabel: data })
+                // let ticket = singleton.addState(labelId);
                 return {
                     async dismiss() {
                         await reqRenderer('dismiss', { labelId: labelId })
+                        // singleton.removeState(ticket);
                     },
                     async succeed(data) {
                         await reqRenderer('succeed', { stateLabel: data, labelId: labelId })
+                        // singleton.removeState(ticket);
                     },
                     async fail(data) {
                         await reqRenderer('fail', { stateLabel: data, labelId: labelId })
+                        // singleton.removeState(ticket);
                     },
                 }
             }
@@ -191,8 +199,10 @@ if (prompt === 'version') {
         }
         dataOutputPath = await prepareOutputDir(path.join(getAppPath('.tempwork'), 'output'), false);
         let resultPath;
+        let exported;
         try {
-            await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath });
+            let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath });
+            exported = solved.exported;
         } catch (err) {
         } finally {
             if (dataSourceNotAssigned) {
@@ -221,8 +231,8 @@ if (prompt === 'version') {
                 try {
                     await fs.promises.access(outputPath);
                     const files = await fs.promises.readdir(outputPath);
-                    if (files.length > 0) {
-                        await open(outputPath);
+                    if (files.length > 0 && exported) {
+                        // await open(outputPath);
                         resultPath = outputPath;
                     }
                 } catch (err) {

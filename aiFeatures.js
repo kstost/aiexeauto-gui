@@ -2,7 +2,8 @@ import singleton from './singleton.js';
 import { getAppPath, convertJsonToResponseFormat, getConfiguration, getToolList, getToolData } from './system.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import fs from 'fs';
-import { useTools } from './solveLogic.js';
+import { useTools, getLanguageFullName } from './solveLogic.js';
+import { caption, replaceAll } from './system.js';
 function extractWaitTime(errorMessage) {
     const regex = /Please try again in ([\d.]+)\s*(ms|s|m|h|d)?/i;
     const match = errorMessage.match(regex);
@@ -408,13 +409,13 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
         groqApiKey = groqApiKey.trim();
         geminiApiKey = geminiApiKey.trim();
 
-        if (llm === 'claude' && !claudeApiKey) throw new Error('Claude API 키가 설정되어 있지 않습니다.');
-        if (llm === 'deepseek' && !deepseekApiKey) throw new Error('DeepSeek API 키가 설정되어 있지 않습니다.');
-        if (llm === 'openai' && !openaiApiKey) throw new Error('OpenAI API 키가 설정되어 있지 않습니다.');
-        if (llm === 'ollama' && !ollamaApiKey && false) throw new Error('Ollama API 키가 설정되어 있지 않습니다.');
-        if (llm === 'groq' && !groqApiKey) throw new Error('Groq API 키가 설정되어 있지 않습니다.');
-        if (llm === 'gemini' && !geminiApiKey) throw new Error('Gemini API 키가 설정되어 있지 않습니다.');
-        if (useDocker && !dockerPath) throw new Error('Docker 경로가 설정되어 있지 않습니다.');
+        if (llm === 'claude' && !claudeApiKey) throw new Error(caption('claudeApiKeyNotSet'));
+        if (llm === 'deepseek' && !deepseekApiKey) throw new Error(caption('deepseekApiKeyNotSet'));
+        if (llm === 'openai' && !openaiApiKey) throw new Error(caption('openaiApiKeyNotSet'));
+        if (llm === 'ollama' && !ollamaApiKey && false) throw new Error(caption('ollamaApiKeyNotSet'));
+        if (llm === 'groq' && !groqApiKey) throw new Error(caption('groqApiKeyNotSet'));
+        if (llm === 'gemini' && !geminiApiKey) throw new Error(caption('geminiApiKeyNotSet'));
+        if (useDocker && !dockerPath) throw new Error(caption('dockerPathNotSet'));
 
         let tool_choice_list = {
             getRequiredPackageNames: { type: "tool", name: "npm_package_names" },
@@ -435,7 +436,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     "description": "verdict whether the mission is solved.",
                     "input_schema": convertJsonToResponseFormat(
                         { evaluation: "", reason: "" },
-                        { evaluation: "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED or GIVEUPTHEMISSION", reason: "Explain the reason for the verdict in korean of short length" }
+                        { evaluation: "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED or GIVEUPTHEMISSION", reason: `Explain the reason for the verdict in ${await getLanguageFullName()} of short length` }
                     ).json_schema.schema
                 },
             ],
@@ -516,9 +517,15 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     };
                 }
                 if (llm === 'ollama' && !(await isOllamaRunning())) {
-                    throw new Error('Ollama API서버 확인에 문제가 있습니다.');
+                    let ollamaServerNotRunning = caption('ollamaServerNotRunning');
+                    ollamaServerNotRunning = replaceAll(ollamaServerNotRunning, '{{stateLabel}}', stateLabel);
+                    ollamaServerNotRunning = replaceAll(ollamaServerNotRunning, '{{model}}', model);
+                    throw new Error(ollamaServerNotRunning);
                 }
-                let pid6 = await out_state(`${stateLabel}를 ${model}가 처리중...`);
+                let aiProcessing = caption('aiProcessing');
+                aiProcessing = replaceAll(aiProcessing, '{{stateLabel}}', stateLabel);
+                aiProcessing = replaceAll(aiProcessing, '{{model}}', model);
+                let pid6 = await out_state(aiProcessing); // `${stateLabel}를 ${model}가 처리중...`
                 let response;
                 let result;
                 //\n\n---\nTOOL NAME TO USE:\ngenerate_python_code\n
@@ -564,27 +571,49 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     result = await response.text();
                     console.log('result', result);
                 } catch (err) {
-                    pid6.fail(`${stateLabel}를 ${model}가 처리 중단 (${err.message})`);
-                    throw new Error('미션 중단');
+                    // aiMissionAborted:`${stateLabel}를 ${model}가 처리 중단 (${err.message})`
+                    let aiMissionAborted = caption('aiMissionAborted');
+                    aiMissionAborted = replaceAll(aiMissionAborted, '{{stateLabel}}', stateLabel);
+                    aiMissionAborted = replaceAll(aiMissionAborted, '{{model}}', model);
+                    aiMissionAborted = replaceAll(aiMissionAborted, '{{errorMessage}}', err.message);
+                    pid6.fail(aiMissionAborted);
+                    throw new Error(caption('missionAborted'));
                 } finally {
                     pid6.dismiss();
                 }
                 if (!result) {
                     let pid64 = await out_state(``);
-                    pid64.fail(`${model}가 ${stateLabel} 처리한 결과가 없음`);
-                    let pid643 = await out_state(`${model}가 ${stateLabel} 처리 재시도 대기`);
+                    // aiNoResult:`${model}가 ${stateLabel} 처리한 결과가 없음`
+                    let aiNoResult = caption('aiNoResult');
+                    aiNoResult = replaceAll(aiNoResult, '{{model}}', model);
+                    aiNoResult = replaceAll(aiNoResult, '{{stateLabel}}', stateLabel);
+                    pid64.fail(aiNoResult);
+                    let aiRetryWaiting = caption('aiRetryWaiting');
+                    aiRetryWaiting = replaceAll(aiRetryWaiting, '{{model}}', model);
+                    aiRetryWaiting = replaceAll(aiRetryWaiting, '{{stateLabel}}', stateLabel);
+                    let pid643 = await out_state(aiRetryWaiting);
                     await new Promise(resolve => setTimeout(resolve, 5000));
                     pid643.dismiss();
                     continue;
                 }
                 await leaveLog({ callMode, data: { resultText: result } });
-                let pid64 = await out_state(`${stateLabel} 처리 데이터 분석 중`);
+
+                // aiAnalyzingResult:`${stateLabel} 처리 데이터 분석 중`
+                let aiAnalyzingResult = caption('aiAnalyzingResult');
+                aiAnalyzingResult = replaceAll(aiAnalyzingResult, '{{stateLabel}}', stateLabel);
+                let pid64 = await out_state(aiAnalyzingResult);
                 try {
                     result = JSON.parse(result);
                 } catch {
-                    pid64.fail(`${stateLabel} 처리 데이터 분석 실패`);
+                    // aiAnalyzingResultFailed:`${stateLabel} 처리 데이터 분석 실패`
+                    let aiAnalyzingResultFailed = caption('aiAnalyzingResultFailed');
+                    aiAnalyzingResultFailed = replaceAll(aiAnalyzingResultFailed, '{{stateLabel}}', stateLabel);
+                    pid64.fail(aiAnalyzingResultFailed);
                     await leaveLog({ callMode, data: { resultErrorJSON: result } });
-                    let pid643 = await out_state(`${model}가 ${stateLabel} 처리 재시도 대기`);
+                    let aiRetryWaiting = caption('aiRetryWaiting');
+                    aiRetryWaiting = replaceAll(aiRetryWaiting, '{{model}}', model);
+                    aiRetryWaiting = replaceAll(aiRetryWaiting, '{{stateLabel}}', stateLabel);
+                    let pid643 = await out_state(aiRetryWaiting);
                     await new Promise(resolve => setTimeout(resolve, 5000));
                     pid643.dismiss();
                     continue;
@@ -615,7 +644,19 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                         exponentialBackoffCount *= 1.5;
                         waitTime *= exponentialBackoffCount;
                         waitTime = Math.ceil(waitTime);
-                        let percentBar = await percent_bar({ template: `${model}가 ${stateLabel} 처리 재시도 대기 {{second}}초 남음`, total: waitTime });
+                        // ollamaServerNotRunning:'Ollama API서버 확인에 문제가 있습니다.'
+                        // processing:`${stateLabel}를 ${model}가 처리중...`
+                        // aiMissionAborted:`${stateLabel}를 ${model}가 처리 중단 (${err.message})`
+                        // aiNoResult:`${model}가 ${stateLabel} 처리한 결과가 없음`
+                        // aiRetryWaiting:`${model}가 ${stateLabel} 처리 재시도 대기`
+                        // aiAnalyzingResult:`${stateLabel} 처리 데이터 분석 중`
+                        // aiAnalyzingResultFailed:`${stateLabel} 처리 데이터 분석 실패`
+                        // aiRetryWaiting:`${model}가 ${stateLabel} 처리 재시도 대기`
+                        // aiRetryWaitingSecondLeft:`${model}가 ${stateLabel} 처리 재시도 대기 {{second}}초 남음`
+                        let aiRetryWaitingSecondLeft = caption('aiRetryWaitingSecondLeft');
+                        aiRetryWaitingSecondLeft = replaceAll(aiRetryWaitingSecondLeft, '{{model}}', model);
+                        aiRetryWaitingSecondLeft = replaceAll(aiRetryWaitingSecondLeft, '{{stateLabel}}', stateLabel);
+                        let percentBar = await percent_bar({ template: aiRetryWaitingSecondLeft, total: waitTime });
                         while (await percentBar.onetick()) {
                             await new Promise(resolve => setTimeout(resolve, 1000));
                             if (singleton.missionAborting) {

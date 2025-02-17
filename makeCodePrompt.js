@@ -1,4 +1,4 @@
-import { omitMiddlePart } from './solveLogic.js';
+import { omitMiddlePart, getLanguageFullName } from './solveLogic.js';
 
 export function indention(num = 1, string = null) {
     if (string) {
@@ -7,7 +7,7 @@ export function indention(num = 1, string = null) {
         return ' '.repeat(num * 2);
     }
 }
-export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationText, processTransactions) {
+export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationText, processTransactions) {
 
     let output = processTransactions.at(-1).data;
     if (output) {
@@ -99,7 +99,7 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
                 '  <Rule>Write only the core content in a concise manner.</Rule>',
                 '  <Rule>Use only simple and plain expressions.</Rule>',
                 '  <Rule>Do not include code.</Rule>',
-                '  <Rule>Respond in one sentence in Korean.</Rule>',
+                `  <Rule>Respond in one sentence in ${await getLanguageFullName()}.</Rule>`,
                 '</WritingGuidelines>',
                 '',
                 'As an AI agent, please summarize the tasks performed so far.',
@@ -122,12 +122,12 @@ export function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationT
                 '  <Rule>Determine what to do next logically.</Rule>',
                 '  <Rule>Skip optional tasks.</Rule>',
                 '  <Rule>Do not include code.</Rule>',
-                '  <Rule>Respond in one sentence in Korean.</Rule>',
+                `  <Rule>Respond in one sentence in ${await getLanguageFullName()}.</Rule>`,
                 '</Instructions>',
                 '',
-                '<OutputFormat>',
-                '  ...를 할게요.',
-                '</OutputFormat>',
+                // '<OutputFormat>',
+                // '  ...를 할게요.',
+                // '</OutputFormat>',
                 '',
                 'Tell me what task to perform next right away!',
             ].join('\n'),
