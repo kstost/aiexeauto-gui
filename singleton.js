@@ -1,8 +1,11 @@
 // import chalk from 'chalk';
 // import { oraSucceed, oraFail, oraStop, oraStart, oraBackupAndStopCurrent, print, strout } from './oraManager.js'
 import { app } from 'electron';
+import { getSystemLangCode } from './system.js'
+// getSystemLangCode()
+
 const singleton = {
-    lang: app.getLocale().split('-')[0] || 'en',
+    lang: getSystemLangCode(),
     abortQueue: {},
     async debug(data, scopename) {
         const optionscopename = singleton?.options?.debug;

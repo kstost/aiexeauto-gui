@@ -468,8 +468,8 @@ export async function makeConfigUI(configurationContainer) {
             languageSelect.value = language;
         } else {
             // 기본값을 영어로 설정
-            languageSelect.value = 'ko';
-            await setConfig('captionLanguage', 'ko');
+            languageSelect.value = 'en';
+            await setConfig('captionLanguage', 'en');
         }
     };
 

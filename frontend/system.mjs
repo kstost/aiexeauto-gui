@@ -16,5 +16,5 @@ export async function setConfig(key, value) {
 }
 export function caption(key) {
     const lang = singleton.lang;
-    return i18nCaptions[lang]?.[key] || i18nCaptions['ko']?.[key] || '';
+    return i18nCaptions[lang]?.[key] || i18nCaptions['en']?.[key] || '';
 }

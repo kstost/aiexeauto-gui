@@ -10,17 +10,24 @@ const __dirname = dirname(__filename);
 import { writeEnsuredFile, ensureAppsHomePath } from './dataHandler.js';
 import singleton from './singleton.js';
 import { i18nCaptions } from './frontend/i18nCaptions.mjs';
+import { app } from 'electron';
 
 // function asfasdff(){
 //     wfwef;
 // }
+export function getSystemLangCode() {
+    try {
+        return app.getLocale().split('-')[0] || 'en'
+    } catch { }
+    return 'en';
+}
 export function replaceAll(str, search, replace) {
     if (!str) return '';
     return str.split(search).join(replace);
 }
 export function caption(key) {
     const lang = singleton.lang;
-    return i18nCaptions[lang]?.[key] || i18nCaptions['ko']?.[key] || '';
+    return i18nCaptions[lang]?.[key] || i18nCaptions['en']?.[key] || '';
 }
 export function getHomeDir() {
     return os.homedir();
@@ -83,7 +90,7 @@ export async function loadConfiguration() {
         ollamaEndpoint: 'http://localhost:11434',
         autoCodeExecution: false, // 자동 코드 실행 여부 (false: 자동 실행 안함, true: 자동 실행함)
         planEditable: false, // AI가 판단한 계획 수정 가능 여부 (false: 수정 불가능, true: 수정 가능)
-        captionLanguage: 'ko', // 캡션 언어 (ko: 한국어, en: 영어)
+        captionLanguage: getSystemLangCode(), // 캡션 언어 (ko: 한국어, en: 영어)
     }
     let config_ = {};
     try {
