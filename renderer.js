@@ -307,6 +307,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     await singleton.loadConfigurations();
                     turnWindow(menuItem.mode);
                 } else if (menuItem.mode === 'customrules') {
+                    if (operationDoing) { alert(caption('configChangeNotAllowed')); return; }
                     turnWindow(menuItem.mode);
                     {
                         const data = `${await getConfig('customRulesForCodeGenerator')}`;
