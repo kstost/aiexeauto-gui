@@ -1,5 +1,6 @@
 export const i18nCaptions = {
     "ko": {
+        "reviewMission": "미션 검토",
         "openResultFolder": "결과 폴더 열기",
         "getStartOperation": "임무 수행",
         "language": "언어",
@@ -96,6 +97,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "reviewMission": "Review Mission",
         "openResultFolder": "Open Result Folder",
         "getStartOperation": "Start Operation",
         "language": "Language",
@@ -192,6 +194,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "reviewMission": "ミッション 検討",
         "openResultFolder": "結果フォルダーを開く",
         "getStartOperation": "操作を開始",
         "language": "言語",
@@ -288,6 +291,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "reviewMission": "Đánh giá công việc",
         "openResultFolder": "Mở Thư mục Kết quả",
         "getStartOperation": "Bắt đầu Nhiệm vụ",
         "language": "Ngôn ngữ",
@@ -384,6 +388,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "reviewMission": "任务审查",
         "openResultFolder": "打开结果文件夹",
         "getStartOperation": "开始任务",
         "language": "语言",

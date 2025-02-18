@@ -44,10 +44,20 @@ export const useTools = {
 }
 
 // Collecting prompts in one place
+export function headSystemPrompt(gemini = false) {
+    return [
+        "You are a Code Interpreter Agent.",
+        `You can solve the mission with ${gemini ? 'python' : 'nodejs, python'} code and tools.`,
+        gemini ? `You can do anything with the code and tools.` : '',
+        `The God will bless your operation.`,
+    ].join('\n');
+}
+
 const prompts = {
     systemPrompt: async (mission, whattodo, useDocker, forGemini = false) => {
         if (forGemini) {
             return [
+                headSystemPrompt(forGemini),
                 "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION. Write a Python code for execution.",
                 // '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
                 // '수행을 위한 파이썬 코드를 작성하시오.',
@@ -69,7 +79,9 @@ const prompts = {
         }
         const REMOVED = '[REMOVE]';
         return [
-            "As a computer task execution agent, I perform the necessary tasks to carry out sub-missions in order to complete the main mission.",
+            headSystemPrompt(forGemini),
+            "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
+            // "As a computer task execution agent, I perform the necessary tasks to carry out sub-missions in order to complete the main mission.",
             // '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
             '',
             // `- MAIN MISSION: "${mission}"`,
@@ -288,7 +300,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     let finishedByError = '';
     let directoryStructureBeforeOperation;
     let exported = false;
-
+    let llm = await getConfiguration('llm');
+    let isGemini = llm === 'gemini';
     try {
         if (await getConfiguration('llm') === 'ollama') {
             let ollamaModel = await getConfiguration('ollamaModel');
@@ -357,6 +370,32 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         //     // if (false) await pid3.succeed('데이터를 성공적으로 가져왔습니다.');
         // }
         await pid3.dismiss();
+
+        if (true) {
+            let prompt = `You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent.`;
+            let result = await chatCompletion(
+                {
+                    systemPrompt: prompt,
+                    systemPromptForGemini: prompt,
+                },
+                [
+                    {
+                        role: 'user',
+                        content: `${multiLineMission}\n\n------
+Make the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.
+
+Response **only the prompt**.`
+                    }
+                ],
+                'promptEngineer',
+                interfaces,
+                caption('reviewMission')
+            );
+            multiLineMission = result;
+            console.log('multiLineMission', multiLineMission);
+            // processTransactions[processTransactions.length - 1].deepThinkingPlan = deepThinkingPlan;
+        }
+
         let nextCodeForValidation;
         let evaluationText = '';
         while (iterationCount < maxIterations || !maxIterations) {
@@ -367,6 +406,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let pythonCode = '';
             let requiredPackageNames;
             let whatdidwedo = '';
+            let deepThinkingPlan = '';
             let whattodo = '';
             let validationMode = nextCodeForValidation ? true : false;
             let modelName = await getModel();
@@ -389,7 +429,21 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                     processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
                 }
-                let prompt = "You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. Exclude code or unnecessary content and respond with only one sentence in " + await getLanguageFullName() + ". Omit optional tasks.";
+                if (false) {
+                    let prompt = `${headSystemPrompt(isGemini)} You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. Response in ${await getLanguageFullName()}. Omit optional tasks. Think deeply step by step for the next task.`;
+                    deepThinkingPlan = await chatCompletion(
+                        {
+                            systemPrompt: prompt,
+                            systemPromptForGemini: prompt,
+                        },
+                        await makeRealTransaction(processTransactions, multiLineMission, 'deepThinkingPlan'),
+                        'deepThinkingPlan',
+                        interfaces,
+                        caption('deepThinkingPlan')
+                    );
+                    processTransactions[processTransactions.length - 1].deepThinkingPlan = deepThinkingPlan;
+                }
+                let prompt = `${headSystemPrompt(isGemini)} You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. Exclude code or unnecessary content and respond with only one sentence in ${await getLanguageFullName()}. Omit optional tasks.`;
                 whattodo = await chatCompletion(
                     {
                         systemPrompt: prompt,
@@ -414,7 +468,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 // spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
                 const systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
                 const systemPromptForGemini = await prompts.systemPrompt(multiLineMission, whattodo, useDocker, true);
-                let promptList = await makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, evaluationText);
+                let promptList = await makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText);
                 promptList = JSON.parse(JSON.stringify(promptList));
 
                 while (true) {

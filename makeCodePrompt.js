@@ -7,7 +7,7 @@ export function indention(num = 1, string = null) {
         return ' '.repeat(num * 2);
     }
 }
-export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationText, processTransactions) {
+export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions) {
 
     let output = processTransactions.at(-1).data;
     if (output) {
@@ -54,6 +54,11 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
                 whatdidwedo ? '<WorkDoneSoFar>' : '',
                 whatdidwedo ? indention(1, whatdidwedo) : '',
                 whatdidwedo ? '</WorkDoneSoFar>' : '',
+                '',
+                deepThinkingPlan ? '' : '',
+                deepThinkingPlan ? '<Plan>' : '',
+                deepThinkingPlan ? indention(1, deepThinkingPlan) : '',
+                deepThinkingPlan ? '</Plan>' : '',
                 '',
                 whattodo ? '' : '',
                 whattodo ? '<NextTasks>' : '',
@@ -117,6 +122,10 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
                 indention(1, mission),
                 `</OurGoal>`,
                 '',
+                processTransactions.at(-1).deepThinkingPlan ? '<Plan>' : '',
+                processTransactions.at(-1).deepThinkingPlan ? indention(1, processTransactions.at(-1).deepThinkingPlan) : '',
+                processTransactions.at(-1).deepThinkingPlan ? '</Plan>' : '',
+                '',
                 '<Instructions>',
                 '  <Rule>Consider the mission and the current progress so far.</Rule>',
                 '  <Rule>Determine what to do next logically.</Rule>',
@@ -130,6 +139,34 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
                 // '</OutputFormat>',
                 '',
                 'Tell me what task to perform next right away!',
+            ].join('\n'),
+        };
+    } else if (type === 'deepThinkingPlan') {
+        return {
+            role: "user",
+            content: [
+                '',
+                '',
+                ...last,
+                '',
+                `<OurGoal>`,
+                indention(1, mission),
+                `</OurGoal>`,
+                '',
+                '<Instructions>',
+                '  <Rule>Consider the mission and the current progress so far.</Rule>',
+                '  <Rule>Think deeply step by step for the next task.</Rule>',
+                '  <Rule>Skip optional tasks.</Rule>',
+                '  <Rule>Do not include code.</Rule>',
+                `  <Rule>Respond in ${await getLanguageFullName()}.</Rule>`,
+                '</Instructions>',
+                '',
+                // '<OutputFormat>',
+                // '  ...를 할게요.',
+                // '</OutputFormat>',
+                '',
+                // `Let's think deeply step by step for the next task.`,
+                `Let's think step by step.`,
             ].join('\n'),
         };
     }
