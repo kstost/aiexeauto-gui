@@ -110,9 +110,11 @@ export async function actDataParser({ actData }) {
                 `const result = spawnSync('which', ['${actData.input.command}'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, encoding: 'utf-8' });`,
                 `const output = result.stderr.toString() + result.stdout.toString();`,
                 `const outputExists = output.trim().length>0;`,
-                `const notFound = '(❌ ${actData.input.command} 명령어가 존재하지 않습니다)';`,
-                `if (result.status === 0) console.log(outputExists?'${actData.input.command} 명령어가 존재합니다.'+String.fromCharCode(10)+'명령어의 경로: '+output:notFound);`,
-                `if (result.status !== 0) console.error('❌ which 명령어 실행 실패'+(outputExists?String.fromCharCode(10)+output:''));`,
+                'const backtick = "`";',
+                `const notFound = '(❌ ${actData.input.command} Command is not available)';`,
+                `if (result.status === 0) console.log(outputExists?backtick+'${actData.input.command}'+backtick+' Command is available.'+String.fromCharCode(10)+'Path: '+output+String.fromCharCode(10).repeat(2)+'You can use this with subprocess in python':notFound);`,
+                `if (result.status !== 0) console.error(notFound);`,
+                `if (false && result.status !== 0) console.error('❌ Failed to run '+backtick+'which'+backtick+' command'+(outputExists?String.fromCharCode(10)+output:''));`,
                 `process.exit(result.status);`,
             ].join('\n');
         } else if (actData.name === 'run_command') {
