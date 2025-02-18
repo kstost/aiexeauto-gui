@@ -420,7 +420,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
     function setForceScroll() {
-        forceScroll = missionSolvingContainer.scrollHeight > parentContainer.getBoundingClientRect().height;
+        forceScroll = missionSolvingContainer.getBoundingClientRect().height > parentContainer.getBoundingClientRect().height;
     }
     function scrollBodyToBottomSmoothly(animation = true) {
         if (!isBottom && !forceScroll) return;
