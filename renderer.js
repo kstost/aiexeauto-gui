@@ -27,6 +27,7 @@ function randomId() {
 }
 let aborting_responsed = false;
 let currentConfig = {};
+const dockerContainers = {};
 window.electronAPI.receive('mission_aborting_response', (arg) => {
     aborting_responsed = true;
 });
@@ -606,11 +607,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             });
             // console.log(value.detail);
-            let task = reqAPI('ve1nppvpath', { prompt: promptInput.input.value, inputFolderPath: getInputFolderPath(), outputFolderPath: '' });
+            const containerIdToUse = Object.keys(dockerContainers)[0];
+            let task = reqAPI('ve1nppvpath', { prompt: promptInput.input.value, inputFolderPath: getInputFolderPath(), outputFolderPath: '', containerIdToUse });
             let taskId = task.taskId;
             if (false) await abortTask(taskId);
             // console.log(await task.promise);
-            let resultPath = await task.promise;
+            let { resultPath, containerId } = await task.promise;
+            dockerContainers[containerId] = true;
+            // console.log(containerId);
             enableUIElements();
             promptInput.setFocus();
             scrollBodyToBottomSmoothly(false);

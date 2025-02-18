@@ -310,6 +310,31 @@ export async function makeConfigUI(configurationContainer) {
     dockerContainer.appendChild(dockerImageInput);
     configWrapper.appendChild(dockerRow);
 
+    // Docker Image 설정 다음에 추가
+    const { row: keepDockerRow, inputContainer: keepDockerContainer } = createConfigRow(caption('keepDockerContainer'));
+    keepDockerContainer.style.display = 'flex';
+    keepDockerContainer.style.alignItems = 'center';
+    keepDockerContainer.style.gap = '12px';
+
+    const keepDockerCheckbox = document.createElement('input');
+    keepDockerCheckbox.type = 'checkbox';
+    keepDockerCheckbox.style.width = '20px';
+    keepDockerCheckbox.style.height = '20px';
+    keepDockerCheckbox.style.cursor = 'pointer';
+    keepDockerCheckbox.style.accentColor = '#2196F3';
+    keepDockerCheckbox.style.flexShrink = '0';
+    keepDockerContainer.appendChild(keepDockerCheckbox);
+
+    // 설명 추가
+    const keepDockerDescription = document.createElement('div');
+    keepDockerDescription.style.fontSize = '14px';
+    keepDockerDescription.style.color = 'rgba(255, 255, 255, 0.5)';
+    keepDockerDescription.textContent = caption('keepDockerContainerDescription');
+    keepDockerDescription.style.flex = '1';
+    keepDockerContainer.appendChild(keepDockerDescription);
+
+    configWrapper.appendChild(keepDockerRow);
+
     // Docker 사용 여부에 따라 Docker 관련 설정들 표시/숨김
     useDockerCheckbox.addEventListener('change', async () => {
         dockerRow.style.display = useDockerCheckbox.checked ? 'flex' : 'none';
@@ -471,6 +496,12 @@ export async function makeConfigUI(configurationContainer) {
             languageSelect.value = 'en';
             await setConfig('captionLanguage', 'en');
         }
+
+        // Docker 컨테이너 유지 설정 로드
+        const keepDocker = await getConfig('keepDockerContainer');
+        if (keepDocker !== undefined) {
+            keepDockerCheckbox.checked = keepDocker;
+        }
     };
 
     // 초기 설정값 로드
@@ -628,6 +659,11 @@ export async function makeConfigUI(configurationContainer) {
         await setConfig('captionLanguage', languageSelect.value);
         await fadeOut(0.5);
         window.location.reload();
+    });
+
+    // 이벤트 리스너 추가 부분에 keepDocker 이벤트 리스너 추가
+    keepDockerCheckbox.addEventListener('change', async () => {
+        await setConfig('keepDockerContainer', keepDockerCheckbox.checked);
     });
 }
 

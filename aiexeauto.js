@@ -105,7 +105,7 @@ if (prompt === 'version') {
         async ve1nppvpath(body) {
             // ㅊ...
             console.log(body);
-            return await application(body.prompt, body.inputFolderPath, body.outputFolderPath);
+            return await application(body.prompt, body.inputFolderPath, body.outputFolderPath, body.containerIdToUse);
         },
         async ve1nvpath(body) {
             if (false) if (isTaskAborted(body.__taskId)) return;
@@ -121,7 +121,7 @@ if (prompt === 'version') {
             return await open(body.url);
         }
     }
-    async function application(prompt, dataSourcePath, dataOutputPath) {
+    async function application(prompt, dataSourcePath, dataOutputPath, containerIdToUse) {
         const taskId = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
         singleton.missionAborting = false;
         const interfaces = {
@@ -203,9 +203,11 @@ if (prompt === 'version') {
         dataOutputPath = await prepareOutputDir(path.join(getAppPath('.tempwork'), 'output'), false);
         let resultPath;
         let exported;
+        let containerId;
         try {
-            let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath });
+            let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse });
             exported = solved.exported;
+            containerId = solved.containerId;
         } catch (err) {
         } finally {
             if (dataSourceNotAssigned) {
@@ -242,7 +244,7 @@ if (prompt === 'version') {
                 }
             }
         }
-        return resultPath;
+        return { resultPath, containerId };
         // })();
 
     }

@@ -10,7 +10,7 @@ import { importData, exportData } from './dataHandler.js';
 import { chatCompletion, getModel, isOllamaRunning } from './aiFeatures.js';
 import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
 import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler.js';
-import { getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
+import { cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
 import { getToolList, getToolData, getAppPath, getUseDocker, replaceAll } from './system.js';
 import fs from 'fs';
 import { getConfiguration } from './system.js';
@@ -261,12 +261,12 @@ export function omitMiddlePart(text, length = 1024) {
         : text).trim();
 }
 
-export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath }) {
+export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse }) {
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
 
     // const taskId = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
     // let uniqueSumNumber = 0;
-    let containerId;
+    let containerId = containerIdToUse;
 
     // const pid54 = await out_state(`미션 착수 준비중...`);
     // while (singleton.installedPackages.length) singleton.installedPackages.splice(0, 1);
@@ -348,7 +348,17 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             if (!(await doesDockerImageExist(dockerImage))) {
                 throw new Error(replaceAll(caption('dockerImageNotFound'), '{{dockerImage}}', dockerImage)); // caption('dockerImageNotFound')
             }
-            containerId = await runDockerContainerDemon(dockerImage);
+            if (containerId) {
+                if (!(await isDockerContainerRunning(containerId))) {
+                    containerId = await runDockerContainerDemon(dockerImage);
+                    console.log('없어.')
+                } else {
+                    console.log('있어.')
+                }
+            } else {
+                containerId = await runDockerContainerDemon(dockerImage);
+            }
+            await cleanContainer(containerId);
         }
         // let browser, page;
 
@@ -404,20 +414,20 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                     processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
                 }
-                if (false) {
-                    let prompt = `${headSystemPrompt(isGemini)} You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. Response in ${await getLanguageFullName()}. Omit optional tasks. Think deeply step by step for the next task.`;
-                    deepThinkingPlan = await chatCompletion(
-                        {
-                            systemPrompt: prompt,
-                            systemPromptForGemini: prompt,
-                        },
-                        await makeRealTransaction(processTransactions, multiLineMission, 'deepThinkingPlan'),
-                        'deepThinkingPlan',
-                        interfaces,
-                        caption('deepThinkingPlan')
-                    );
-                    processTransactions[processTransactions.length - 1].deepThinkingPlan = deepThinkingPlan;
-                }
+                // if (false) {
+                //     let prompt = `${headSystemPrompt(isGemini)} You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. Response in ${await getLanguageFullName()}. Omit optional tasks. Think deeply step by step for the next task.`;
+                //     deepThinkingPlan = await chatCompletion(
+                //         {
+                //             systemPrompt: prompt,
+                //             systemPromptForGemini: prompt,
+                //         },
+                //         await makeRealTransaction(processTransactions, multiLineMission, 'deepThinkingPlan'),
+                //         'deepThinkingPlan',
+                //         interfaces,
+                //         capti on('deepThinkingPlan')
+                //     );
+                //     processTransactions[processTransactions.length - 1].deepThinkingPlan = deepThinkingPlan;
+                // }
                 let prompt = `${headSystemPrompt(isGemini)} You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. Exclude code or unnecessary content and respond with only one sentence in ${await getLanguageFullName()}. Omit optional tasks.`;
                 whattodo = await chatCompletion(
                     {
@@ -723,9 +733,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
             await pid12.dismiss();
         }
-        if (containerId) {
+        if (containerId && !(await getConfiguration('keepDockerContainer'))) {
             const pid14 = await out_state(caption('stoppingDockerContainer'));
             await killDockerContainer(containerId);
+            containerId = null;
             await pid14.dismiss();
         }
         if (finishedByError) {
@@ -737,5 +748,5 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         }
 
     }
-    return { exported };
+    return { exported, containerId };
 }

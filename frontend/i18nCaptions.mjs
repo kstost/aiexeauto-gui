@@ -1,5 +1,7 @@
 export const i18nCaptions = {
     "ko": {
+        "keepDockerContainer": "Docker 컨테이너 유지",
+        "keepDockerContainerDescription": "컨테이너를 삭제하지 않고 유지합니다.",
         "reviewMission": "미션 검토",
         "openResultFolder": "결과 폴더 열기",
         "getStartOperation": "임무 수행",
@@ -97,6 +99,8 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "keepDockerContainer": "Keep Docker Container",
+        "keepDockerContainerDescription": "Keep the container without deleting it.",
         "reviewMission": "Review Mission",
         "openResultFolder": "Open Result Folder",
         "getStartOperation": "Start Operation",
@@ -194,6 +198,8 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "keepDockerContainer": "Docker コンテナを維持",
+        "keepDockerContainerDescription": "コンテナを削除せずに維持します。",
         "reviewMission": "ミッション 検討",
         "openResultFolder": "結果フォルダーを開く",
         "getStartOperation": "操作を開始",
@@ -291,6 +297,8 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "keepDockerContainer": "Giữ Container Docker",
+        "keepDockerContainerDescription": "Giữ container Docker mà không xóa nó.",
         "reviewMission": "Đánh giá công việc",
         "openResultFolder": "Mở Thư mục Kết quả",
         "getStartOperation": "Bắt đầu Nhiệm vụ",
@@ -388,6 +396,8 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "keepDockerContainer": "保持Docker容器",
+        "keepDockerContainerDescription": "不删除容器。",
         "reviewMission": "任务审查",
         "openResultFolder": "打开结果文件夹",
         "getStartOperation": "开始任务",

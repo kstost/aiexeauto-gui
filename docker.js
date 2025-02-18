@@ -443,7 +443,17 @@ export async function runDockerContainerDemon(dockerImage) {
     if (result.code !== 0) throw new Error('컨테이너 시작 실패');
     return result.stdout.trim();
 }
+export async function isDockerContainerRunning(containerId) {
+    let result = await executeCommand(`'${await getDockerCommand()}' ps -q --filter "id=${containerId}"`);
+    return result.code === 0 && result.stdout.trim().length > 0;
+}
 
+export async function cleanContainer(containerId) {
+    const dockerWorkDir = await getConfiguration('dockerWorkDir');
+    const workDir = dockerWorkDir;
+    await executeInContainer(containerId, 'rm -rf ' + workDir + ' ', null);
+    await executeInContainer(containerId, 'rm -rf /nodework/ ', null);
+}
 export async function runDockerContainer(dockerImage, inputDir, outputDir) {
     const containerId = await runDockerContainerDemon(dockerImage);
     const dockerWorkDir = await getConfiguration('dockerWorkDir');
