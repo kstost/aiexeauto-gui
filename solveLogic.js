@@ -24,7 +24,7 @@ import singleton from './singleton.js';
 import { validatePath } from './system.js';
 import { getAbsolutePath, caption } from './system.js';
 import { validateAndCreatePaths } from './dataHandler.js';
-
+import { reviewMission } from './aiFeatures.js';
 
 
 let spinners = {};
@@ -269,6 +269,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     let containerId;
 
     // const pid54 = await out_state(`미션 착수 준비중...`);
+    // while (singleton.installedPackages.length) singleton.installedPackages.splice(0, 1);
+    Object.keys(singleton.installedPackages).forEach(key => {
+        delete singleton.installedPackages[key];
+    });
 
     const openaiApiKey = await getConfiguration('openaiApiKey');
     const retrivalFolder = getAppPath('retrival');
@@ -365,37 +369,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         } else {
             // Local Environment
         }
-        // if (spinners.import) {
-        //     spinners.import.succeed('데이터를 성공적으로 가져왔습니다.');
-        //     // if (false) await pid3.succeed('데이터를 성공적으로 가져왔습니다.');
-        // }
         await pid3.dismiss();
-
-        if (true) {
-            let prompt = `You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent.`;
-            let result = await chatCompletion(
-                {
-                    systemPrompt: prompt,
-                    systemPromptForGemini: prompt,
-                },
-                [
-                    {
-                        role: 'user',
-                        content: `${multiLineMission}\n\n------
-Make the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.
-
-Response **only the prompt**.`
-                    }
-                ],
-                'promptEngineer',
-                interfaces,
-                caption('reviewMission')
-            );
-            multiLineMission = result;
-            console.log('multiLineMission', multiLineMission);
-            // processTransactions[processTransactions.length - 1].deepThinkingPlan = deepThinkingPlan;
-        }
-
+        multiLineMission = await reviewMission(multiLineMission, interfaces);
         let nextCodeForValidation;
         let evaluationText = '';
         while (iterationCount < maxIterations || !maxIterations) {

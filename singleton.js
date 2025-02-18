@@ -5,6 +5,7 @@ import { getSystemLangCode } from './system.js'
 // getSystemLangCode()
 
 const singleton = {
+    installedPackages: {},
     lang: getSystemLangCode(),
     abortQueue: {},
     async debug(data, scopename) {

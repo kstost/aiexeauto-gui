@@ -8,7 +8,7 @@ import { setHandler, removeHandler } from './sigintManager.js';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { is_file } from './codeExecution.js';
 import { writeEnsuredFile } from './dataHandler.js';
-
+import singleton from './singleton.js';
 export async function executeInContainer(containerId, command, streamGetter = null) {
     if (command.includes('"')) {
         return {
@@ -288,17 +288,24 @@ let pipInit = false;
 export function isInstalledNodeModule(moduleName) {
     return !!installNPMHistory[moduleName.toLowerCase()];
 }
+export function isInInstalledPackageList(moduleName) {
+    return !!singleton.installedPackages[moduleName.toLowerCase()];
+}
+
 export async function installNodeModules(containerId, workDir, moduleName) {
     moduleName = moduleName.trim();
     if (!moduleName) return;
+    if (isInInstalledPackageList(moduleName)) return;
     await initNodeProject(containerId, workDir);
     if (!isInstalledNodeModule(moduleName)) {
         installNPMHistory[moduleName.toLowerCase()] = true;
         let result = await executeInContainer(containerId, 'cd ' + workDir + ' && npm install ' + moduleName + '');
-        return true;
+        if (result.code === 0) singleton.installedPackages[moduleName.toLowerCase()] = true;
+        return result.code === 0;
     }
 }
 export async function isInstalledPythonModule(containerId, workDir, moduleName) {
+    if (isInInstalledPackageList(moduleName)) return true;
     return await checkIfPythonModuleInstalled(containerId, moduleName);
     // let piplist = await executeInContainer(containerId, 'cd ' + workDir + ' && pip show ' + moduleName + '');
     // return (!!piplist.stdout.trim()) && piplist.code === 0;
@@ -311,14 +318,17 @@ export async function initPythonProject(containerId, workDir) {
 export async function installPythonModules(containerId, workDir, moduleName) {
     moduleName = moduleName.trim();
     if (!moduleName) return;
+    if (isInInstalledPackageList(moduleName)) return true;
     await initPythonProject(containerId, workDir);
     if (!await isInstalledPythonModule(containerId, workDir, moduleName)) {
         installPIPHistory[moduleName.toLowerCase()] = true;
         let result = await executeInContainer(containerId, 'cd ' + workDir + ' && pip install ' + moduleName + '');
-        return true;
+        if (result.code === 0) singleton.installedPackages[moduleName.toLowerCase()] = true;
+        return result.code === 0;
     }
 }
 export async function checkIfPythonModuleInstalled(containerId, moduleName) {
+    if (isInInstalledPackageList(moduleName)) return true;
 
     const workDir = await getConfiguration('dockerWorkDir');
     let code = [

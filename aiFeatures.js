@@ -4,6 +4,42 @@ import { writeEnsuredFile } from './dataHandler.js';
 import fs from 'fs';
 import { useTools, getLanguageFullName } from './solveLogic.js';
 import { caption, replaceAll } from './system.js';
+
+
+export async function reviewMission(multiLineMission, interfaces) {
+    const systemPrompt = [
+        'You are a prompt-engineer.',
+        'Your task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent.'
+    ].join('\n');
+
+    const userContent = [
+        multiLineMission,
+        '',
+        '------',
+        'Make the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.',
+        '',
+        'Response **only the prompt**.'
+    ].join('\n');
+
+    const result = await chatCompletion(
+        {
+            systemPrompt,
+            systemPromptForGemini: systemPrompt
+        },
+        [{
+            role: 'user',
+            content: userContent
+        }],
+        'promptEngineer',
+        interfaces,
+        caption('reviewMission')
+    );
+
+    return result;
+}
+
+
+
 function extractWaitTime(errorMessage) {
     const regex = /Please try again in ([\d.]+)\s*(ms|s|m|h|d)?/i;
     const match = errorMessage.match(regex);

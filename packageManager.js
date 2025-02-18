@@ -19,12 +19,14 @@ import { getConfiguration } from './system.js';
 import { actDataParser } from './actDataParser.js';
 import { makeCodePrompt } from './makeCodePrompt.js';
 import { makeRealTransaction } from './makeRealTransaction.js';
+import singleton from './singleton.js';
+// singleton
 // getAppPath
-
 
 function ignorePackages(packageList) {
     if (!packageList) return [];
     const ignorePackages = [
+        ...Object.keys(singleton.installedPackages),
         `listDirectory`,
         `aptInstall`,
         `child_process`,
@@ -52,7 +54,7 @@ export async function installPackages(requiredPackageNames, pythonCode, javascri
                 console.log('패키지 설치 여부:', installed, 'Docker 사용:', useDocker);
 
                 if (!installed) {
-                    spinners.iter = createSpinner(`${packageName} 설치중.....`);
+                    // spinners.iter = createSpinner(`${packageName} 설치중.....`);
                     const pid7 = await out_state(`${packageName} 설치중.....`);
 
                     if (await getUseDocker()) {
@@ -65,11 +67,11 @@ export async function installPackages(requiredPackageNames, pythonCode, javascri
                         // Local Environment
                     }
 
-                    if (spinners.iter) {
-                        spinners.iter.succeed(`${packageName} 설치 완료`);
-                        await pid7.succeed(`${packageName} 설치 완료`);
-                        console.log('스피너 상태 업데이트 완료');
-                    }
+                    // if (spinners.iter) {
+                    // spinners.iter.succeed(`${packageName} 설치 완료`);
+                    await pid7.succeed(`${packageName} 설치 완료`);
+                    // console.log('스피너 상태 업데이트 완료');
+                    // }
                 }
             } else if (!javascriptCode && pythonCode) {
                 console.log('Python 패키지 설치 흐름 진입');
@@ -80,7 +82,7 @@ export async function installPackages(requiredPackageNames, pythonCode, javascri
                 console.log('Python 패키지 설치 여부:', installed);
 
                 if (!installed) {
-                    spinners.iter = createSpinner(`${packageName} 설치중...`);
+                    // spinners.iter = createSpinner(`${packageName} 설치중...`);
                     const pid8 = await out_state(`${packageName} 설치중...`);
 
                     if (await getUseDocker()) {
@@ -93,11 +95,11 @@ export async function installPackages(requiredPackageNames, pythonCode, javascri
                         // Local Environment
                     }
 
-                    if (spinners.iter) {
-                        spinners.iter.succeed(`${packageName} 설치 완료`);
-                        await pid8.succeed(`${packageName} 설치 완료`);
-                        console.log('스피너 상태 업데이트 완료');
-                    }
+                    // if (spinners.iter) {
+                    // spinners.iter.succeed(`${packageName} 설치 완료`);
+                    await pid8.succeed(`${packageName} 설치 완료`);
+                    // console.log('스피너 상태 업데이트 완료');
+                    // }
                 }
             }
             console.log('패키지 설치 완료:', packageName);

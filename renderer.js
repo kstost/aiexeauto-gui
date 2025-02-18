@@ -77,6 +77,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const message = body.data;// body.message[0];
             const mode = body.mode;
+            if (!message) return;
             const inputBox = new ContentBox();
             conversations.appendChild(inputBox.resultContainer);
 
