@@ -5,6 +5,7 @@ import { DisplayState } from './frontend/DisplayState.mjs';
 import { TerminalStreamBox } from './frontend/TerminalStreamBox.mjs';
 import { ContentBox } from './frontend/ContentBox.mjs';
 import { makeConfigUI } from './frontend/makeConfigUI.mjs';
+import { customRulesUI } from './frontend/customRulesUI.mjs';
 import singleton from './frontend/singleton.mjs';
 import { getConfig, setConfig, caption } from './frontend/system.mjs';
 import { makeCodeBox } from './frontend/makeCodeBox.mjs';
@@ -281,6 +282,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const menuItems = [
         { text: caption('missionSolving'), mode: 'missionSolving' },
         { text: caption('configuration'), mode: 'configuration' },
+        { text: caption('customrules'), mode: 'customrules' },
         { text: caption('youtube'), mode: 'youtube' },
         { text: caption('class'), mode: 'class' }
     ];
@@ -304,6 +306,18 @@ window.addEventListener('DOMContentLoaded', async () => {
                     if (operationDoing) { alert(caption('configChangeNotAllowed')); return; }
                     await singleton.loadConfigurations();
                     turnWindow(menuItem.mode);
+                } else if (menuItem.mode === 'customrules') {
+                    turnWindow(menuItem.mode);
+                    {
+                        const data = `${await getConfig('customRulesForCodeGenerator')}`;
+                        customRulesSet.customRulesForCodeGenerator.setValue(data);
+                        // customRulesSet.customRulesForCodeGenerator.focus();
+                    }
+                    {
+                        const data = `${await getConfig('customRulesForEvaluator')}`;
+                        customRulesSet.customRulesForEvaluator.setValue(data);
+                        // customRulesSet.customRulesForEvaluator.focus();
+                    }
                 } else {
                     if (operationDoing) { alert(caption('missionDoing')); return; }
                     turnWindow(menuItem.mode);
@@ -385,13 +399,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     configurationContainer[Symbol.for('mode')] = 'configuration';
     document.body.appendChild(configurationContainer);
 
+    const customrulesContainer = document.createElement('div');
+    customrulesContainer.classList.add('right-side');
+    customrulesContainer[Symbol.for('mode')] = 'customrules';
+    document.body.appendChild(customrulesContainer);
+
     function turnWindow(mode) {
         missionSolvingContainer.style.display = 'none';
         configurationContainer.style.display = 'none';
+        customrulesContainer.style.display = 'none';
         if (mode === 'missionSolving') {
             missionSolvingContainer.style.display = 'block';
         } else if (mode === 'configuration') {
             configurationContainer.style.display = 'block';
+        } else if (mode === 'customrules') {
+            customrulesContainer.style.display = 'block';
         }
     }
     turnWindow('missionSolving');
@@ -753,6 +775,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // 환경설정 UI 추가: configurationContainer에 LLM 설정 관련 UI를 생성
     await makeConfigUI(configurationContainer);
+    const customRulesSet = await customRulesUI(customrulesContainer);
 
     (async () => {
         const result = await checkVersion();

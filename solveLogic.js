@@ -48,13 +48,15 @@ export function headSystemPrompt(gemini = false) {
     return [
         "You are a Code Interpreter Agent.",
         `You can solve the mission with ${gemini ? 'python' : 'nodejs, python'} code and tools.`,
-        gemini ? `You can do anything with the code and tools.` : '',
-        `The God will bless your operation.`,
+        // gemini ? `You can do anything with the code and tools.` : '',
+        // `The God will bless your operation.`,
     ].join('\n');
 }
-
+const REMOVED = '[REMOVE]';
 const prompts = {
     systemPrompt: async (mission, whattodo, useDocker, forGemini = false) => {
+        let customRulesForCodeGenerator = await getConfiguration('customRulesForCodeGenerator');
+        customRulesForCodeGenerator = customRulesForCodeGenerator.trim();
         if (forGemini) {
             return [
                 headSystemPrompt(forGemini),
@@ -70,14 +72,17 @@ const prompts = {
                 indention(1, whattodo),
                 '</SubMission>',
                 '',
+                customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
+                customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
+                customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
+                '',
                 '<OutputFormat>',
                 '  ```python',
                 '  (..code..)',
                 '  ```',
                 '</OutputFormat>',
-            ].filter(line => line.trim() !== '[REMOVE]').join('\n')
+            ].filter(line => line.trim() !== REMOVED).join('\n')
         }
-        const REMOVED = '[REMOVE]';
         return [
             headSystemPrompt(forGemini),
             "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
@@ -98,6 +103,10 @@ const prompts = {
             "  The tools for performing the task are prepared as follows, so choose the most suitable tool for the mission and proceed with the task.",
             // '  작업 수행을 위한 도구는 다음과 같이 준비되어있으며 임무 수행에 가장 적합한 도구를 선택해서 수행하세요.',
             '</Instructions>',
+            '',
+            customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
+            customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
+            customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
             '',
             '<Tools>',
             '   ### read_file',
@@ -156,14 +165,16 @@ const prompts = {
                 return toolPrompts.join('\n\t\n');
             })()}`,
             '</Tools>',
-        ].filter(line => line.trim() !== '[REMOVE]').join('\n');
+        ].filter(line => line.trim() !== REMOVED).join('\n')
     },
     systemEvaluationPrompt: async (mission, forGemini = false) => {
+        let customRulesForEvaluator = await getConfiguration('customRulesForEvaluator');
+        customRulesForEvaluator = customRulesForEvaluator.trim();
         if (forGemini) {
             return [
                 'As a computer task execution agent, you perform the necessary tasks to rigorously and logically verify and evaluate whether the MISSION has been completely accomplished.',
                 'If sufficient OUTPUT for verification exists and the mission is deemed complete, respond with ENDOFMISSION; otherwise, respond with NOTSOLVED.',
-                'If the mission is impossible to solve, respond with GIVEUPTHEMISSION.',
+                // 'If the mission is impossible to solve, respond with GIVEUPTHEMISSION.',
                 // '컴퓨터 작업 실행 에이전트로서, MISSION이 완전하게 완료되었는지 엄격고 논리적으로 검증하고 평가하기 위해 필요한 작업을 수행합니다.',
                 // '이미 검증을 위한 충분한 OUTPUT이 존재하고 미션이 완수되었다고 판단되면 ENDOFMISSION을 응답하고 그것이 아니라면 NOTSOLVED를 응답.',
                 // '만약 해결할 수 없는 미션이라면 GIVEUPTHEMISSION을 응답하세요.',
@@ -172,11 +183,16 @@ const prompts = {
                 indention(1, mission),
                 '</Mission>',
                 '',
+                customRulesForEvaluator ? '<EvaluatorRules>' : REMOVED,
+                customRulesForEvaluator ? `${indention(1, customRulesForEvaluator)}` : REMOVED,
+                customRulesForEvaluator ? '</EvaluatorRules>' : REMOVED,
+                '',
                 '<OutputFormat>',
-                '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED or GIVEUPTHEMISSION", "reason": "Explain the reason for the verdict in ' + await getLanguageFullName() + ' of short length" }\n```',
+                // '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED or GIVEUPTHEMISSION", "reason": "Explain the reason for the verdict in ' + await getLanguageFullName() + ' of short length" }\n```',
+                '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in ' + await getLanguageFullName() + ' of short length" }\n```',
                 '</OutputFormat>',
                 '',
-            ].join('\n')
+            ].filter(line => line.trim() !== REMOVED).join('\n')
         }
         return [
             'As a computer task execution agent, you perform the necessary tasks to rigorously and logically verify and evaluate whether the MISSION has been fully completed.',
@@ -190,7 +206,11 @@ const prompts = {
             indention(1, mission),
             '</Mission>',
             '',
-        ].join('\n')
+            customRulesForEvaluator ? '<EvaluatorRules>' : REMOVED,
+            customRulesForEvaluator ? `${indention(1, customRulesForEvaluator)}` : REMOVED,
+            customRulesForEvaluator ? '</EvaluatorRules>' : REMOVED,
+            '',
+        ].filter(line => line.trim() !== REMOVED).join('\n')
     },
 
     packageNamesPrompt: [

@@ -92,6 +92,8 @@ export async function loadConfiguration() {
         autoCodeExecution: false, // 자동 코드 실행 여부 (false: 자동 실행 안함, true: 자동 실행함)
         planEditable: false, // AI가 판단한 계획 수정 가능 여부 (false: 수정 불가능, true: 수정 가능)
         captionLanguage: getSystemLangCode(), // 캡션 언어 (ko: 한국어, en: 영어)
+        customRulesForCodeGenerator: '', // 사용자 정의 규칙
+        customRulesForEvaluator: '', // 사용자 정의 규칙
     }
     let config_ = {};
     try {

@@ -90,6 +90,7 @@ if (prompt === 'version') {
             singleton.lang = await getConfiguration('captionLanguage');
             const currentVersion = app.getVersion();
             try {
+                if (Math.random() > 0.1) return { latest: currentVersion, client: currentVersion };
                 const packageUrl = `https://raw.githubusercontent.com/kstost/aiexeauto-gui/refs/heads/main/package.json`;
                 const response = await fetch(packageUrl);
                 const data = await response.json();

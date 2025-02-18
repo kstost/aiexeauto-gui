@@ -472,7 +472,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     "description": "verdict whether the mission is solved.",
                     "input_schema": convertJsonToResponseFormat(
                         { evaluation: "", reason: "" },
-                        { evaluation: "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED or GIVEUPTHEMISSION", reason: `Explain the reason for the verdict in ${await getLanguageFullName()} of short length` }
+                        { evaluation: "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED" + (llm !== 'gemini' ? " or GIVEUPTHEMISSION" : ""), reason: `Explain the reason for the verdict in ${await getLanguageFullName()} of short length` }
                     ).json_schema.schema
                 },
             ],

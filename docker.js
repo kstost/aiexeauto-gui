@@ -197,26 +197,20 @@ export async function exportFromDocker(containerId, workDir, outputDir, director
         'AIEXE-data-handling-operation.js',
         'package-lock.json', 'package.json'
     ];
-
-    let result;
-
-    for (const item of removeList) {
-        result = await executeInContainer(containerId, `rm -rf ${workDir}/${item}`);
-        if (result.code !== 0) throw new Error(`${item} 삭제 실패`);
-    }
-
-    result = await executeInContainer(containerId, `rm -rf ${workDir}/${prefixName}*`);
-    if (result.code !== 0) throw new Error('임시 파일 삭제 실패');
-
+    const commandList = [];
+    commandList.push(`mkdir -p /nodework/`);
+    for (const item of removeList) commandList.push(`rm -rf ${workDir}/${item}`);
+    commandList.push(`rm -rf ${workDir}/${prefixName}*`);
+    await executeInContainer(containerId, commandList.join(' && '));
     let structure;
     {
         const tmpJsFile = getAppPath('.code_' + Math.random() + '.js');
         const jsFileName = 'AIEXE-data-handling-operation.js';
         let code = [
             `
-            import fs from 'fs';
-            import path from 'path';
-            export async function getDetailDirectoryStructure(directoryPath, basePath = directoryPath) {
+            const fs = require('fs');
+            const path = require('path');
+            async function getDetailDirectoryStructure(directoryPath, basePath = directoryPath) {
                 let fsPromise = fs.promises;
                 const entries = await fsPromise.readdir(directoryPath);
                 entries.sort((a, b) => a.localeCompare(b));
@@ -253,7 +247,7 @@ export async function exportFromDocker(containerId, workDir, outputDir, director
         ].join('\n');
         await writeEnsuredFile(tmpJsFile, code);
         {
-            await executeInContainer(containerId, "mkdir -p /nodework/ && cd /nodework/ && npm init -y es6");
+
             let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpJsFile + '" "' + containerId + ':' + '/nodework/' + '/' + jsFileName + '"');
             if (result.code !== 0) throw new Error('임시 JS 파일 복사 실패');
         }
@@ -268,7 +262,7 @@ export async function exportFromDocker(containerId, workDir, outputDir, director
         structure = (result.stdout || '').trim();
     }
     if (directoryStructureBeforeOperation && JSON.stringify(directoryStructureBeforeOperation) !== structure) {
-        result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + outputDir + '"');
+        let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + outputDir + '"');
         if (result.code !== 0) throw new Error('output 폴더로 복사 실패');
         return true;
     }

@@ -74,7 +74,8 @@ export class TerminalStreamBox {
             this.placeholder = null;
         }
         const streamBox = document.createElement('div');
-        streamBox.style.whiteSpace = 'pre';
+        // streamBox.style.whiteSpace = 'pre';
+        streamBox.style.wordBreak = 'break-all';
         streamBox.classList.add('terminal-stream-box');
         streamBox.textContent = stream;
         streamBox.style.padding = '2px';
