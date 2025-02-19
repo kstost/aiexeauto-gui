@@ -6,9 +6,10 @@ import { getAbsolutePath, getAppPath, isWindows, getConfiguration, getHomePath }
 import chalk from 'chalk';
 import { setHandler, removeHandler } from './sigintManager.js';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
-import { is_file } from './codeExecution.js';
+import { is_file, is_dir } from './codeExecution.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import singleton from './singleton.js';
+import open from 'open';
 export async function executeInContainer(containerId, command, streamGetter = null) {
     if (command.includes('"')) {
         return {
@@ -267,6 +268,59 @@ export async function exportFromDocker(containerId, workDir, outputDir, director
         return true;
     }
     return false;
+}
+export async function waitingForDataCheck(out_state) {
+    if (!singleton.beingDataCheck || singleton.missionAborting) return;
+    const pid11 = await out_state(`Waiting for data exporting...`);
+    try {
+        while (singleton.beingDataCheck && !singleton.missionAborting) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    } catch { } finally {
+        await pid11.dismiss();
+    }
+}
+export async function exportFromDockerForDataCheck(containerId, dataOutputPath) {
+    singleton.beingDataCheck = true;
+    try {
+        async function _exportFromDockerForDataCheck(containerId, workDir, outputDir) {
+            // const prefixName = 'AIEXE-data-handling-';
+            // const removeList = [
+            //     'node_modules', '.git', '.vscode',
+            //     'AIEXE-data-handling-tmpfile.tar',
+            //     'AIEXE-data-handling-exportData.js',
+            //     'AIEXE-data-handling-operation.js',
+            //     'package-lock.json', 'package.json'
+            // ];
+            // const commandList = [];
+            let outputDirPreview = outputDir;
+            while (outputDirPreview.endsWith('/') || outputDirPreview.endsWith('\\')) {
+                outputDirPreview = outputDirPreview.slice(0, -1);
+            }
+            let count = 0;
+            let candidate = `${outputDirPreview}-preview`;
+            while (await is_dir(candidate)) {
+                count++;
+                candidate = `${outputDirPreview}-${count}`;
+                if (ensureAppsHomePath(candidate) && !(await is_dir(candidate))) break;
+            }
+            let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + candidate + '"');
+            // console.log('***command', '\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + candidate + '"');
+            // console.log('***result', result);
+            return result.code === 0 ? candidate : null;
+        }
+        if (containerId) {
+            if (await getConfiguration('useDocker')) {
+                const exported = await _exportFromDockerForDataCheck(containerId, await getConfiguration('dockerWorkDir'), dataOutputPath);
+                return exported;
+            }
+        }
+
+    } catch {
+    } finally {
+        singleton.beingDataCheck = false;
+    }
+    return null;
 }
 
 export async function initNodeProject(containerId, workDir) {

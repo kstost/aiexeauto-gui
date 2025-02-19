@@ -16,6 +16,7 @@ import { installProcess, shell_exec } from './codeExecution.js';
 import { fileURLToPath } from 'url';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { is_dir } from './codeExecution.js';
+import { exportFromDockerForDataCheck } from './docker.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function reqRenderer(mode, arg) {
@@ -49,16 +50,24 @@ if (prompt === 'version') {
 
     const apiMethods = {
         async clear_output_data(body) {
-            let outputPath = getAppPath('outputs');
-            if (fs.existsSync(outputPath)) {
-                // [remove.001] rm - /Users/kst/.aiexeauto/workspace/outputs
-                if ((ensureAppsHomePath(outputPath)) && linuxStyleRemoveDblSlashes(outputPath).includes('/.aiexeauto/workspace/') && await is_dir(outputPath) && outputPath.startsWith(getHomePath('.aiexeauto/workspace'))) {
-                    console.log(`[remove.001] rm - ${outputPath}`);
-                    await fs.promises.rm(outputPath, { recursive: true });
-                } else {
-                    console.log(`[remove.001!] rm - ${outputPath}`);
+            let list = [
+                getAppPath('outputs'),
+                getAppPath('preview'),
+                getAppPath('.tempwork'),
+                getAppPath('logs_txt'),
+                getAppPath('retrival'),
+            ];
+            for (let i = 0; i < list.length; i++) {
+                let outputPath = list[i];
+                if (fs.existsSync(outputPath)) {
+                    // [remove.001] rm - /Users/kst/.aiexeauto/workspace/outputs
+                    if ((ensureAppsHomePath(outputPath)) && linuxStyleRemoveDblSlashes(outputPath).includes('/.aiexeauto/workspace/') && await is_dir(outputPath) && outputPath.startsWith(getHomePath('.aiexeauto/workspace'))) {
+                        console.log(`[remove.001] rm - ${outputPath}`);
+                        await fs.promises.rm(outputPath, { recursive: true });
+                    } else {
+                        console.log(`[remove.001!] rm - ${outputPath}`);
+                    }
                 }
-
             }
         },
         async open_output_folder(body) {
@@ -366,6 +375,36 @@ if (prompt === 'version') {
                 event.reply('response', { arg: result, taskId: arg.taskId });
             }
         });
+        ipcMain.on('onewayreq', async (event, arg) => {
+            try {
+                const data = arg.arg;
+                const mode = arg.mode;
+                console.log(mode, data);
+                if (mode === 'planEditable') {
+                    await setConfiguration('planEditable', data.checked);
+                }
+                if (mode === 'autoCodeExecution') {
+                    await setConfiguration('autoCodeExecution', data.checked);
+                }
+                if (mode === 'modify_mission') {
+                    // singleton.modifiedMission = data;
+                }
+                if (mode === 'data_check') {
+                    const dataOutputPath = getAppPath('preview/previewData');
+                    await fs.promises.mkdir(dataOutputPath, { recursive: true });
+                    if (!singleton.currentWorkingContainerId) throw null;
+                    let prepared = await exportFromDockerForDataCheck(singleton.currentWorkingContainerId, dataOutputPath)
+                    if (prepared) {
+                        await open(prepared);
+                    }
+                }
+            } catch {
+
+            } finally {
+                event.reply('onewayreqres', arg);
+            }
+        });
+
         ipcMain.on('aborting', async (event, arg) => {
             singleton.abortQueue[arg.taskId] = true;
             // arg.taskIds.forEach(taskId => {

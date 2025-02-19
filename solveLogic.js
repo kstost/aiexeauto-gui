@@ -10,7 +10,7 @@ import { importData, exportData } from './dataHandler.js';
 import { chatCompletion, getModel, isOllamaRunning } from './aiFeatures.js';
 import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
 import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler.js';
-import { cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
+import { waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
 import { getToolList, getToolData, getAppPath, getUseDocker, replaceAll } from './system.js';
 import fs from 'fs';
 import { getConfiguration } from './system.js';
@@ -25,7 +25,7 @@ import { validatePath } from './system.js';
 import { getAbsolutePath, caption } from './system.js';
 import { validateAndCreatePaths } from './dataHandler.js';
 import { reviewMission } from './aiFeatures.js';
-
+import open from 'open';
 
 let spinners = {};
 
@@ -319,6 +319,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     };
 
     // await pid54.dismiss();
+    // delete singleton.reservedDataCheck;// = false;
+    delete singleton.currentWorkingContainerId;
+    delete singleton.beingDataCheck;
 
     let iterationCount = 0;
     let finishedByError = '';
@@ -380,6 +383,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
             await cleanContainer(containerId);
         }
+        singleton.currentWorkingContainerId = containerId;
         // let browser, page;
 
         //multiLineMission
@@ -405,6 +409,15 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         let evaluationText = '';
         while (iterationCount < maxIterations || !maxIterations) {
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
+            await waitingForDataCheck(out_state);
+            // if (10 < Math.random() && singleton.reservedDataCheck) {
+            //     // first make 123.txt file in this folder and print from 1 to 10 every 1second
+            //     // make 123 folder and make 45 and make 455 folder. do it seperately.
+            //     const pid12 = await out_state(caption('savingResults'));
+            //     await exportFromDockerForDataCheck(containerId, dataOutputPath)
+            //     await pid12.dismiss();
+            //     delete singleton.reservedDataCheck;
+            // }
             iterationCount++;
             let javascriptCode = '';
             let javascriptCodeBack = '';
@@ -588,6 +601,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             executionId = confirmed.executionId;
                         }
                         console.log('Docker에서 NodeJS 코드 실행');
+                        await waitingForDataCheck(out_state);
                         result = await runNodeJSCode(containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames, streamGetter);
                     } else {
                         // console.log('로컬 환경에서 JavaScript 실행');
@@ -611,6 +625,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             executionId = confirmed.executionId;
                         }
                         console.log('Docker에서 Python 코드 실행');
+                        await waitingForDataCheck(out_state);
                         result = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames, streamGetter);
                     }
                 } else {

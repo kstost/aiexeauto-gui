@@ -104,6 +104,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             // return 1112;
         },
         async await_prompt(body) {
+            // currentConfig['autoCodeExecution'] = await getConfig('autoCodeExecution');
+            // currentConfig['planEditable'] = await getConfig('planEditable');
 
             let _resolve = null;
             let _reject = null;
@@ -237,6 +239,12 @@ window.addEventListener('DOMContentLoaded', async () => {
             scrollBodyToBottomSmoothly();
             delete displayState[id];
         },
+    }, {
+        async data_check(body) {
+            // turnDataCheckButton(false);
+            document.getElementById('dataCheckButton')[Symbol.for('changeMethod')](false);
+            console.log('data_check', body);
+        }
     });
     // { reqAPI, abortAllTask, abortTask }
     singleton.reqAPI = reqAPI;
@@ -587,11 +595,127 @@ window.addEventListener('DOMContentLoaded', async () => {
             // return;
 
             // 화면의
+            //----------------------------------------------
+            // 버튼들의 컨테이너 생성
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.display = 'flex';
+            buttonContainer.style.gap = '15px';
+            buttonContainer.style.position = 'fixed';
+            buttonContainer.style.top = '0px';
+            buttonContainer.style.right = '0px';
+            buttonContainer.style.left = '200px';
+            buttonContainer.style.zIndex = '9999';
+            buttonContainer.style.backdropFilter = 'blur(3px)';
+            buttonContainer.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            buttonContainer.style.padding = '10px';
+            buttonContainer.style.fontSize = '13px';
+            buttonContainer.style.textAlign = 'right';
+            buttonContainer.style.justifyContent = 'flex-end';
+
+            // 계획수정 체크박스 생성
+            const planEditCheckbox = document.createElement('div');
+            planEditCheckbox.style.display = 'flex';
+            planEditCheckbox.style.alignItems = 'center';
+            planEditCheckbox.style.gap = '4px';
+            planEditCheckbox.style.color = '#ffffff';
+            planEditCheckbox.style.fontSize = '13px';
+            planEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
+            planEditCheckbox.innerHTML = `
+                <input type="checkbox" id="planEditableCheckbox" style="cursor: pointer;">
+                <label for="planEditableCheckbox" style="cursor: pointer;">계획수정</label>
+            `;
+            const checkboxForPlanEdit = planEditCheckbox.querySelector('#planEditableCheckbox');
+            checkboxForPlanEdit.checked = await getConfig('planEditable');;//currentConfig['planEditable'];
+            checkboxForPlanEdit.addEventListener('change', () => {
+                console.log('planEditableCheckbox', checkboxForPlanEdit.checked);
+                currentConfig['planEditable'] = checkboxForPlanEdit.checked;
+                window.electronAPI.send('onewayreq', { mode: 'planEditable', arg: { checked: checkboxForPlanEdit.checked } });
+            });
+
+            // 코드수정 체크박스 생성
+            const codeEditCheckbox = document.createElement('div');
+            codeEditCheckbox.style.display = 'flex';
+            codeEditCheckbox.style.alignItems = 'center';
+            codeEditCheckbox.style.gap = '4px';
+            codeEditCheckbox.style.color = '#ffffff';
+            codeEditCheckbox.style.fontSize = '13px';
+            codeEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
+            codeEditCheckbox.innerHTML = `
+                <input type="checkbox" id="autoCodeExecutionCheckbox" style="cursor: pointer;">
+                <label for="autoCodeExecutionCheckbox" style="cursor: pointer;">코드자동실행</label>
+            `;
+            const checkboxForCodeEdit = codeEditCheckbox.querySelector('#autoCodeExecutionCheckbox');
+            checkboxForCodeEdit.checked = await getConfig('autoCodeExecution');
+            checkboxForCodeEdit.addEventListener('change', () => {
+                console.log('autoCodeExecutionCheckbox', checkboxForCodeEdit.checked);
+                currentConfig['autoCodeExecution'] = checkboxForCodeEdit.checked;
+                window.electronAPI.send('onewayreq', { mode: 'autoCodeExecution', arg: { checked: checkboxForCodeEdit.checked } });
+            });
+
+            // modify mission button
+            const modifyMissionButton = document.createElement('button');
+            modifyMissionButton.style.backgroundColor = '#8b5cf6';
+            modifyMissionButton.style.color = '#ffffff';
+            modifyMissionButton.style.border = 'none';
+            modifyMissionButton.style.borderRadius = '4px';
+            modifyMissionButton.style.cursor = 'pointer';
+            modifyMissionButton.style.display = 'flex';
+            modifyMissionButton.style.alignItems = 'center';
+            modifyMissionButton.style.gap = '4px';
+            modifyMissionButton.style.padding = '4px 8px';
+            modifyMissionButton.style.fontSize = '13px';
+            modifyMissionButton.innerHTML = `
+                <span class="material-icons" style="font-size: 20px;">refresh</span>
+                <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">미션조정</span>
+            `;
+            modifyMissionButton.addEventListener('click', async () => {
+                window.electronAPI.send('onewayreq', { mode: 'modify_mission', arg: {} });
+            });
+            modifyMissionButton.style.display = 'none';
+
+            // 
+
+
+            // 데이터 확인버튼
+            const dataCheckButton = document.createElement('button');
+            dataCheckButton.id = 'dataCheckButton';
+            dataCheckButton[Symbol.for('changeMethod')] = function (mode) {
+                dataCheckButton[Symbol.for('state')] = mode;
+                if (mode) {
+                    // 데이터 확인중
+                    dataCheckButton.innerHTML = `
+                    <span class="material-icons" style="font-size: 20px;">sync</span>
+                    <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">데이터확인중</span>
+                    `;
+                    dataCheckButton.style.opacity = '0.5';
+                } else {
+                    // 보통 상태
+                    dataCheckButton.innerHTML = `
+                    <span class="material-icons" style="font-size: 20px;">folder_open</span>
+                    <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">데이터확인</span>
+                    `;
+                    dataCheckButton.style.opacity = '1';
+                }
+            }
+            dataCheckButton.style.backgroundColor = '#22a55e';
+            dataCheckButton.style.color = '#ffffff';
+            dataCheckButton.style.border = 'none';
+            dataCheckButton.style.borderRadius = '4px';
+            dataCheckButton.style.cursor = 'pointer';
+            dataCheckButton.style.display = 'flex';
+            dataCheckButton.style.alignItems = 'center';
+            dataCheckButton.style.gap = '4px';
+            dataCheckButton.style.padding = '4px 8px';
+            dataCheckButton.style.fontSize = '13px';
+            dataCheckButton[Symbol.for('changeMethod')](false);
+            dataCheckButton.addEventListener('click', async () => {
+                if (dataCheckButton[Symbol.for('state')]) return;
+                dataCheckButton[Symbol.for('changeMethod')](true);
+                window.electronAPI.send('onewayreq', { mode: 'data_check', arg: {} });
+            });
+
             // 미션중지 버튼 생성
             const abortButton = document.createElement('button');
-            abortButton.style.position = 'fixed';
-            abortButton.style.top = '10px';
-            abortButton.style.right = '10px';
             abortButton.style.backgroundColor = '#ef4444';
             abortButton.style.color = '#ffffff';
             abortButton.style.border = 'none';
@@ -607,7 +731,13 @@ window.addEventListener('DOMContentLoaded', async () => {
                 <span class="material-icons" style="font-size: 20px;">stop</span>
                 <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('abortMission')}</span>
             `;
-            document.body.appendChild(abortButton);
+
+            buttonContainer.appendChild(planEditCheckbox);
+            buttonContainer.appendChild(codeEditCheckbox);
+            buttonContainer.appendChild(modifyMissionButton);
+            buttonContainer.appendChild(dataCheckButton);
+            buttonContainer.appendChild(abortButton);
+            document.body.appendChild(buttonContainer);
 
             abortButton.addEventListener('click', async () => {
                 {
@@ -622,13 +752,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                     if (aborting_responsed) break;
                     await new Promise(resolve => setTimeout(resolve));
                 }
-                abortButton.style.backgroundColor = 'rgba(239, 68, 68, 0.7)';
-                abortButton.remove();
+                // abortButton.style.backgroundColor = 'rgba(239, 68, 68, 0.7)';
+                buttonContainer.remove();
                 [...document.querySelectorAll('.run-button')].forEach(button => {
                     button.click();
                 });
 
             });
+            //-----------------------------------------------------------------------------------------
             // console.log(value.detail);
             const containerIdToUse = Object.keys(dockerContainers)[0];
             let task = reqAPI('ve1nppvpath', { prompt: promptInput.input.value, inputFolderPath: getInputFolderPath(), outputFolderPath: '', containerIdToUse });
@@ -641,7 +772,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             enableUIElements();
             promptInput.setFocus();
             scrollBodyToBottomSmoothly(false);
-            abortButton.remove();
+            buttonContainer.remove();
             operationDoing = false;
 
             Object.keys(displayState).forEach(key => {

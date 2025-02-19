@@ -1,4 +1,4 @@
-export function callEvent(apiMethods) {
+export function callEvent(apiMethods, onewayreqresMethods) {
     let counter = 0;
     let queue = {};
     let abortedTasks = {};
@@ -79,6 +79,9 @@ export function callEvent(apiMethods) {
         if (!fnd) return;
         delete queue[arg.taskId];
         fnd._resolve(arg.arg);
+    });
+    window.electronAPI.receive('onewayreqres', (arg) => {
+        if (onewayreqresMethods[arg.mode]) onewayreqresMethods[arg.mode](arg.arg);
     });
     return {
         reqAPI, abortAllTask, abortTask
