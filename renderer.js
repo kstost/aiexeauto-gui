@@ -708,6 +708,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (operationDoing) return;
         operationDoing = true;
         aborting_responsed = false;
+
+
+        // await new Promise(resolve => window.requestAnimationFrame(resolve));
+        // parentContainer.style.transition = 'opacity 0.2s ease-in-out';
+        // await new Promise(resolve => window.requestAnimationFrame(resolve));
+        // parentContainer.style.opacity = '1';
+        // parentContainer.style
+        // inputContainer.style.display = 'none';
+
+
+
         // conversations.innerHTML = '';
         conversations.parentElement.appendChild(conversations);
         formToEnd();
@@ -723,6 +734,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         // console.log(pathDisplay.value);
         setFolderPath(pathDisplay.value, pathDisplay);
         // return;
+        formDisplay(false);
 
         // 화면의
         //----------------------------------------------
@@ -950,6 +962,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         //     console.log('filename', filename);
         // }
 
+        formDisplay();
 
         // if (resultPath) {
         //     open(resultPath);
