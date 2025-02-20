@@ -461,7 +461,18 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 //     );
                 //     processTransactions[processTransactions.length - 1].deepThinkingPlan = deepThinkingPlan;
                 // }
-                let prompt = `${headSystemPrompt(isGemini)} You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. Exclude code or unnecessary content and respond with only one sentence in ${await getLanguageFullName()}. Omit optional tasks.`;
+                let customRulesForCodeGenerator = await getConfiguration('customRulesForCodeGenerator');
+                customRulesForCodeGenerator = customRulesForCodeGenerator.trim();
+                let prompt = [
+                    `${headSystemPrompt(isGemini)}`,
+                    `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
+                    `Exclude code or unnecessary content and respond with only one sentence in ${await getLanguageFullName()}. Omit optional tasks.`,
+                    '',
+                    customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
+                    customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
+                    customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
+                    '',
+                ].filter(line => line.trim() !== REMOVED).join('\n')
                 whattodo = await chatCompletion(
                     {
                         systemPrompt: prompt,
