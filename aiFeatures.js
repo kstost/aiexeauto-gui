@@ -675,7 +675,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                         pid65.fail(errorMessage);
                         await leaveLog({ callMode, data: { resultErrorSystem: result } });
                         let waitTime = Math.ceil(extractWaitTime(errorMessage));
-                        if (!waitTime && waitTime !== 0) waitTime = 5;
+                        if (!waitTime) waitTime = 5;
+                        if (llm === 'claude') waitTime *= 2;
                         if (RESOURCE_EXHAUSTED) waitTime = 5;
                         exponentialBackoffCount *= 1.5;
                         waitTime *= exponentialBackoffCount;
