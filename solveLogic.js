@@ -26,7 +26,7 @@ import { getAbsolutePath, caption } from './system.js';
 import { validateAndCreatePaths } from './dataHandler.js';
 import { reviewMission } from './aiFeatures.js';
 import open from 'open';
-
+import { ensureAppsHomePath } from './dataHandler.js';
 let spinners = {};
 
 export function getSpinners() {
@@ -281,8 +281,17 @@ export function omitMiddlePart(text, length = 1024) {
         : text).trim();
 }
 
-export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse }) {
+export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle }) {
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    let keepMode = processTransactions.length > 0;
+    processTransactions.forEach(transaction => {
+        transaction.notcurrentmission = true;
+        delete transaction.mainkeymission;
+        // delete transaction.whattodo;
+        delete transaction.whatdidwedo;
+        delete transaction.deepThinkingPlan;
+    });
+    if (processTransactions.at(-1)) delete processTransactions.at(-1).notcurrentmission;// = false;
 
     // const taskId = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
     // let uniqueSumNumber = 0;
@@ -300,7 +309,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     if (!fs.existsSync(retrivalFolder)) fs.mkdirSync(retrivalFolder);
 
 
-    const processTransactions = [];
+    // const processTransactions = [];
     const pushProcessTransactions = async (data) => {
         processTransactions.push(data);
         // if (!retriver) return;
@@ -404,7 +413,15 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             // Local Environment
         }
         await pid3.dismiss();
-        multiLineMission = await reviewMission(multiLineMission, interfaces);
+        if (!keepMode) multiLineMission = await reviewMission(multiLineMission, interfaces);
+        let nextPrompt;
+        let mainKeyMission;// = multiLineMission;
+        if (keepMode) {
+            nextPrompt = `${multiLineMission}`;
+            // nextPrompt = `<THE-MAIN-KEY-MISSION>${multiLineMission}</THE-MAIN-KEY-MISSION>`;
+            mainKeyMission = multiLineMission;
+            multiLineMission = 'Solve the THE-MAIN-KEY-MISSION';
+        }
         let nextCodeForValidation;
         let evaluationText = '';
         while (iterationCount < maxIterations || !maxIterations) {
@@ -432,13 +449,13 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let actData;
             if (!validationMode) {
                 processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
-                if (processTransactions.length > 1) {
+                if (processTransactions.length > 1 && !nextPrompt) {
                     whatdidwedo = await chatCompletion(
                         {
                             systemPrompt: 'As an AI agent, analyze what has been done so far',
                             systemPromptForGemini: 'As an AI agent, analyze what has been done so far',
                         },
-                        await makeRealTransaction(processTransactions, multiLineMission, 'whatdidwedo'),
+                        await makeRealTransaction({ processTransactions, multiLineMission, type: 'whatdidwedo', mainKeyMission }),
                         'whatDidWeDo',
                         interfaces,
                         caption('whatDidWeDo')
@@ -461,43 +478,50 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 //     );
                 //     processTransactions[processTransactions.length - 1].deepThinkingPlan = deepThinkingPlan;
                 // }
-                let customRulesForCodeGenerator = await getConfiguration('customRulesForCodeGenerator');
-                customRulesForCodeGenerator = customRulesForCodeGenerator.trim();
-                let prompt = [
-                    `${headSystemPrompt(isGemini)}`,
-                    `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
-                    `Exclude code or unnecessary content and respond with only one sentence in ${await getLanguageFullName()}. Omit optional tasks.`,
-                    '',
-                    customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
-                    customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
-                    customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
-                    '',
-                ].filter(line => line.trim() !== REMOVED).join('\n')
-                whattodo = await chatCompletion(
-                    {
-                        systemPrompt: prompt,
-                        systemPromptForGemini: prompt,
-                    },
-                    await makeRealTransaction(processTransactions, multiLineMission, 'whattodo'),
-                    'whatToDo',
-                    interfaces,
-                    caption('whatToDo')
-                );
-                if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
-                if (await getConfiguration('planEditable')) {
-                    let confirmed = await await_prompt({ mode: 'whattodo_confirm', actname: 'whattodo_confirm', containerId, dockerWorkDir, whattodo });
-                    if (singleton.missionAborting) throw new Error(caption('missionAborted'));
-                    whattodo = confirmed.confirmedCode;
+                if (!nextPrompt) {
+                    let customRulesForCodeGenerator = await getConfiguration('customRulesForCodeGenerator');
+                    customRulesForCodeGenerator = customRulesForCodeGenerator.trim();
+                    let prompt = [
+                        `${headSystemPrompt(isGemini)}`,
+                        `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
+                        `Exclude code or unnecessary content and respond with only one sentence in ${await getLanguageFullName()}. Omit optional tasks.`,
+                        '',
+                        customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
+                        customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
+                        customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
+                        '',
+                    ].filter(line => line.trim() !== REMOVED).join('\n')
+                    whattodo = await chatCompletion(
+                        {
+                            systemPrompt: prompt,
+                            systemPromptForGemini: prompt,
+                        },
+                        await makeRealTransaction({ processTransactions, multiLineMission, type: 'whattodo', mainKeyMission }),
+                        'whatToDo',
+                        interfaces,
+                        caption('whatToDo')
+                    );
                     if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                    if (await getConfiguration('planEditable')) {
+                        let confirmed = await await_prompt({ mode: 'whattodo_confirm', actname: 'whattodo_confirm', containerId, dockerWorkDir, whattodo });
+                        if (singleton.missionAborting) throw new Error(caption('missionAborted'));
+                        whattodo = confirmed.confirmedCode;
+                        if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                    } else {
+                        await out_print({ data: whattodo, mode: 'whattodo' });
+                    }
+                    processTransactions[processTransactions.length - 1].whattodo = whattodo;
                 } else {
-                    await out_print({ data: whattodo, mode: 'whattodo' });
+                    processTransactions[processTransactions.length - 1].whattodo = nextPrompt;
+                    processTransactions[processTransactions.length - 1].mainkeymission = nextPrompt;
+                    // whattodo = nextPrompt;
+                    nextPrompt = null;
                 }
-                processTransactions[processTransactions.length - 1].whattodo = whattodo;
 
                 // spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
                 const systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
                 const systemPromptForGemini = await prompts.systemPrompt(multiLineMission, whattodo, useDocker, true);
-                let promptList = await makeRealTransaction(processTransactions, multiLineMission, 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText);
+                let promptList = await makeRealTransaction({ processTransactions, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission });
                 promptList = JSON.parse(JSON.stringify(promptList));
 
                 while (true) {
@@ -711,7 +735,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         systemPrompt: await prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath),
                         systemPromptForGemini: await prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath, true),
                     },
-                    await makeRealTransaction(processTransactions, multiLineMission, 'evaluation'),
+                    await makeRealTransaction({ processTransactions, multiLineMission, type: 'evaluation', mainKeyMission }),
                     'evaluateCode',
                     interfaces,
                     caption('evaluation')
@@ -789,10 +813,66 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             const pid4 = await out_state('');
             await pid4.fail(`${finishedByError}`);
         } else {
+            if (!talktitle) {
+                async function getNewFileName() {
+                    const path = getAppPath('list');
+                    if (!fs.existsSync(path)) {
+                        await fs.promises.mkdir(path, { recursive: true });
+                    }
+                    let resultPath;
+                    while (true) {
+                        let randomName = Math.random().toString();
+                        resultPath = randomName + '.json';
+                        if (!fs.existsSync(path + '/' + resultPath)) {
+                            break;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 10)); // 약간의 딜레이
+                    }
+                    if (ensureAppsHomePath(path + '/' + resultPath)) {
+                        await fs.promises.writeFile(path + '/' + resultPath, '{}');
+                        return resultPath;
+                    }
+
+                }
+                talktitle = {
+                    filename: await getNewFileName(),
+                    title: '',
+                };
+
+                try {
+                    talktitle.title = await chatCompletion(
+                        {
+                            systemPrompt: 'Make a short title for the mission',
+                            systemPromptForGemini: 'Make a short title for the mission',
+                        },
+                        [
+                            {
+                                role: 'user',
+                                content: [
+                                    `<Mission>`,
+                                    `${multiLineMission}`,
+                                    `</Mission>`,
+                                    `<WhatDidWeDo>`,
+                                    `${processTransactions.map(a => a.whatdidwedo).join('\n\n')}`,
+                                    `</WhatDidWeDo>`,
+                                    `What is the title of the mission?`
+                                ].join('\n')
+                            }
+                        ],
+                        '',
+                        interfaces,
+                        caption('namingMission')
+                    );
+                } catch { }
+                if (!talktitle) {
+                    talktitle.title = new Date().toISOString();
+                }
+            }
+
             const pid4 = await out_state('');
             await pid4.succeed(caption('missionCompleted'));
         }
 
     }
-    return { exported, containerId };
+    return { exported, containerId, processTransactions, talktitle };
 }

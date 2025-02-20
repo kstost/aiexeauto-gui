@@ -7,7 +7,7 @@ export function indention(num = 1, string = null) {
         return ' '.repeat(num * 2);
     }
 }
-export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions) {
+export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission) {
 
     let output = processTransactions.at(-1).data;
     if (output) {
@@ -60,10 +60,15 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
                 deepThinkingPlan ? indention(1, deepThinkingPlan) : '',
                 deepThinkingPlan ? '</Plan>' : '',
                 '',
-                whattodo ? '' : '',
-                whattodo ? '<NextTasks>' : '',
-                whattodo ? indention(1, whattodo) : '',
-                whattodo ? '</NextTasks>' : '',
+                whattodo && mainKeyMission !== whattodo ? '' : '',
+                whattodo && mainKeyMission !== whattodo ? '<NextTasks>' : '',
+                whattodo && mainKeyMission !== whattodo ? indention(1, whattodo) : '',
+                whattodo && mainKeyMission !== whattodo ? '</NextTasks>' : '',
+                '',
+                mainKeyMission ? '' : '',
+                mainKeyMission ? '<THE-MAIN-KEY-MISSION>' : '',
+                mainKeyMission ? indention(1, mainKeyMission) : '',
+                mainKeyMission ? '</THE-MAIN-KEY-MISSION>' : '',
                 '',
                 'Make the code.',
                 // '---',
@@ -77,6 +82,12 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
             content: [
                 ...last,
                 '',
+                mainKeyMission ? '' : '',
+                mainKeyMission ? '<THE-MAIN-KEY-MISSION>' : '',
+                mainKeyMission ? indention(1, mainKeyMission) : '',
+                mainKeyMission ? '</THE-MAIN-KEY-MISSION>' : '',
+                '',
+
                 `<MissionEvaluation>`,
                 `   <CompletionCheck>`,
                 `      Does the progress so far and current output indicate mission completion?`,
@@ -98,6 +109,11 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
                 `<OurGoal>`,
                 indention(1, mission),
                 `</OurGoal>`,
+                '',
+                mainKeyMission ? '' : '',
+                mainKeyMission ? '<THE-MAIN-KEY-MISSION>' : '',
+                mainKeyMission ? indention(1, mainKeyMission) : '',
+                mainKeyMission ? '</THE-MAIN-KEY-MISSION>' : '',
                 '',
                 '<WritingGuidelines>',
                 '  <Rule>Summarize the tasks performed so far.</Rule>',
@@ -121,6 +137,11 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
                 `<OurGoal>`,
                 indention(1, mission),
                 `</OurGoal>`,
+                '',
+                mainKeyMission ? '' : '',
+                mainKeyMission ? '<THE-MAIN-KEY-MISSION>' : '',
+                mainKeyMission ? indention(1, mainKeyMission) : '',
+                mainKeyMission ? '</THE-MAIN-KEY-MISSION>' : '',
                 '',
                 processTransactions.at(-1).deepThinkingPlan ? '<Plan>' : '',
                 processTransactions.at(-1).deepThinkingPlan ? indention(1, processTransactions.at(-1).deepThinkingPlan) : '',

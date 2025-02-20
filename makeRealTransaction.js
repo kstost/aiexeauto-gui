@@ -1,6 +1,6 @@
 import { omitMiddlePart } from './solveLogic.js';
 import { makeCodePrompt, indention } from './makeCodePrompt.js';
-export async function makeRealTransaction(processTransactions, multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText) {
+export async function makeRealTransaction({ processTransactions, multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission }) {
     let realTransactions = [];
     for (let i = 0; i < processTransactions.length; i++) {
         const role = processTransactions[i].class === 'output' ? 'user' : 'assistant';
@@ -8,11 +8,15 @@ export async function makeRealTransaction(processTransactions, multiLineMission,
         let output = processTransactions[i].class === 'output' ? processTransactions[i].data : null;
         let whattodo = processTransactions[i].whattodo;
         let whatdidwedo = processTransactions[i].whatdidwedo;
+        let mainkeymission = processTransactions[i].mainkeymission;
+        let notcurrentmission = processTransactions[i].notcurrentmission;
+        mainkeymission = mainKeyMission;
         if (output) {
             output = omitMiddlePart(output);
             output = output.trim();
         }
 
+        const printWhatToDo = whattodo && mainkeymission !== whattodo;
         let data = {
             role,
             content: (role === 'user' ? (output ? [
@@ -28,9 +32,13 @@ export async function makeRealTransaction(processTransactions, multiLineMission,
                 whatdidwedo ? indention(1, whatdidwedo) : '',
                 whatdidwedo ? '</WorkDoneSoFar>' : '',
                 '',
-                whattodo ? '<NextTasks>' : '',
-                whattodo ? indention(1, whattodo) : '',
-                whattodo ? '</NextTasks>' : '',
+                printWhatToDo ? '<NextTasks>' : '',
+                printWhatToDo ? indention(1, whattodo) : '',
+                printWhatToDo ? '</NextTasks>' : '',
+                '',
+                !printWhatToDo && !notcurrentmission && mainkeymission ? '<NextTasksToDo>' : '',
+                !printWhatToDo && !notcurrentmission && mainkeymission ? indention(1, mainkeymission) : '',
+                !printWhatToDo && !notcurrentmission && mainkeymission ? '</NextTasksToDo>' : '',
             ] : [
                 '<CodeExecutionOutput>',
                 // 'NO OUTPUT. THE EXECUTION COMPLETED WITHOUT ANY OUTPUT.',
@@ -45,9 +53,13 @@ export async function makeRealTransaction(processTransactions, multiLineMission,
                 whatdidwedo ? indention(1, whatdidwedo) : '',
                 whatdidwedo ? '</WorkDoneSoFar>' : '',
                 '',
-                whattodo ? '<NextTasks>' : '',
-                whattodo ? indention(1, whattodo) : '',
-                whattodo ? '</NextTasks>' : '',
+                printWhatToDo ? '<NextTasks>' : '',
+                printWhatToDo ? indention(1, whattodo) : '',
+                printWhatToDo ? '</NextTasks>' : '',
+                '',
+                !printWhatToDo && !notcurrentmission && mainkeymission ? '<NextTasksToDo>' : '',
+                !printWhatToDo && !notcurrentmission && mainkeymission ? indention(1, mainkeymission) : '',
+                !printWhatToDo && !notcurrentmission && mainkeymission ? '</NextTasksToDo>' : '',
             ]) : [
                 '<CodeForNextTasks>',
                 indention(1, code),
@@ -79,6 +91,6 @@ export async function makeRealTransaction(processTransactions, multiLineMission,
             realTransactions[0].content = 'Response the first code for the first step of the mission.';
         }
     }
-    realTransactions[realTransactions.length - 1] = await makeCodePrompt(multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions);
+    realTransactions[realTransactions.length - 1] = await makeCodePrompt(multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission);
     return realTransactions;
 }

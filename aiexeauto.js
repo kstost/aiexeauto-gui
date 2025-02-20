@@ -108,6 +108,78 @@ if (prompt === 'version') {
                 return null;
             }
         },
+        async saveWork(body) {
+            console.log('saveWork 함수 시작');
+            console.log('body 데이터:', body);
+
+            let { filename, data } = body;
+            console.log('파일명:', filename);
+            console.log('저장할 데이터:', data);
+
+            let path = getAppPath('list/' + filename);
+            console.log('저장 경로:', path);
+
+            if (ensureAppsHomePath(path)) {
+                console.log('경로 검증 성공');
+                console.log('파일 쓰기 시작');
+                console.log('데이터 타입:', typeof data);
+                console.log('데이터 내용:', JSON.stringify(data, null, 2));
+                await fs.promises.writeFile(path, JSON.stringify(data, null, 2));
+                console.log('파일 쓰기 완료');
+                console.log('파일 크기:', fs.statSync(path).size, 'bytes');
+                return true;
+            } else {
+                console.log('경로 검증 실패');
+            }
+
+            console.log('경로 검증 실패');
+            return false;
+        },
+        async loadWork(body) {
+            let { filename } = body;
+            let path = getAppPath('list/' + filename);
+            if (fs.existsSync(path)) {
+                return JSON.parse(fs.readFileSync(path, 'utf8'));
+            }
+        },
+        // async getNewFileName(body) {
+        //     const path = getAppPath('list');
+        //     if (!fs.existsSync(path)) {
+        //         await fs.promises.mkdir(path, { recursive: true });
+        //     }
+        //     let resultPath;
+        //     while (true) {
+        //         let randomName = Math.random().toString();
+        //         resultPath = randomName + '.json';
+        //         if (!fs.existsSync(path + '/' + resultPath)) {
+        //             break;
+        //         }
+        //         await new Promise(resolve => setTimeout(resolve, 10)); // 약간의 딜레이
+        //     }
+        //     if (ensureAppsHomePath(path + '/' + resultPath)) {
+        //         await fs.promises.writeFile(path + '/' + resultPath, '{}');
+        //         return { filename: resultPath };
+        //     }
+        //     return null;
+        // },
+        async worklist(body) {
+            const path = getAppPath('list');
+            if (!fs.existsSync(path)) {
+                await fs.promises.mkdir(path, { recursive: true });
+            }
+            let list = await fs.promises.readdir(path);
+            list.sort((a, b) => {
+                let aTime = fs.statSync(getAppPath('list/' + a)).mtime.getTime();
+                let bTime = fs.statSync(getAppPath('list/' + b)).mtime.getTime();
+                return bTime - aTime;
+            });
+            list = list.map(item => {
+                const filepath = getAppPath('list/' + item);
+                const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+                return data;
+            });
+            return { list };
+        },
         async openFolder(body) {
             await open(body.resultPath);
             return true;
@@ -115,7 +187,7 @@ if (prompt === 'version') {
         async ve1nppvpath(body) {
             // ㅊ...
             console.log(body);
-            return await application(body.prompt, body.inputFolderPath, body.outputFolderPath, body.containerIdToUse);
+            return await application(body.prompt, body.inputFolderPath, body.outputFolderPath, body.containerIdToUse, body.processTransactions, body.talktitle);
         },
         async ve1nvpath(body) {
             if (false) if (isTaskAborted(body.__taskId)) return;
@@ -131,7 +203,7 @@ if (prompt === 'version') {
             return await open(body.url);
         }
     }
-    async function application(prompt, dataSourcePath, dataOutputPath, containerIdToUse) {
+    async function application(prompt, dataSourcePath, dataOutputPath, containerIdToUse, processTransactions, talktitle) {
         const taskId = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
         singleton.missionAborting = false;
         const interfaces = {
@@ -214,10 +286,13 @@ if (prompt === 'version') {
         let resultPath;
         let exported;
         let containerId;
+        // let processTransactions;
         try {
-            let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse });
+            let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle });
             exported = solved.exported;
             containerId = solved.containerId;
+            processTransactions = solved.processTransactions;
+            talktitle = solved.talktitle;
         } catch (err) {
         } finally {
             if (dataSourceNotAssigned) {
@@ -254,7 +329,7 @@ if (prompt === 'version') {
                 }
             }
         }
-        return { resultPath, containerId };
+        return { resultPath, containerId, processTransactions, talktitle };
         // })();
 
     }

@@ -38,9 +38,66 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 함수 선언만 먼저
     let forceScroll = true;
     // let loadConfigurations;
+    let workData = {
+        history: [],
+        inputPath: '',
+        outputPath: '',
+    };
     const terminalStreamBoxes = {};
     const percentBar = {};
     let isBottom = false;
+    const displayer = {
+        printer(body) {
+            console.log(body);
+            if (body.class === 'out_print') {
+                this.out_print(body.message);
+            }
+            if (body.class === 'code_confirmed') {
+                this.code_confirmed(body.confirmedCode, body.language);
+            }
+            if (body.class === 'out_stream') {
+                this.out_stream(body.str, body.type, body.id);
+            }
+            if (body.class === 'out_state') {
+                this.out_state(body.text, body.state);
+            }
+        },
+        out_state(text, state) {
+            let id = randomId();
+            displayState[id] = new DisplayState();
+            conversations.appendChild(displayState[id].state);
+            displayState[id].setState({ text: text, state: state });
+            // scrollBodyToBottomSmoothly();
+        },
+        code_confirmed(confirmedCode, language) {
+            let lineNumbers = true;
+            if (language === 'bash') lineNumbers = false;
+            if (language === 'text') lineNumbers = false;
+            const { editor, runButton } = makeCodeBox(confirmedCode, language, lineNumbers);
+            editor.setSize('100%', '100%');
+            runButton.remove();
+        },
+        out_print(message) {
+            const inputBox = new ContentBox();
+            conversations.appendChild(inputBox.resultContainer);
+            const resultContainer = inputBox.getContainer();
+            resultContainer.textContent = `${message}`;
+            scrollBodyToBottomSmoothly();
+        },
+        out_stream(str, type, id) {
+            if (!terminalStreamBoxes[id]) {
+                terminalStreamBoxes[id] = new TerminalStreamBox();
+                conversations.appendChild(terminalStreamBoxes[id].container);
+                terminalStreamBoxes[id].removeStopButton();
+            }
+            str.split('\n').forEach(line => {
+                if (line.trim() === '') return;
+                terminalStreamBoxes[id].addStream(line, type);
+            });
+
+            // terminalStreamBoxes[executionId].addStream(str, type);
+        }
+    }
     const { reqAPI, abortAllTask, abortTask } = callEvent({
         // async selected_folder(body) {
         //     console.log(body);
@@ -55,6 +112,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const { str, type } = JSON.parse(body.stream);
             const id = body.executionId;
+            workData.history.push({ class: 'out_stream', id, str, type });
             str.split('\n').forEach(line => {
                 if (line.trim() === '') return;
                 terminalStreamBoxes[id].addStream(line, type);
@@ -76,16 +134,11 @@ window.addEventListener('DOMContentLoaded', async () => {
             return id;
         },
         async out_print(body) {
-
             const message = body.data;// body.message[0];
             const mode = body.mode;
             if (!message) return;
-            const inputBox = new ContentBox();
-            conversations.appendChild(inputBox.resultContainer);
-
-            const resultContainer = inputBox.getContainer();
-            resultContainer.textContent = `${message}`;
-            scrollBodyToBottomSmoothly();
+            workData.history.push({ class: 'out_print', message });
+            displayer.out_print(message);
         },
         async out_state(body) {
 
@@ -119,6 +172,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             const pythonCode = body.pythonCode;
             const actname = body.actname;
             const whattodo = body.whattodo;
+            let language;
 
             function isCodeRequiredConfirm(actname) {
                 const codeRequiredConfirm = [
@@ -140,6 +194,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
                 const sourceCode = editor.getValue();
                 scrollBodyToBottomSmoothly();
+                workData.history.push({ class: 'code_confirmed', confirmedCode: sourceCode, executionId, language });
                 _resolve({ confirmedCode: sourceCode, executionId });
                 if (destroy) {
                     // console.log(editor);
@@ -156,12 +211,14 @@ window.addEventListener('DOMContentLoaded', async () => {
             // let confirmed = await await_prompt({ mode: 'run_nodejs_code', actname: actData.name, containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames });
 
             if (!isCodeRequiredConfirm(actname)) {
+                language = 'javascript';
                 const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                 editor.setSize('100%', '100%');
                 handleCodeConfirmation(editor, true);
                 if (currentConfig['autoCodeExecution']) runButton.click();
             }
             else if ((mode === 'whattodo_confirm')) {
+                language = 'text';
                 const { editor, runButton } = makeCodeBox(whattodo, 'text', false);
                 editor.setSize('100%', '100%');
                 editor.setEventOnRun(async (code) => {
@@ -169,12 +226,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                 });
             }
             else if ((actname === 'run_command' && mode === 'run_nodejs_code')) {
+                language = 'javascript';
                 const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                 editor.setSize('100%', '100%');
                 handleCodeConfirmation(editor, true);
                 if (currentConfig['autoCodeExecution']) runButton.click();
             } else {
                 if (mode === 'run_nodejs_code') {
+                    language = 'javascript';
                     const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
@@ -182,6 +241,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     });
                     if (currentConfig['autoCodeExecution']) runButton.click();
                 } else if (mode === 'run_python_code') {
+                    language = 'python';
                     const { editor, runButton } = makeCodeBox(pythonCode, 'python');
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
@@ -189,6 +249,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     });
                     if (currentConfig['autoCodeExecution']) runButton.click();
                 } else if (mode === 'run_command') {
+                    language = 'bash';
                     const { editor, runButton } = makeCodeBox('# Linux Shell Script\n' + body.command, 'bash', false);
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
@@ -227,6 +288,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             let id = body.labelId;
             if (!displayState[id]) return;
 
+            workData.history.push({ class: 'out_state', text: body.stateLabel, state: 'done' });
             displayState[id].setState({ text: body.stateLabel, state: 'done' });
             scrollBodyToBottomSmoothly();
             delete displayState[id];
@@ -235,6 +297,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             let id = body.labelId;
             if (!displayState[id]) return;
 
+            workData.history.push({ class: 'out_state', text: body.stateLabel, state: 'fail' });
             displayState[id].setState({ text: body.stateLabel, state: 'fail' });
             scrollBodyToBottomSmoothly();
             delete displayState[id];
@@ -258,7 +321,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     leftSide.classList.add('left-side');
     document.body.appendChild(leftSide);
 
-    // 새롭게 추가: 앱 제목 "AIEXE"를 상단에 추가
+    // 메뉴 컨테이너 생성 (전체 왼쪽 영역을 감싸는 컨테이너)
+    const menuContainer = document.createElement('div');
+    menuContainer.style.display = 'flex';
+    menuContainer.style.flexDirection = 'column';
+    menuContainer.style.height = '100%'; // 전체 높이 사용
+    menuContainer.style.position = 'relative'; // 상대 위치 설정
+    leftSide.appendChild(menuContainer);
+
+    // 상단 로고 영역 (고정)
+    const topLogoContainer = document.createElement('div');
     const appTitle = document.createElement('h1');
     const titleSpan1 = document.createElement('span');
     titleSpan1.textContent = 'AIEXE';
@@ -276,15 +348,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     appTitle.style.borderBottom = '5px solid rgba(255, 255, 255, 0.1)';
     appTitle.style.marginLeft = '30px';
     appTitle.style.marginRight = '30px';
-    leftSide.appendChild(appTitle);
+    topLogoContainer.appendChild(appTitle);
+    menuContainer.appendChild(topLogoContainer);
 
-    // 새롭게 추가: 메뉴 컨테이너 생성
-    const menuContainer = document.createElement('div');
-    menuContainer.style.display = 'flex';
-    menuContainer.style.flexDirection = 'column';
-    menuContainer.style.rowGap = '10px';
-    menuContainer.style.padding = '0 10px';
-    leftSide.appendChild(menuContainer);
+    // 메인 메뉴 영역 (고정)
+    const mainMenuContainer = document.createElement('div');
+    mainMenuContainer.style.padding = '10px';
+    mainMenuContainer.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+    menuContainer.appendChild(mainMenuContainer);
 
     // 메뉴 항목 배열
     const menuItems = [
@@ -295,11 +366,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         { text: caption('class'), mode: 'class' }
     ];
 
-    // 각 메뉴 항목 생성 및 클릭 이벤트 등록
+    // 각 메뉴 항목을 메인 메뉴 컨테이너에 추가
     menuItems.forEach(menuItem => {
         const menuItemElement = document.createElement('div');
         menuItemElement.textContent = menuItem.text;
         menuItemElement.style.padding = '10px';
+        menuItemElement.style.marginBottom = '10px';
         menuItemElement.style.borderRadius = '4px';
         menuItemElement.style.cursor = 'pointer';
         menuItemElement.style.color = '#ffffff';
@@ -311,24 +383,30 @@ window.addEventListener('DOMContentLoaded', async () => {
                 window.electronAPI.send('openwebsite', { url: 'https://cokac.com/' });
             } else {
                 if (menuItem.mode === 'configuration') {
-                    if (operationDoing) { alert(caption('configChangeNotAllowed')); return; }
+                    if (operationDoing) {
+                        alert(caption('configChangeNotAllowed'));
+                        return;
+                    }
                     await singleton.loadConfigurations();
                     turnWindow(menuItem.mode);
                 } else if (menuItem.mode === 'customrules') {
-                    if (operationDoing) { alert(caption('configChangeNotAllowed')); return; }
+                    if (operationDoing) {
+                        alert(caption('configChangeNotAllowed'));
+                        return;
+                    }
                     turnWindow(menuItem.mode);
-                    {
-                        const data = `${await getConfig('customRulesForCodeGenerator')}`;
-                        customRulesSet.customRulesForCodeGenerator.setValue(data);
-                        // customRulesSet.customRulesForCodeGenerator.focus();
-                    }
-                    {
-                        const data = `${await getConfig('customRulesForEvaluator')}`;
-                        customRulesSet.customRulesForEvaluator.setValue(data);
-                        // customRulesSet.customRulesForEvaluator.focus();
-                    }
+
+                    const data1 = `${await getConfig('customRulesForCodeGenerator')}`;
+                    customRulesSet.customRulesForCodeGenerator.setValue(data1);
+
+                    const data2 = `${await getConfig('customRulesForEvaluator')}`;
+                    customRulesSet.customRulesForEvaluator.setValue(data2);
+
                 } else {
-                    if (operationDoing) { alert(caption('missionDoing')); return; }
+                    if (operationDoing) {
+                        alert(caption('missionDoing'));
+                        return;
+                    }
                     turnWindow(menuItem.mode);
                 }
             }
@@ -340,32 +418,50 @@ window.addEventListener('DOMContentLoaded', async () => {
         menuItemElement.addEventListener('mouseleave', () => {
             menuItemElement.style.backgroundColor = '#1c1c1c';
         });
-        menuContainer.appendChild(menuItemElement);
+        mainMenuContainer.appendChild(menuItemElement);
     });
 
-    // 구분선 추가
-    const menuDivider = document.createElement('hr');
-    menuDivider.style.margin = '15px 10px';
-    menuDivider.style.border = 'none';
-    menuDivider.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
-    menuContainer.appendChild(menuDivider);
+    // 스크롤 가능한 샘플 목록 영역 (유동적 높이)
+    const scrollableListContainer = document.createElement('div');
+    scrollableListContainer.style.flex = '1'; // 남은 공간 모두 사용
+    scrollableListContainer.style.overflowY = 'auto'; // 세로 스크롤 활성화
+    scrollableListContainer.style.padding = '0 0px';
+    scrollableListContainer.style.marginBottom = '10px'; // 하단 버전 정보와 간격
+    menuContainer.appendChild(scrollableListContainer);
 
-    // 버전 정보 추가
+    // 랜덤 문자열 생성 함수
+    function generateRandomString() {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        const length = Math.floor(Math.random() * 10) + 5; // 5~15 글자
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        return result;
+    }
+
+
+    // 하단 버전 정보 영역 (고정)
+    const bottomVersionContainer = document.createElement('div');
+    bottomVersionContainer.style.padding = '10px';
+    bottomVersionContainer.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
+    menuContainer.appendChild(bottomVersionContainer);
+
+    // 버전 정보 텍스트
     const versionInfo = document.createElement('div');
     versionInfo.textContent = '';
     versionInfo.style.color = 'rgba(255, 255, 255, 0.5)';
     versionInfo.style.fontSize = '12px';
     versionInfo.style.textAlign = 'center';
-    versionInfo.style.padding = '0 10px';
-    menuContainer.appendChild(versionInfo);
+    bottomVersionContainer.appendChild(versionInfo);
 
     const versionUpdate = document.createElement('div');
     versionUpdate.textContent = '';
     versionUpdate.style.color = 'yellow';
     versionUpdate.style.fontSize = '12px';
     versionUpdate.style.textAlign = 'center';
-    versionUpdate.style.padding = '0 10px';
-    menuContainer.appendChild(versionUpdate);
+    versionUpdate.style.marginTop = '5px';
+    bottomVersionContainer.appendChild(versionUpdate);
 
     const missionSolvingContainer = document.createElement('div');
     missionSolvingContainer.classList.add('right-side');
@@ -419,13 +515,16 @@ window.addEventListener('DOMContentLoaded', async () => {
         customrulesContainer.style.display = 'none';
         if (mode === 'missionSolving') {
             missionSolvingContainer.style.display = 'block';
+            conversations.innerHTML = '';
+            promptInput.setValue('');
+            promptInput.setFocus();
+
         } else if (mode === 'configuration') {
             configurationContainer.style.display = 'block';
         } else if (mode === 'customrules') {
             customrulesContainer.style.display = 'block';
         }
     }
-    turnWindow('missionSolving');
 
     //----------------------------------------------------
     let displayState = {};
@@ -491,6 +590,9 @@ window.addEventListener('DOMContentLoaded', async () => {
             displayElement[Symbol.for('path')] = path;
         }
     }
+    const inputContainer = document.createElement('div');
+    parentContainer.appendChild(inputContainer);
+
 
     // 컨테이너 생성
     const folderSelectContainer = document.createElement('div');
@@ -529,7 +631,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 컨테이너에 요소들 추가
     folderSelectContainer.appendChild(selectFolderButton);
     folderSelectContainer.appendChild(pathDisplay);
-    parentContainer.appendChild(folderSelectContainer);
+    inputContainer.appendChild(folderSelectContainer);
 
     selectFolderButton.addEventListener('click', async () => {
         let task = reqAPI('selector_folder', {});
@@ -547,7 +649,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
     const promptInput = new PromptInput();
-    parentContainer.appendChild(promptInput.container);
+    inputContainer.appendChild(promptInput.container);
     promptInput.setFocus();
     promptInput.setValue('3,4를 더하고 거기서 2를 빼고 그리고 3을 곱하고 거기서 5나눠. 각 단계를 1초마다 출력. 파이썬코드로 만들어줘.');
     promptInput.setValue('현재 폴더의 목록을 확인해줘. 무엇이 있는지 확인하고 그 목록을 list.txt 파일로 만들어줘.');
@@ -564,264 +666,296 @@ window.addEventListener('DOMContentLoaded', async () => {
     promptInput.setPlaceholder(caption('promptPlaceholder'));
     // promptInput.container.style.opacity = '0.8';
 
+    function formToEnd() {
+        inputContainer.parentElement.appendChild(inputContainer);
+        formDisplay(true);
+    }
+    function formDisplay(display = true) {
+        inputContainer.style.display = display ? 'block' : 'none';
+    }
+    function makeOpenResultFolderButton(resultPath) {
+        if (!resultPath) return;
+        const openResultFolderButton = document.createElement('button');
+        openResultFolderButton.style.backgroundColor = '#388e3c';
+        openResultFolderButton.style.color = '#ffffff';
+        openResultFolderButton.textContent = caption('openResultFolder');
+        openResultFolderButton.style.width = '100%';
+        openResultFolderButton.style.padding = '10px';
+        openResultFolderButton.style.border = 'none';
+        openResultFolderButton.style.borderRadius = '4px';
+        openResultFolderButton.style.cursor = 'pointer';
+        conversations.appendChild(openResultFolderButton);
+        openResultFolderButton.addEventListener('click', async () => {
+            reqAPI('openFolder', { resultPath });
+        });
+        if (!resultPath) openResultFolderButton.remove();
+    }
+
     let operationDoing = false;
-    {
-        const startOperationButton = document.createElement('button');
-        startOperationButton.style.backgroundColor = '#388e3c';
-        startOperationButton.style.color = '#ffffff';
-        startOperationButton.textContent = caption('getStartOperation');
-        startOperationButton.style.width = '100%';
-        startOperationButton.style.padding = '10px';
-        startOperationButton.style.border = 'none';
-        startOperationButton.style.borderRadius = '4px';
-        startOperationButton.style.cursor = 'pointer';
-        parentContainer.appendChild(startOperationButton);
-        startOperationButton.addEventListener('click', async () => {
-            if (operationDoing) return;
-            operationDoing = true;
-            aborting_responsed = false;
-            conversations.innerHTML = '';
-            startOperationButton.style.backgroundColor = '#666666';
-            startOperationButton.style.opacity = '0.5';
-            // await new Promise(resolve => window.requestAnimationFrame(resolve));
-            setForceScroll();
-            currentConfig['autoCodeExecution'] = await getConfig('autoCodeExecution');
-            currentConfig['planEditable'] = await getConfig('planEditable');
-            disableUIElements();
+    // {
+    const startOperationButton = document.createElement('button');
+    startOperationButton.style.backgroundColor = '#388e3c';
+    startOperationButton.style.color = '#ffffff';
+    startOperationButton.textContent = caption('getStartOperation');
+    startOperationButton.style.width = '100%';
+    startOperationButton.style.padding = '10px';
+    startOperationButton.style.border = 'none';
+    startOperationButton.style.borderRadius = '4px';
+    startOperationButton.style.cursor = 'pointer';
+    inputContainer.appendChild(startOperationButton);
+    formToEnd();
+    startOperationButton.addEventListener('click', async () => {
+        if (operationDoing) return;
+        operationDoing = true;
+        aborting_responsed = false;
+        // conversations.innerHTML = '';
+        conversations.parentElement.appendChild(conversations);
+        formToEnd();
+        startOperationButton.style.backgroundColor = '#666666';
+        startOperationButton.style.opacity = '0.5';
+        // await new Promise(resolve => window.requestAnimationFrame(resolve));
+        setForceScroll();
+        currentConfig['autoCodeExecution'] = await getConfig('autoCodeExecution');
+        currentConfig['planEditable'] = await getConfig('planEditable');
+        disableUIElements();
 
 
-            // console.log(pathDisplay.value);
-            setFolderPath(pathDisplay.value, pathDisplay);
-            // return;
+        // console.log(pathDisplay.value);
+        setFolderPath(pathDisplay.value, pathDisplay);
+        // return;
 
-            // 화면의
-            //----------------------------------------------
-            // 버튼들의 컨테이너 생성
-            const buttonContainer = document.createElement('div');
-            buttonContainer.style.display = 'flex';
-            buttonContainer.style.gap = '15px';
-            buttonContainer.style.position = 'fixed';
-            buttonContainer.style.top = '0px';
-            buttonContainer.style.right = '0px';
-            buttonContainer.style.left = '200px';
-            buttonContainer.style.zIndex = '9999';
-            buttonContainer.style.backdropFilter = 'blur(3px)';
-            buttonContainer.style.backgroundColor = 'rgba(255,255,255,0.1)';
-            buttonContainer.style.padding = '10px';
-            buttonContainer.style.fontSize = '13px';
-            buttonContainer.style.textAlign = 'right';
-            buttonContainer.style.justifyContent = 'flex-end';
+        // 화면의
+        //----------------------------------------------
+        // 버튼들의 컨테이너 생성
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '15px';
+        buttonContainer.style.position = 'fixed';
+        buttonContainer.style.top = '0px';
+        buttonContainer.style.right = '0px';
+        buttonContainer.style.left = '200px';
+        buttonContainer.style.zIndex = '9999';
+        buttonContainer.style.backdropFilter = 'blur(3px)';
+        buttonContainer.style.backgroundColor = 'rgba(255,255,255,0.1)';
+        buttonContainer.style.padding = '10px';
+        buttonContainer.style.fontSize = '13px';
+        buttonContainer.style.textAlign = 'right';
+        buttonContainer.style.justifyContent = 'flex-end';
 
-            // 계획수정 체크박스 생성
-            const planEditCheckbox = document.createElement('div');
-            planEditCheckbox.style.display = 'flex';
-            planEditCheckbox.style.alignItems = 'center';
-            planEditCheckbox.style.gap = '4px';
-            planEditCheckbox.style.color = '#ffffff';
-            planEditCheckbox.style.fontSize = '13px';
-            planEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
-            planEditCheckbox.innerHTML = `
+        // 계획수정 체크박스 생성
+        const planEditCheckbox = document.createElement('div');
+        planEditCheckbox.style.display = 'flex';
+        planEditCheckbox.style.alignItems = 'center';
+        planEditCheckbox.style.gap = '4px';
+        planEditCheckbox.style.color = '#ffffff';
+        planEditCheckbox.style.fontSize = '13px';
+        planEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
+        planEditCheckbox.innerHTML = `
                 <input type="checkbox" id="planEditableCheckbox" style="cursor: pointer;">
                 <label for="planEditableCheckbox" style="cursor: pointer;">계획수정</label>
             `;
-            const checkboxForPlanEdit = planEditCheckbox.querySelector('#planEditableCheckbox');
-            checkboxForPlanEdit.checked = await getConfig('planEditable');;//currentConfig['planEditable'];
-            checkboxForPlanEdit.addEventListener('change', () => {
-                console.log('planEditableCheckbox', checkboxForPlanEdit.checked);
-                currentConfig['planEditable'] = checkboxForPlanEdit.checked;
-                window.electronAPI.send('onewayreq', { mode: 'planEditable', arg: { checked: checkboxForPlanEdit.checked } });
-            });
+        const checkboxForPlanEdit = planEditCheckbox.querySelector('#planEditableCheckbox');
+        checkboxForPlanEdit.checked = await getConfig('planEditable');;//currentConfig['planEditable'];
+        checkboxForPlanEdit.addEventListener('change', () => {
+            console.log('planEditableCheckbox', checkboxForPlanEdit.checked);
+            currentConfig['planEditable'] = checkboxForPlanEdit.checked;
+            window.electronAPI.send('onewayreq', { mode: 'planEditable', arg: { checked: checkboxForPlanEdit.checked } });
+        });
 
-            // 코드수정 체크박스 생성
-            const codeEditCheckbox = document.createElement('div');
-            codeEditCheckbox.style.display = 'flex';
-            codeEditCheckbox.style.alignItems = 'center';
-            codeEditCheckbox.style.gap = '4px';
-            codeEditCheckbox.style.color = '#ffffff';
-            codeEditCheckbox.style.fontSize = '13px';
-            codeEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
-            codeEditCheckbox.innerHTML = `
+        // 코드수정 체크박스 생성
+        const codeEditCheckbox = document.createElement('div');
+        codeEditCheckbox.style.display = 'flex';
+        codeEditCheckbox.style.alignItems = 'center';
+        codeEditCheckbox.style.gap = '4px';
+        codeEditCheckbox.style.color = '#ffffff';
+        codeEditCheckbox.style.fontSize = '13px';
+        codeEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
+        codeEditCheckbox.innerHTML = `
                 <input type="checkbox" id="autoCodeExecutionCheckbox" style="cursor: pointer;">
                 <label for="autoCodeExecutionCheckbox" style="cursor: pointer;">코드자동실행</label>
             `;
-            const checkboxForCodeEdit = codeEditCheckbox.querySelector('#autoCodeExecutionCheckbox');
-            checkboxForCodeEdit.checked = await getConfig('autoCodeExecution');
-            checkboxForCodeEdit.addEventListener('change', () => {
-                console.log('autoCodeExecutionCheckbox', checkboxForCodeEdit.checked);
-                currentConfig['autoCodeExecution'] = checkboxForCodeEdit.checked;
-                window.electronAPI.send('onewayreq', { mode: 'autoCodeExecution', arg: { checked: checkboxForCodeEdit.checked } });
-            });
+        const checkboxForCodeEdit = codeEditCheckbox.querySelector('#autoCodeExecutionCheckbox');
+        checkboxForCodeEdit.checked = await getConfig('autoCodeExecution');
+        checkboxForCodeEdit.addEventListener('change', () => {
+            console.log('autoCodeExecutionCheckbox', checkboxForCodeEdit.checked);
+            currentConfig['autoCodeExecution'] = checkboxForCodeEdit.checked;
+            window.electronAPI.send('onewayreq', { mode: 'autoCodeExecution', arg: { checked: checkboxForCodeEdit.checked } });
+        });
 
-            // modify mission button
-            const modifyMissionButton = document.createElement('button');
-            modifyMissionButton.style.backgroundColor = '#8b5cf6';
-            modifyMissionButton.style.color = '#ffffff';
-            modifyMissionButton.style.border = 'none';
-            modifyMissionButton.style.borderRadius = '4px';
-            modifyMissionButton.style.cursor = 'pointer';
-            modifyMissionButton.style.display = 'flex';
-            modifyMissionButton.style.alignItems = 'center';
-            modifyMissionButton.style.gap = '4px';
-            modifyMissionButton.style.padding = '4px 8px';
-            modifyMissionButton.style.fontSize = '13px';
-            modifyMissionButton.innerHTML = `
+        // modify mission button
+        const modifyMissionButton = document.createElement('button');
+        modifyMissionButton.style.backgroundColor = '#8b5cf6';
+        modifyMissionButton.style.color = '#ffffff';
+        modifyMissionButton.style.border = 'none';
+        modifyMissionButton.style.borderRadius = '4px';
+        modifyMissionButton.style.cursor = 'pointer';
+        modifyMissionButton.style.display = 'flex';
+        modifyMissionButton.style.alignItems = 'center';
+        modifyMissionButton.style.gap = '4px';
+        modifyMissionButton.style.padding = '4px 8px';
+        modifyMissionButton.style.fontSize = '13px';
+        modifyMissionButton.innerHTML = `
                 <span class="material-icons" style="font-size: 20px;">refresh</span>
                 <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">미션조정</span>
             `;
-            modifyMissionButton.addEventListener('click', async () => {
-                window.electronAPI.send('onewayreq', { mode: 'modify_mission', arg: {} });
-            });
-            modifyMissionButton.style.display = 'none';
+        modifyMissionButton.addEventListener('click', async () => {
+            window.electronAPI.send('onewayreq', { mode: 'modify_mission', arg: {} });
+        });
+        modifyMissionButton.style.display = 'none';
 
-            // 
+        // 
 
 
-            // 데이터 확인버튼
-            const dataCheckButton = document.createElement('button');
-            dataCheckButton.id = 'dataCheckButton';
-            dataCheckButton[Symbol.for('changeMethod')] = function (mode) {
-                dataCheckButton[Symbol.for('state')] = mode;
-                if (mode) {
-                    // 데이터 확인중
-                    dataCheckButton.innerHTML = `
+        // 데이터 확인버튼
+        const dataCheckButton = document.createElement('button');
+        dataCheckButton.id = 'dataCheckButton';
+        dataCheckButton[Symbol.for('changeMethod')] = function (mode) {
+            dataCheckButton[Symbol.for('state')] = mode;
+            if (mode) {
+                // 데이터 확인중
+                dataCheckButton.innerHTML = `
                     <span class="material-icons" style="font-size: 20px;">sync</span>
                     <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">데이터확인중</span>
                     `;
-                    dataCheckButton.style.opacity = '0.5';
-                } else {
-                    // 보통 상태
-                    dataCheckButton.innerHTML = `
+                dataCheckButton.style.opacity = '0.5';
+            } else {
+                // 보통 상태
+                dataCheckButton.innerHTML = `
                     <span class="material-icons" style="font-size: 20px;">folder_open</span>
                     <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">데이터확인</span>
                     `;
-                    dataCheckButton.style.opacity = '1';
-                }
+                dataCheckButton.style.opacity = '1';
             }
-            dataCheckButton.style.backgroundColor = '#22a55e';
-            dataCheckButton.style.color = '#ffffff';
-            dataCheckButton.style.border = 'none';
-            dataCheckButton.style.borderRadius = '4px';
-            dataCheckButton.style.cursor = 'pointer';
-            dataCheckButton.style.display = 'flex';
-            dataCheckButton.style.alignItems = 'center';
-            dataCheckButton.style.gap = '4px';
-            dataCheckButton.style.padding = '4px 8px';
-            dataCheckButton.style.fontSize = '13px';
-            dataCheckButton[Symbol.for('changeMethod')](false);
-            dataCheckButton.addEventListener('click', async () => {
-                if (dataCheckButton[Symbol.for('state')]) return;
-                dataCheckButton[Symbol.for('changeMethod')](true);
-                window.electronAPI.send('onewayreq', { mode: 'data_check', arg: {} });
-            });
+        }
+        dataCheckButton.style.backgroundColor = '#22a55e';
+        dataCheckButton.style.color = '#ffffff';
+        dataCheckButton.style.border = 'none';
+        dataCheckButton.style.borderRadius = '4px';
+        dataCheckButton.style.cursor = 'pointer';
+        dataCheckButton.style.display = 'flex';
+        dataCheckButton.style.alignItems = 'center';
+        dataCheckButton.style.gap = '4px';
+        dataCheckButton.style.padding = '4px 8px';
+        dataCheckButton.style.fontSize = '13px';
+        dataCheckButton[Symbol.for('changeMethod')](false);
+        dataCheckButton.addEventListener('click', async () => {
+            if (dataCheckButton[Symbol.for('state')]) return;
+            dataCheckButton[Symbol.for('changeMethod')](true);
+            window.electronAPI.send('onewayreq', { mode: 'data_check', arg: {} });
+        });
 
-            // 미션중지 버튼 생성
-            const abortButton = document.createElement('button');
-            abortButton.style.backgroundColor = '#ef4444';
-            abortButton.style.color = '#ffffff';
-            abortButton.style.border = 'none';
-            abortButton.style.borderRadius = '4px';
-            abortButton.style.cursor = 'pointer';
-            abortButton.style.display = 'flex';
-            abortButton.style.alignItems = 'center';
-            abortButton.style.gap = '4px';
-            abortButton.style.padding = '4px 8px';
-            abortButton.style.fontSize = '13px';
-            abortButton.style.zIndex = '9999';
-            abortButton.innerHTML = `
+        // 미션중지 버튼 생성
+        const abortButton = document.createElement('button');
+        abortButton.style.backgroundColor = '#ef4444';
+        abortButton.style.color = '#ffffff';
+        abortButton.style.border = 'none';
+        abortButton.style.borderRadius = '4px';
+        abortButton.style.cursor = 'pointer';
+        abortButton.style.display = 'flex';
+        abortButton.style.alignItems = 'center';
+        abortButton.style.gap = '4px';
+        abortButton.style.padding = '4px 8px';
+        abortButton.style.fontSize = '13px';
+        abortButton.style.zIndex = '9999';
+        abortButton.innerHTML = `
                 <span class="material-icons" style="font-size: 20px;">stop</span>
                 <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('abortMission')}</span>
             `;
 
-            buttonContainer.appendChild(planEditCheckbox);
-            buttonContainer.appendChild(codeEditCheckbox);
-            buttonContainer.appendChild(modifyMissionButton);
-            buttonContainer.appendChild(dataCheckButton);
-            buttonContainer.appendChild(abortButton);
-            document.body.appendChild(buttonContainer);
+        buttonContainer.appendChild(planEditCheckbox);
+        buttonContainer.appendChild(codeEditCheckbox);
+        buttonContainer.appendChild(modifyMissionButton);
+        buttonContainer.appendChild(dataCheckButton);
+        buttonContainer.appendChild(abortButton);
+        document.body.appendChild(buttonContainer);
 
-            abortButton.addEventListener('click', async () => {
-                {
-                    let id = randomId();
-                    displayState[id] = new DisplayState();
-                    conversations.appendChild(displayState[id].state);
-                    displayState[id].setState({ text: 'Operation Aborting...', state: 'loading' });
-                    scrollBodyToBottomSmoothly();
-                }
-                window.electronAPI.send('mission_aborting', {});
-                while (true) {
-                    if (aborting_responsed) break;
-                    await new Promise(resolve => setTimeout(resolve));
-                }
-                // abortButton.style.backgroundColor = 'rgba(239, 68, 68, 0.7)';
-                buttonContainer.remove();
-                [...document.querySelectorAll('.run-button')].forEach(button => {
-                    button.click();
-                });
-
-            });
-            //-----------------------------------------------------------------------------------------
-            // console.log(value.detail);
-            const containerIdToUse = Object.keys(dockerContainers)[0];
-            let task = reqAPI('ve1nppvpath', { prompt: promptInput.input.value, inputFolderPath: getInputFolderPath(), outputFolderPath: '', containerIdToUse });
-            let taskId = task.taskId;
-            if (false) await abortTask(taskId);
-            // console.log(await task.promise);
-            let { resultPath, containerId } = await task.promise;
-            dockerContainers[containerId] = true;
-            // console.log(containerId);
-            enableUIElements();
-            promptInput.setFocus();
-            scrollBodyToBottomSmoothly(false);
-            buttonContainer.remove();
-            operationDoing = false;
-
-            Object.keys(displayState).forEach(key => {
-                displayState[key].dismiss();
-                delete displayState[key];
-            });
-            startOperationButton.style.backgroundColor = '#388e3c';
-            startOperationButton.style.opacity = '1';
-
+        abortButton.addEventListener('click', async () => {
             {
-                const openResultFolderButton = document.createElement('button');
-                openResultFolderButton.style.backgroundColor = '#388e3c';
-                openResultFolderButton.style.color = '#ffffff';
-                openResultFolderButton.textContent = caption('openResultFolder');
-                openResultFolderButton.style.width = '100%';
-                openResultFolderButton.style.padding = '10px';
-                openResultFolderButton.style.border = 'none';
-                openResultFolderButton.style.borderRadius = '4px';
-                openResultFolderButton.style.cursor = 'pointer';
-                conversations.appendChild(openResultFolderButton);
-                openResultFolderButton.addEventListener('click', async () => {
-                    reqAPI('openFolder', { resultPath });
-                });
-                if (resultPath) setFolderPath(resultPath, pathDisplay);
-                if (!resultPath) openResultFolderButton.remove();
+                let id = randomId();
+                displayState[id] = new DisplayState();
+                conversations.appendChild(displayState[id].state);
+                displayState[id].setState({ text: 'Operation Aborting...', state: 'loading' });
                 scrollBodyToBottomSmoothly();
-
-                // const openResultFolderButton = document.createElement('button');
-                // // openResultFolderButton.style.position = 'fixed';
-                // // openResultFolderButton.style.top = '10px';
-                // // openResultFolderButton.style.right = '10px';
-                // openResultFolderButton.style.backgroundColor = '#4caf50';
-                // openResultFolderButton.style.color = '#ffffff';
-                // // openResultFolderButton.style.border = 'none';
-                // openResultFolderButton.style.borderRadius = '4px';
-                // openResultFolderButton.style.cursor = 'pointer';
-                // conversations.appendChild(openResultFolderButton);
-                // openResultFolderButton.style.display = 'flex';
-                // openResultFolderButton.style.alignItems = 'center';
-                // openResultFolderButton.style.gap = '4px';
-                // openResultFolderButton.style.padding = '4px 8px';
-                // openResultFolderButton.style.fontSize = '13px';
             }
+            window.electronAPI.send('mission_aborting', {});
+            while (true) {
+                if (aborting_responsed) break;
+                await new Promise(resolve => setTimeout(resolve));
+            }
+            // abortButton.style.backgroundColor = 'rgba(239, 68, 68, 0.7)';
+            buttonContainer.remove();
+            [...document.querySelectorAll('.run-button')].forEach(button => {
+                button.click();
+            });
 
-            // if (resultPath) {
-            //     open(resultPath);
-            // }
         });
-    }
+        //-----------------------------------------------------------------------------------------
+        // console.log(value.detail);
+        // inputPath.
+        const containerIdToUse = Object.keys(dockerContainers)[0];
+
+        if (false) while (workData.history.length > 0) workData.history.pop();
+        workData.inputPath = getInputFolderPath();
+        workData.outputPath = '';
+        workData.prompt = promptInput.input.value;
+        workData.containerIdToUse = containerIdToUse;
+
+        let task = reqAPI('ve1nppvpath', { prompt: promptInput.input.value, inputFolderPath: getInputFolderPath(), outputFolderPath: '', containerIdToUse, processTransactions: workData.processTransactions || [], talktitle: workData.talktitle });
+        let taskId = task.taskId;
+        if (false) await abortTask(taskId);
+        // console.log(await task.promise);
+        let { resultPath, containerId, processTransactions, talktitle } = await task.promise;
+        console.log('talktitle', talktitle);
+        workData.talktitle = talktitle;
+        dockerContainers[containerId] = true;
+        // console.log(containerId);
+        enableUIElements();
+        promptInput.setFocus();
+        scrollBodyToBottomSmoothly(false);
+        buttonContainer.remove();
+        operationDoing = false;
+
+
+        Object.keys(displayState).forEach(key => {
+            displayState[key].dismiss();
+            delete displayState[key];
+        });
+        startOperationButton.style.backgroundColor = '#388e3c';
+        startOperationButton.style.opacity = '1';
+
+
+        if (true) {
+            // conversations.innerHTML = '';
+
+        }
+        makeOpenResultFolderButton(resultPath);
+        if (resultPath) setFolderPath(resultPath, pathDisplay);
+        if (resultPath) workData.outputPath = resultPath;
+        workData.processTransactions = processTransactions;
+        {
+            let task = reqAPI('saveWork', { filename: workData.talktitle.filename, data: workData });
+            let data = await task.promise;
+            await loadWorkList();
+            // console.log('data', data);
+        }
+
+        console.log(JSON.stringify(workData, null, 3));
+        formToEnd();
+        scrollBodyToBottomSmoothly();
+        // await api
+        // {
+        //     let task = reqAPI('getNewFileName', {});
+        //     let taskId = task.taskId;
+        //     let { filename } = await task.promise;
+        //     console.log('filename', filename);
+        // }
+
+
+        // if (resultPath) {
+        //     open(resultPath);
+        // }
+    });
+    // }
 
     // promptInput.on('enter', );
     enableUIElements();
@@ -941,8 +1075,162 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
 
+    if (!true) {
+        // console.log(JSON.stringify(history));
+        // await new Promise(resolve => window.requestAnimationFrame(resolve));
+    }
+
+    // {
+    //     console.log('getNewFileName');
+    //     let task = reqAPI('getNewFileName', {});
+    //     let taskId = task.taskId;
+    //     console.log('taskId', taskId);
+    //     let { filename } = await task.promise;
+    //     console.log('taskId2', taskId);
+    //     console.log('filename', filename);
+    // }
+    async function loadWorkList() {
+        scrollableListContainer.innerHTML = '';
+        console.log('worklist');
+        let task = reqAPI('worklist', {});
+        let taskId = task.taskId;
+        console.log('taskId', taskId);
+        let { list } = await task.promise;
+        console.log('taskId2', taskId);
+        console.log('list', list);
+        for (const item of list) {
+            console.log('item', item.talktitle.title);
+        }
+        // const workListContainer = document.createElement('div');
+        // workListContainer.style.position = 'fixed';
+        // workListContainer.style.top = '50%';
+        // workListContainer.style.left = '50%';
+        // workListContainer.style.transform = 'translate(-50%, -50%)';
+        // workListContainer.style.backgroundColor = '#1c1c1c';
+        // workListContainer.style.padding = '20px';
+        // workListContainer.style.borderRadius = '8px';
+        // workListContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+        // workListContainer.style.maxHeight = '80vh';
+        // workListContainer.style.overflowY = 'auto';
+        // workListContainer.style.zIndex = '1000';
+
+        // const listElement = document.createElement('ul');
+        // listElement.style.listStyle = 'none';
+        // listElement.style.padding = '0';
+        // listElement.style.margin = '0';
+
+        for (const item of list) {
+            console.log('item', item.talktitle.title);
+            item.talktitle.title = item.talktitle.title.split('"').join('');
+            item.talktitle.title = item.talktitle.title.split(`'`).join('');
+            item.talktitle.title = item.talktitle.title.split('`').join('');
+            item.talktitle.title = item.talktitle.title.trim();
+            const listItem = document.createElement('li');
+            listItem.style.padding = '10px';
+            listItem.style.borderBottom = '1px solid #333333';
+            listItem.style.cursor = 'pointer';
+            listItem.style.color = 'rgba(255,255,255,0.5)';
+            listItem.style.whiteSpace = 'nowrap';
+            listItem.style.overflow = 'hidden';
+            listItem.style.textOverflow = 'ellipsis';
+            listItem.style.listStyle = 'none';
+            // elipsis
+
+            listItem.style.backgroundColor = '#1c1c1c';
+            listItem.style.borderRadius = '4px';
+            listItem.textContent = item.talktitle.title;
+
+            listItem.addEventListener('mouseenter', () => {
+                listItem.style.backgroundColor = '#333333';
+            });
+
+            listItem.addEventListener('mouseleave', () => {
+                listItem.style.backgroundColor = '#1c1c1c';
+            });
 
 
+            let loading = false;
+            listItem.addEventListener('click', async () => {
+                if (operationDoing) {
+                    alert(caption('missionDoing'));
+                    return;
+                }
+
+                if (loading) return;
+                loading = true;
+                Object.keys(terminalStreamBoxes).forEach(key => {
+                    // terminalStreamBoxes[key].dismiss();
+                    delete terminalStreamBoxes[key];
+                });
+                turnWindow('missionSolving');
+                parentContainer.style.transition = '';
+                await new Promise(resolve => window.requestAnimationFrame(resolve));
+                parentContainer.style.opacity = '0';
+
+                // terminalStreamBoxes = [];
+                let task = reqAPI('loadWork', { filename: item.talktitle.filename });
+                let data = await task.promise;
+                workData = data;
+                for (let i = 0; i < 10; i++) {
+                    await new Promise(resolve => window.requestAnimationFrame(resolve));
+                }
+                conversations.innerHTML = '';
+                setFolderPath(workData.inputPath, pathDisplay);
+                for (const item of workData.history) {
+                    displayer.printer(item);
+                }
+                makeOpenResultFolderButton(workData.outputPath);
+                console.log(workData.outputPath);
+                formToEnd();
+                promptInput.setValue(workData.prompt);
+                promptInput.setFocus();
+                scrollBodyToBottomSmoothly(false);
+                loading = false;
+                await new Promise(resolve => window.requestAnimationFrame(resolve));
+                parentContainer.style.transition = 'opacity 0.2s ease-in-out';
+                await new Promise(resolve => window.requestAnimationFrame(resolve));
+                parentContainer.style.opacity = '1';
+                // await new Promise(resolve => window.requestAnimationFrame(resolve));
+
+            });
+
+            scrollableListContainer.appendChild(listItem);
+        }
+
+        // workListContainer.appendChild(listElement);
+        // document.body.appendChild(workListContainer);
+    }
+    loadWorkList();
+    turnWindow('missionSolving');
+    // {
+    //     let task = reqAPI('loadWork', { filename: '0.5448798276225089.json' });
+    //     let data = await task.promise;
+    //     console.log('data', data);
+    // }
+    // 100개의 샘플 항목 추가
+    // for (let i = 0; i < 100; i++) {
+    //     const sampleItem = document.createElement('div');
+    //     sampleItem.textContent = `Sample ${i + 1}: ${generateRandomString()}`;
+    //     sampleItem.style.padding = '10px';
+    //     sampleItem.style.whiteSpace = 'nowrap';
+    //     sampleItem.style.overflow = 'hidden';
+    //     sampleItem.style.textOverflow = 'ellipsis';
+    //     sampleItem.style.marginBottom = '0px';
+    //     sampleItem.style.borderRadius = '4px';
+    //     sampleItem.style.backgroundColor = '#1c1c1c';
+    //     sampleItem.style.color = 'rgba(255,255,255,0.5)';
+    //     sampleItem.style.cursor = 'pointer';
+
+    //     // 호버 효과
+    //     sampleItem.addEventListener('mouseenter', () => {
+    //         sampleItem.style.backgroundColor = '#333333';
+    //     });
+    //     sampleItem.addEventListener('mouseleave', () => {
+    //         sampleItem.style.backgroundColor = '#1c1c1c';
+    //     });
+
+    //     scrollableListContainer.appendChild(sampleItem);
+    // }
 
 
 });

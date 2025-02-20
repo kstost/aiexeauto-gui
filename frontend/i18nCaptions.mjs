@@ -1,5 +1,6 @@
 export const i18nCaptions = {
     "ko": {
+        "namingMission": "미션 이름 지정",
         "keepDockerContainer": "Docker 컨테이너 유지",
         "keepDockerContainerDescription": "컨테이너를 삭제하지 않고 유지합니다.",
         "reviewMission": "미션 검토",
@@ -100,6 +101,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "namingMission": "Naming Mission",
         "keepDockerContainer": "Keep Docker Container",
         "keepDockerContainerDescription": "Keep the container without deleting it.",
         "reviewMission": "Review Mission",
@@ -200,6 +202,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "namingMission": "ミッション名の命名",
         "keepDockerContainer": "Docker コンテナを維持",
         "keepDockerContainerDescription": "コンテナを削除せずに維持します。",
         "reviewMission": "ミッション 検討",
@@ -300,6 +303,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "namingMission": "Đặt tên cho nhiệm vụ",
         "keepDockerContainer": "Giữ Container Docker",
         "keepDockerContainerDescription": "Giữ container Docker mà không xóa nó.",
         "reviewMission": "Đánh giá công việc",
@@ -400,6 +404,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "namingMission": "任务命名",
         "keepDockerContainer": "保持Docker容器",
         "keepDockerContainerDescription": "不删除容器。",
         "reviewMission": "任务审查",
