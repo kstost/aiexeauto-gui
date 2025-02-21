@@ -174,10 +174,12 @@ if (prompt === 'version') {
                 return bTime - aTime;
             });
             list = list.map(item => {
-                const filepath = getAppPath('list/' + item);
-                const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
-                return data;
-            });
+                try {
+                    const filepath = getAppPath('list/' + item);
+                    const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+                    return data;
+                } catch { }
+            }).filter(item => item);
             return { list };
         },
         async openFolder(body) {

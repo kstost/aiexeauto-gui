@@ -1104,7 +1104,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // }
     async function loadWorkList() {
         scrollableListContainer.innerHTML = '';
-        console.log('worklist');
+        console.log('worklist345345');
         let task = reqAPI('worklist', {});
         let taskId = task.taskId;
         console.log('taskId', taskId);
