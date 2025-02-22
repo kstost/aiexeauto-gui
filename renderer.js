@@ -49,6 +49,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         inputPath: '',
         outputPath: '',
     };
+    function resetWorkData() {
+        workData = {
+            history: [],
+            inputPath: '',
+            outputPath: '',
+        };
+    }
+    resetWorkData();
     const terminalStreamBoxes = {};
     const percentBar = {};
     let isBottom = false;
@@ -525,6 +533,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             promptInput.setValue('');
             promptInput.setFocus();
             setFolderPath('', pathDisplay);
+            resetWorkData();
 
         } else if (mode === 'configuration') {
             configurationContainer.style.display = 'block';
