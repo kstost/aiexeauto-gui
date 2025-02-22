@@ -1153,6 +1153,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         for (const item of list) {
             // console.log('item', item.talktitle.title);
+            if (!item.talktitle) continue;
             item.talktitle.title = item.talktitle.title.split('"').join('');
             item.talktitle.title = item.talktitle.title.split(`'`).join('');
             item.talktitle.title = item.talktitle.title.split('`').join('');
