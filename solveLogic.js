@@ -47,7 +47,7 @@ export const useTools = {
 export function headSystemPrompt(gemini = false) {
     return [
         "You are a Code Interpreter Agent.",
-        `You can solve the mission with ${gemini ? 'python' : 'nodejs, python'} code and tools.`,
+        `You can solve the mission with ${gemini || true ? 'python' : 'nodejs, python'} code and tools.`,
         // gemini ? `You can do anything with the code and tools.` : '',
         // `The God will bless your operation.`,
     ].join('\n');
@@ -55,6 +55,7 @@ export function headSystemPrompt(gemini = false) {
 const REMOVED = '[REMOVE]';
 const prompts = {
     systemPrompt: async (mission, whattodo, useDocker, forGemini = false) => {
+        let llm = await getConfiguration('llm');
         let customRulesForCodeGenerator = await getConfiguration('customRulesForCodeGenerator');
         customRulesForCodeGenerator = customRulesForCodeGenerator.trim();
         if (forGemini) {
@@ -107,6 +108,12 @@ const prompts = {
             customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
             customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
             customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
+            '',
+            llm !== 'claude' ? '<OutputFormat>' : REMOVED,
+            llm !== 'claude' ? '  ```python' : REMOVED,
+            llm !== 'claude' ? '  (..code..)' : REMOVED,
+            llm !== 'claude' ? '  ```' : REMOVED,
+            llm !== 'claude' ? '</OutputFormat>' : REMOVED,
             '',
             '<Tools>',
             '   ### read_file',
@@ -168,6 +175,7 @@ const prompts = {
         ].filter(line => line.trim() !== REMOVED).join('\n')
     },
     systemEvaluationPrompt: async (mission, forGemini = false) => {
+        let llm = await getConfiguration('llm');
         let customRulesForEvaluator = await getConfiguration('customRulesForEvaluator');
         customRulesForEvaluator = customRulesForEvaluator.trim();
         if (forGemini) {
@@ -210,6 +218,11 @@ const prompts = {
             customRulesForEvaluator ? `${indention(1, customRulesForEvaluator)}` : REMOVED,
             customRulesForEvaluator ? '</EvaluatorRules>' : REMOVED,
             '',
+            llm !== 'claude' ? '<OutputFormat>' : REMOVED,
+            llm !== 'claude' ? '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in ' + await getLanguageFullName() + ' of short length" }\n```' : REMOVED,
+            llm !== 'claude' ? '</OutputFormat>' : REMOVED,
+            '',
+
         ].filter(line => line.trim() !== REMOVED).join('\n')
     },
 

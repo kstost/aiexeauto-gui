@@ -199,7 +199,7 @@ export async function getToolList() {
     const toolList = await fs.promises.readdir(getCodePath(`prompt_tools/${container}`));
     let candidateList;
     candidateList = toolList.filter(tool => tool.endsWith('.toolspec.json')).map(tool => tool.replace(/\.toolspec\.json$/, ''));
-    if (llm === 'gemini') {
+    if (llm === 'gemini' || true) {
         candidateList = candidateList.filter(tool => tool.includes('_python_'));
     }
     return candidateList;
