@@ -334,8 +334,47 @@ function plainParser(text, callMode) {
         }
     }
 }
+function stripTags(fileContent) {
+    // 태그 이름은 어떤 것이든 상관없이 첫번째 태그 쌍의 내부 내용을 추출
+    const regex = /<([A-Za-z0-9_-]+)>([\s\S]*?)<\/\1>/;
+    const match = fileContent.match(regex);
+    if (!match) {
+        return '';
+    }
+
+    // 두 번째 캡처 그룹에 태그 사이의 코드 내용이 담겨 있음
+    let codeBlock = match[2];
+
+    // 줄 단위로 분리 (모든 줄에 대해 동일하게 처리)
+    const lines = codeBlock.split('\n');
+
+    // 비어있지 않은 줄들에 대해 최소 선행 공백(들여쓰기) 길이를 계산
+    let minIndent = Infinity;
+    for (const line of lines) {
+        if (line.trim().length > 0) {
+            const leadingSpaces = line.match(/^(\s*)/)[0].length;
+            if (leadingSpaces < minIndent) {
+                minIndent = leadingSpaces;
+            }
+        }
+    }
+    if (minIndent === Infinity) {
+        minIndent = 0;
+    }
+
+    // 모든 줄에서 동일하게 minIndent 만큼의 공백 제거
+    const dedented = lines.map(line => {
+        // 만약 줄의 길이가 minIndent보다 작으면 그냥 왼쪽 공백 제거
+        return line.length >= minIndent ? line.slice(minIndent) : line.trimStart();
+    });
+
+    // 앞뒤 불필요한 공백과 빈 줄 제거 후 반환
+    return dedented.join('\n').trim();
+}
+
 function langParser(text, callMode) {
     try {
+        text = stripTags(text) || text;
         let { languageName, code } = stripSourceCodeInFencedCodeBlock(text);
         let toolCall = {
             name: null,
