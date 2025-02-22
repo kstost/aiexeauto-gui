@@ -200,7 +200,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 }
                 return codeRequiredConfirm.includes(actname);
             }
-            function handleCodeConfirmation(editor, destroy = false) {
+            function handleCodeConfirmation(editor, destroy = false, save = true) {
 
                 const executionId = randomId();
                 terminalStreamBoxes[executionId] = new TerminalStreamBox();
@@ -208,7 +208,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
                 const sourceCode = editor.getValue();
                 scrollBodyToBottomSmoothly();
-                workData.history.push({ class: 'code_confirmed', confirmedCode: sourceCode, executionId, language });
+                if (save) workData.history.push({ class: 'code_confirmed', confirmedCode: sourceCode, executionId, language });
                 _resolve({ confirmedCode: sourceCode, executionId });
                 if (destroy) {
                     // console.log(editor);
@@ -243,7 +243,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 language = 'javascript';
                 const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                 editor.setSize('100%', '100%');
-                handleCodeConfirmation(editor, true);
+                handleCodeConfirmation(editor, true, false);
                 if (currentConfig['autoCodeExecution']) runButton.click();
             } else {
                 if (mode === 'run_nodejs_code') {

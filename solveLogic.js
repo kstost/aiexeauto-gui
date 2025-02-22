@@ -311,7 +311,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
 
     // const processTransactions = [];
-    const pushProcessTransactions = async (data) => {
+    const pushProcessTransactions = (data) => {
         processTransactions.push(data);
         // if (!retriver) return;
         // uniqueSumNumber++;
@@ -450,8 +450,14 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let modelName = await getModel();
 
             let actData;
+            function setCodeDefault(actDataResult = {}) {
+                javascriptCode = actDataResult.javascriptCode || '';
+                requiredPackageNames = actDataResult.requiredPackageNames || [];
+                pythonCode = actDataResult.pythonCode || '';
+                javascriptCodeBack = actDataResult.javascriptCodeBack || '';
+            }
             if (!validationMode) {
-                processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
+                processTransactions.length === 0 && pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1 && !nextPrompt) {
                     whatdidwedo = await chatCompletion(
                         {
@@ -594,23 +600,28 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
 
             //------------------------------------------
-            let result;
-            let killed = false;
-            let brokenAIResponse = false;
-            let codeExecuted = false;
-            try {
-                console.log('코드 실행 시작');
-                let executionId;
-                const streamGetter = async (str) => {
-                    console.log('스트림 처리 시작');
-                    if (!useDocker) return;
-                    process.stdout.write(str);
-                    if (executionId) {
-                        console.log('스트림 출력 전송');
-                        await out_stream({ executionId, stream: str, state: 'stdout' });
-                    }
+            let codeExecutionResult = {
+                stdout: '',
+                stderr: '',
+                output: '',
+                code: 0,
+                error: null
+            };
+            let runCodeFactor = false;
+            let errorList = {};
+            console.log('코드 실행 시작');
+            let executionId;
+            const streamGetter = async (str) => {
+                console.log('스트림 처리 시작');
+                if (!useDocker) return;
+                process.stdout.write(str);
+                if (executionId) {
+                    console.log('스트림 출력 전송');
+                    await out_stream({ executionId, stream: str, state: 'stdout' });
                 }
-                let confirmedd = false;
+            }
+            let confirmedd = false;
+            try {
                 if (actData.name === 'run_command') {
                     // actData.input.command;
                     let command = actData.input.command;
@@ -620,12 +631,18 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     // confirmedd = true;
                     // console.log('confirmed', confirmed);
                     let actDataResult = await actDataParser({ actData });
-                    javascriptCode = actDataResult.javascriptCode || '';
-                    requiredPackageNames = actDataResult.requiredPackageNames || [];
-                    pythonCode = actDataResult.pythonCode || '';
-                    javascriptCodeBack = actDataResult.javascriptCodeBack || '';
-
+                    setCodeDefault(actDataResult);
                 }
+            } catch (error) {
+                errorList.runcommand = error;
+                actData.input.command = '';
+                setCodeDefault();
+            }
+            if (!pythonCode && !javascriptCode) {
+                errorList.nocodeerror = true;
+            }
+            try {
+
                 if (!pythonCode && javascriptCode) {
                     console.log('JavaScript 코드 실행 준비');
                     let javascriptCodeToRun = javascriptCodeBack ? javascriptCodeBack : javascriptCode;
@@ -641,8 +658,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         }
                         console.log('Docker에서 NodeJS 코드 실행');
                         await waitingForDataCheck(out_state);
-                        result = await runNodeJSCode(containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames, streamGetter);
-                        codeExecuted = true;
+                        const codeExecutionResult_ = await runNodeJSCode(containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames, streamGetter);
+                        if (codeExecutionResult_) codeExecutionResult = codeExecutionResult_;
+                        runCodeFactor = true;
                     } else {
                         // console.log('로컬 환경에서 JavaScript 실행');
                         // if (!confirmedd) {
@@ -666,72 +684,33 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         }
                         console.log('Docker에서 Python 코드 실행');
                         await waitingForDataCheck(out_state);
-                        result = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames, streamGetter);
-                        codeExecuted = true;
+                        const codeExecutionResult_ = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames, streamGetter);
+                        if (codeExecutionResult_) codeExecutionResult = codeExecutionResult_;
+                        runCodeFactor = true;
                     }
-                } else {
-                    // console.log('ddddddddddddddddddddddd');
-                    // console.log('javascriptCode', javascriptCode);
-                    // console.log('pythonCode', pythonCode);
-                    brokenAIResponse = true;
                 }
             } catch (error) {
-                // console.log('코드 실행 중 에러 발생:', error);
-                killed = true;
-                result = error
+                errorList.codeexecutionerror = { error };
             }
-            const noCodeExecution = (brokenAIResponse && !result);
-            if (result || killed) {
-                let pid11;
-                if (useDocker) {
-                    // spinners.iter = createSpinner(`실행 #${iterationCount}차 ${killed ? '중단' : '완료'}`);
-                    pid11 = await out_state(``);
-                    if (killed) {
-                        await pid11.fail(caption('codeExecutionAborted'));
-                    } else {
-                        await pid11.succeed(replaceAll(caption('codeExecutionCompleted'), '{{iterationCount}}', iterationCount)); // `코드 수행 #${iterationCount}차 완료`
-                    }
+            if (useDocker) {
+                let pid = await out_state(``);
+                if (errorList.codeexecutionerror) {
+                    await pid.fail(caption('codeExecutionAborted'));
+                } else {
+                    await pid.succeed(replaceAll(caption('codeExecutionCompleted'), '{{iterationCount}}', iterationCount)); // `코드 수행 #${iterationCount}차 완료`
                 }
-            }
-            if (noCodeExecution) {
-                result = {
-                    stdout: '',
-                    stderr: '',
-                    output: '',
-                    code: 0,
-                    error: null
-                };
             }
             await operation_done({});
-            let pushedCode = false;
-            if (codeExecuted) {
-                if (javascriptCode) {
-                    await pushProcessTransactions({ class: 'code', data: javascriptCode });
-                    pushedCode = true;
-                } else if (pythonCode) {
-                    await pushProcessTransactions({ class: 'code', data: pythonCode });
-                    pushedCode = true;
-                }
-            }
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
-
-            // 결과 출력 및 평가
-            result.output = result.output.replace(/\x1b\[[0-9;]*m/g, '');
-
-
-            // 실행 결과를 boxen으로 감싸기
-            if (!useDocker) {
-                const outputPreview = omitMiddlePart(result.output);
-
-                await out_print({ data: outputPreview, mode: 'outputPreview' });
-            }
-            if (!noCodeExecution && result.output.trim().length === 0) {
+            const data = javascriptCode || pythonCode;
+            const weatherToPush = (!errorList.codeexecutionerror && data);
+            const codeExecutionResultOutput = codeExecutionResult?.output?.replace(/\x1b\[[0-9;]*m/g, '') || '';
+            if (weatherToPush) pushProcessTransactions({ class: 'code', data });
+            if (weatherToPush) pushProcessTransactions({ class: 'output', data: codeExecutionResultOutput });
+            if (runCodeFactor && !(codeExecutionResultOutput.trim().length)) {
                 await out_print({ data: caption('noResult'), mode: 'outputPreview' });
             }
-
-
-            const outputData = { class: 'output', data: result.output };
-            if (pushedCode) await pushProcessTransactions(outputData);
+            //--------------------------------------------------------------------------------------------------
 
             // if (false) {
             // const review = await retriver.retrieve(taskId, '지금까지 수행한 모든 작업을 회고하세요.');
