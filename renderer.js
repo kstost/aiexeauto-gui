@@ -10,6 +10,12 @@ import singleton from './frontend/singleton.mjs';
 import { getConfig, setConfig, caption } from './frontend/system.mjs';
 import { makeCodeBox } from './frontend/makeCodeBox.mjs';
 
+function fixWorkData(workData) {
+    if (!workData.processTransactions) workData.processTransactions = [];
+    if (workData.processTransactions[workData.processTransactions.length - 1]?.class !== 'output') {
+        workData.processTransactions.pop();
+    }
+}
 function getCurrentDateTime() {
     const now = new Date();
     const year = now.getFullYear();
@@ -518,6 +524,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             conversations.innerHTML = '';
             promptInput.setValue('');
             promptInput.setFocus();
+            setFolderPath('', pathDisplay);
 
         } else if (mode === 'configuration') {
             configurationContainer.style.display = 'block';
@@ -912,12 +919,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         workData.prompt = promptInput.input.value;
         workData.containerIdToUse = containerIdToUse;
 
+        fixWorkData(workData);
         let task = reqAPI('ve1nppvpath', { prompt: promptInput.input.value, inputFolderPath: getInputFolderPath(), outputFolderPath: '', containerIdToUse, processTransactions: workData.processTransactions || [], talktitle: workData.talktitle });
         let taskId = task.taskId;
         if (false) await abortTask(taskId);
         // console.log(await task.promise);
         let { resultPath, containerId, processTransactions, talktitle } = await task.promise;
-        console.log('talktitle', talktitle);
+        let doneWithNothing = processTransactions.length === 0 || !talktitle;
         workData.talktitle = talktitle;
         dockerContainers[containerId] = true;
         // console.log(containerId);
@@ -942,16 +950,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
         makeOpenResultFolderButton(resultPath);
         if (resultPath) setFolderPath(resultPath, pathDisplay);
-        if (resultPath) workData.outputPath = resultPath;
-        workData.processTransactions = processTransactions;
-        {
+        if (resultPath) workData.inputPath = resultPath;
+        if (!doneWithNothing) workData.processTransactions = processTransactions;
+        if (!doneWithNothing) {
             let task = reqAPI('saveWork', { filename: workData.talktitle.filename, data: workData });
             let data = await task.promise;
             await loadWorkList();
             // console.log('data', data);
         }
-
+        console.log('---------------------');
+        console.log('doneWithNothing', doneWithNothing);
         console.log(JSON.stringify(workData, null, 3));
+        console.log('---------------------');
         formToEnd();
         scrollBodyToBottomSmoothly();
         // await api
@@ -1104,16 +1114,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     // }
     async function loadWorkList() {
         scrollableListContainer.innerHTML = '';
-        console.log('worklist345345');
+        // console.log('worklist345345');
         let task = reqAPI('worklist', {});
         let taskId = task.taskId;
-        console.log('taskId', taskId);
+        // console.log('taskId', taskId);
         let { list } = await task.promise;
-        console.log('taskId2', taskId);
-        console.log('list', list);
-        for (const item of list) {
-            console.log('item', item.talktitle.title);
-        }
+        // console.log('taskId2', taskId);
+        // console.log('list', list);
+        // for (const item of list) {
+        //     console.log('item', item.talktitle.title);
+        // }
         // const workListContainer = document.createElement('div');
         // workListContainer.style.position = 'fixed';
         // workListContainer.style.top = '50%';
@@ -1133,7 +1143,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         // listElement.style.margin = '0';
 
         for (const item of list) {
-            console.log('item', item.talktitle.title);
+            // console.log('item', item.talktitle.title);
             item.talktitle.title = item.talktitle.title.split('"').join('');
             item.talktitle.title = item.talktitle.title.split(`'`).join('');
             item.talktitle.title = item.talktitle.title.split('`').join('');
@@ -1192,7 +1202,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 for (const item of workData.history) {
                     displayer.printer(item);
                 }
-                makeOpenResultFolderButton(workData.outputPath);
+                makeOpenResultFolderButton(workData.inputPath);
                 console.log(workData.outputPath);
                 formToEnd();
                 promptInput.setValue(workData.prompt);

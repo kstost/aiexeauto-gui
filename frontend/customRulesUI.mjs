@@ -13,7 +13,7 @@ export async function customRulesUI(customrulesContainer) {
 
     // 이 페이지부분의 타이틀은 남겨둬야지
     const title = document.createElement('h2');
-    title.textContent = '커스텀 규칙';
+    title.textContent = caption('customrulestitle');
     title.style.margin = '0';
     title.style.marginBottom = '0px';
     title.style.fontSize = '22px';
@@ -104,13 +104,13 @@ export async function customRulesUI(customrulesContainer) {
 
     const customRulesForCodeGenerator = await createEditorSet({
         configKey: 'customRulesForCodeGenerator',
-        title: 'Code Generator Rules',
-        description: 'You can customize the rules for the Code Generator.'
+        title: caption('codeGeneratorRulesTitle'),
+        description: caption('codeGeneratorRulesDescription')
     });
     const customRulesForEvaluator = await createEditorSet({
         configKey: 'customRulesForEvaluator',
-        title: 'Evaluator Rules',
-        description: 'You can customize the rules for the Evaluator.'
+        title: caption('evaluatorRulesTitle'),
+        description: caption('evaluatorRulesDescription')
     });
     return { customRulesForCodeGenerator, customRulesForEvaluator };
 }

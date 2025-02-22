@@ -1,5 +1,10 @@
 export const i18nCaptions = {
     "ko": {
+        "codeGeneratorRulesTitle": "코드 생성 규칙",
+        "codeGeneratorRulesDescription": "코드 생성 규칙을 지정합니다.",
+        "evaluatorRulesTitle": "작업검증 규칙",
+        "evaluatorRulesDescription": "작업검증 규칙을 지정합니다.",
+        "customrulestitle": "사용자 규칙",
         "namingMission": "미션 이름 지정",
         "keepDockerContainer": "Docker 컨테이너 유지",
         "keepDockerContainerDescription": "컨테이너를 삭제하지 않고 유지합니다.",
@@ -101,6 +106,11 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "codeGeneratorRulesTitle": "Code Generator Rules",
+        "codeGeneratorRulesDescription": "You can customize the rules for the Code Generator.",
+        "evaluatorRulesTitle": "Evaluator Rules",
+        "evaluatorRulesDescription": "You can customize the rules for the Evaluator.",
+        "customrulestitle": "Custom Rules",
         "namingMission": "Naming Mission",
         "keepDockerContainer": "Keep Docker Container",
         "keepDockerContainerDescription": "Keep the container without deleting it.",
@@ -202,6 +212,11 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "codeGeneratorRulesTitle": "コード生成ルール",
+        "codeGeneratorRulesDescription": "コード生成ルールを指定します。",
+        "evaluatorRulesTitle": "評価ルール",
+        "evaluatorRulesDescription": "評価ルールを指定します。",
+        "customrulestitle": "カスタムルール",
         "namingMission": "ミッション名の命名",
         "keepDockerContainer": "Docker コンテナを維持",
         "keepDockerContainerDescription": "コンテナを削除せずに維持します。",
@@ -303,6 +318,11 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "codeGeneratorRulesTitle": "Quy tắc tạo mã",
+        "codeGeneratorRulesDescription": "Bạn có thể tùy chỉnh các quy tắc cho việc tạo mã.",
+        "evaluatorRulesTitle": "Quy tắc đánh giá",
+        "evaluatorRulesDescription": "Bạn có thể tùy chỉnh các quy tắc cho việc đánh giá.",
+        "customrulestitle": "Quy tắc tùy chỉnh",
         "namingMission": "Đặt tên cho nhiệm vụ",
         "keepDockerContainer": "Giữ Container Docker",
         "keepDockerContainerDescription": "Giữ container Docker mà không xóa nó.",
@@ -404,6 +424,11 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "codeGeneratorRulesTitle": "代码生成规则",
+        "codeGeneratorRulesDescription": "您可以自定义代码生成规则。",
+        "evaluatorRulesTitle": "工作验证规则",
+        "evaluatorRulesDescription": "您可以自定义工作验证规则。",
+        "customrulestitle": "自定义规则",
         "namingMission": "任务命名",
         "keepDockerContainer": "保持Docker容器",
         "keepDockerContainerDescription": "不删除容器。",

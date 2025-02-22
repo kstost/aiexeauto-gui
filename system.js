@@ -95,6 +95,35 @@ export async function loadConfiguration() {
         customRulesForCodeGenerator: '', // 사용자 정의 규칙
         customRulesForEvaluator: '', // 사용자 정의 규칙
     }
+    let dataType = {
+        claudeApiKey: "string",
+        groqApiKey: "string",
+        deepseekApiKey: "string",
+        openaiApiKey: "string",
+        ollamaApiKey: "string",
+        geminiApiKey: "string",
+        geminiModel: "string", // 원하는 모델 e.g. gemini-2.0-flash, gemini-2.0-flash-latest
+        model: "string",
+        deepseekModel: "string",
+        openaiModel: "string",
+        ollamaModel: "string",
+        groqModel: "string",
+        llm: "string",
+        maxIterations: "number",
+        dockerImage: 'string',
+        useDocker: "boolean", // Docker 사용 여부 (false: 도커 아닌 웹컨테이너 사용, true: 도커 사용함)
+        keepDockerContainer: "boolean",
+        dockerPath: 'string', // 도커 경로
+        dockerWorkDir: 'string',
+        overwriteOutputDir: "boolean", // 덮어쓰기 여부 (false: 덮어쓰지 않음, true: 덮어씀)
+        trackLog: "boolean",
+        ollamaEndpoint: 'string',
+        autoCodeExecution: "boolean", // 자동 코드 실행 여부 (false: 자동 실행 안함, true: 자동 실행함)
+        planEditable: "boolean", // AI가 판단한 계획 수정 가능 여부 (false: 수정 불가능, true: 수정 가능)
+        captionLanguage: "string", // 캡션 언어 (ko: 한국어, en: 영어)
+        customRulesForCodeGenerator: "string", // 사용자 정의 규칙
+        customRulesForEvaluator: "string", // 사용자 정의 규칙
+    }
     let config_ = {};
     try {
         const configPath = getConfigFilePath();
@@ -149,6 +178,18 @@ export async function loadConfiguration() {
             }
         }
     }
+    for (let key in config_) {
+        if (dataType[key]) {
+            if (dataType[key] === 'string') {
+                config_[key] = `${config_[key]}`;
+            } else if (dataType[key] === 'number') {
+                config_[key] = Number(config_[key]);
+            } else if (dataType[key] === 'boolean') {
+                config_[key] = !!config_[key];
+            }
+        }
+    }
+
     return config_;
 }
 export async function getToolList() {
