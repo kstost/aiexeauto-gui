@@ -335,47 +335,54 @@ function plainParser(text, callMode) {
     }
 }
 function stripTags(fileContent) {
-    // 태그 이름은 어떤 것이든 상관없이 첫번째 태그 쌍의 내부 내용을 추출
-    const regex = /<([A-Za-z0-9_-]+)>([\s\S]*?)<\/\1>/;
-    const match = fileContent.match(regex);
-    if (!match) {
-        return '';
-    }
+    // 태그 이름이 무엇이든 상관없이 모든 태그 쌍의 내용을 추출하는 정규표현식 (global flag 사용)
+    const regex = /<([A-Za-z0-9_-]+)>([\s\S]*?)<\/\1>/g;
+    const results = [];
+    let match;
 
-    // 두 번째 캡처 그룹에 태그 사이의 코드 내용이 담겨 있음
-    let codeBlock = match[2];
+    while ((match = regex.exec(fileContent)) !== null) {
+        let codeBlock = match[2];
 
-    // 줄 단위로 분리 (모든 줄에 대해 동일하게 처리)
-    const lines = codeBlock.split('\n');
+        // 각 코드 블록의 앞뒤 공백 제거
+        let lines = codeBlock.split('\n');
 
-    // 비어있지 않은 줄들에 대해 최소 선행 공백(들여쓰기) 길이를 계산
-    let minIndent = Infinity;
-    for (const line of lines) {
-        if (line.trim().length > 0) {
-            const leadingSpaces = line.match(/^(\s*)/)[0].length;
-            if (leadingSpaces < minIndent) {
-                minIndent = leadingSpaces;
+        // 비어있는 줄은 무시하고, 모든 줄에 공통으로 포함된 최소 들여쓰기 계산
+        let minIndent = Infinity;
+        for (const line of lines) {
+            if (line.trim().length > 0) {
+                const leadingSpaces = line.match(/^(\s*)/)[0].length;
+                minIndent = Math.min(minIndent, leadingSpaces);
             }
         }
-    }
-    if (minIndent === Infinity) {
-        minIndent = 0;
+        if (minIndent === Infinity) {
+            minIndent = 0;
+        }
+
+        // 각 줄에서 최소 들여쓰기를 제거
+        const dedentedLines = lines.map(line =>
+            line.length >= minIndent ? line.slice(minIndent) : line.trimStart()
+        );
+
+        // 처리 후 앞뒤 불필요한 공백 제거 및 결과 배열에 추가
+        results.push(dedentedLines.join('\n').trim());
     }
 
-    // 모든 줄에서 동일하게 minIndent 만큼의 공백 제거
-    const dedented = lines.map(line => {
-        // 만약 줄의 길이가 minIndent보다 작으면 그냥 왼쪽 공백 제거
-        return line.length >= minIndent ? line.slice(minIndent) : line.trimStart();
-    });
-
-    // 앞뒤 불필요한 공백과 빈 줄 제거 후 반환
-    return dedented.join('\n').trim();
+    return results;
 }
+
 
 function langParser(text, callMode) {
     try {
-        text = stripTags(text) || text;
-        let { languageName, code } = stripSourceCodeInFencedCodeBlock(text);
+        text = stripTags(text).join('\n').trim() || text;
+        const striped = stripSourceCodeInFencedCodeBlock(text);
+        let code, languageName;
+        if (striped) {
+            languageName = striped.languageName;
+            code = striped.code;
+        } else {
+            languageName = '';
+            code = text;
+        }
         let toolCall = {
             name: null,
             args: null
@@ -437,7 +444,9 @@ function langParser(text, callMode) {
             }
         }
         return toolCall;
-    } catch { }
+    } catch (ee) {
+        console.log('ee', ee);
+    }
 }
 export async function getModel() {
     const llm = await getConfiguration('llm');
