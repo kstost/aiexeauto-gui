@@ -936,6 +936,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         let { resultPath, containerId, processTransactions, talktitle } = await task.promise;
         let doneWithNothing = processTransactions.length === 0 || !talktitle;
         workData.talktitle = talktitle;
+        Object.keys(dockerContainers).forEach(key => delete dockerContainers[key]);
         dockerContainers[containerId] = true;
         // console.log(containerId);
         enableUIElements();
