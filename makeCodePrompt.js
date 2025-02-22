@@ -1,5 +1,5 @@
 import { omitMiddlePart, getLanguageFullName } from './solveLogic.js';
-
+import { getConfiguration } from './system.js';
 export function indention(num = 1, string = null) {
     if (string) {
         return string.split('\n').map(line => ' '.repeat(num * 2) + line).join('\n');
@@ -8,6 +8,8 @@ export function indention(num = 1, string = null) {
     }
 }
 export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission) {
+    const llm = await getConfiguration('llm');
+    const gemini = llm === 'gemini';
 
     let output = processTransactions.at(-1).data;
     if (output) {
@@ -70,7 +72,8 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
                 mainKeyMission ? indention(1, mainKeyMission) : '',
                 mainKeyMission ? '</THE-MAIN-KEY-MISSION>' : '',
                 '',
-                'Make the code.',
+                gemini ? 'Make the python code.' : 'Make the code.',
+
                 // '---',
                 // '',
                 // 'To do this, choose proper action.',
@@ -96,6 +99,12 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
                 `      Judge what to do to complete the mission by the Output of the Execution and the history we did so far.`,
                 `   </ActionDetermination>`,
                 `</MissionEvaluation>`,
+                ``,
+                gemini ? '<OutputFormat>' : '',
+                gemini ? '```json' : '',
+                gemini ? '{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in ' + await getLanguageFullName() + ' of short length" }' : '',
+                gemini ? '```' : '',
+                gemini ? '</OutputFormat>' : '',
                 ``,
                 `Determine mission completion and decide next steps.`,
             ].join('\n'),

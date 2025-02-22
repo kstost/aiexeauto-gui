@@ -155,6 +155,7 @@ async function leaveLog({ callMode, data }) {
                     contentToLeave += '----------------\n';
                     contentToLeave += JSON.stringify(unified, undefined, 3);
                 }
+                contentToLeave += `\n\n\n------------------\n${JSON.stringify(data, undefined, 3)}`;
                 await writeEnsuredFile(`${aiLogFolder}/${date}_REQ_${unified.model}_${callMode}.txt`, contentToLeave);
             } else {
                 let contentToLeave = '';
@@ -250,7 +251,9 @@ async function leaveLog({ callMode, data }) {
                 await writeEnsuredFile(`${aiLogFolder}/${date}_RES_${callMode}.txt`, contentToLeave);
                 if (false) await writeEnsuredFile(`${aiLogFolder}/${date}_RES_${callMode}.json`, JSON.stringify(JSON.parse(data.resultText), undefined, 3));
             }
-        } catch { }
+        } catch (err) {
+            console.error(err);
+        }
     }
 }
 export async function isOllamaRunning() {
