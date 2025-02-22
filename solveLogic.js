@@ -283,6 +283,7 @@ export function omitMiddlePart(text, length = 1024) {
 
 export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle }) {
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    // const pid1 = await out_state(caption('solvingLogic'));
     let keepMode = processTransactions.length > 0;
     processTransactions.forEach(transaction => {
         transaction.notcurrentmission = true;
@@ -367,6 +368,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
 
         }
+        const pid32 = await out_state(caption('preparingDocker'));
         if (await getUseDocker()) {
             let dockerImage = await getConfiguration('dockerImage');
             dockerImage = dockerImage.trim();
@@ -404,6 +406,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
         // 데이터 임포트 스피너
         // spinners.import = createSpinner('데이터를 가져오는 중...');
+        await pid32.dismiss();
         const pid3 = await out_state(caption('importingData'));
 
         if (useDocker) {
@@ -594,6 +597,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let result;
             let killed = false;
             let brokenAIResponse = false;
+            let codeExecuted = false;
             try {
                 console.log('코드 실행 시작');
                 let executionId;
@@ -638,6 +642,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         console.log('Docker에서 NodeJS 코드 실행');
                         await waitingForDataCheck(out_state);
                         result = await runNodeJSCode(containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames, streamGetter);
+                        codeExecuted = true;
                     } else {
                         // console.log('로컬 환경에서 JavaScript 실행');
                         // if (!confirmedd) {
@@ -662,6 +667,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         console.log('Docker에서 Python 코드 실행');
                         await waitingForDataCheck(out_state);
                         result = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames, streamGetter);
+                        codeExecuted = true;
                     }
                 } else {
                     // console.log('ddddddddddddddddddddddd');
@@ -697,12 +703,16 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 };
             }
             await operation_done({});
-            if (javascriptCode) {
-                await pushProcessTransactions({ class: 'code', data: javascriptCode });
-            } else if (pythonCode) {
-                await pushProcessTransactions({ class: 'code', data: pythonCode });
+            let pushedCode = false;
+            if (codeExecuted) {
+                if (javascriptCode) {
+                    await pushProcessTransactions({ class: 'code', data: javascriptCode });
+                    pushedCode = true;
+                } else if (pythonCode) {
+                    await pushProcessTransactions({ class: 'code', data: pythonCode });
+                    pushedCode = true;
+                }
             }
-
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
 
             // 결과 출력 및 평가
@@ -721,7 +731,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
 
             const outputData = { class: 'output', data: result.output };
-            await pushProcessTransactions(outputData);
+            if (pushedCode) await pushProcessTransactions(outputData);
 
             // if (false) {
             // const review = await retriver.retrieve(taskId, '지금까지 수행한 모든 작업을 회고하세요.');

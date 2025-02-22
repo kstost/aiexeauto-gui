@@ -207,6 +207,7 @@ if (prompt === 'version') {
     }
     async function application(prompt, dataSourcePath, dataOutputPath, containerIdToUse, processTransactions, talktitle) {
         const taskId = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
+        // console.log('taskId', taskId);
         singleton.missionAborting = false;
         const interfaces = {
             async operation_done(body) {
