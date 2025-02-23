@@ -4,7 +4,7 @@ import { writeEnsuredFile } from './dataHandler.js';
 import fs from 'fs';
 import { useTools, getLanguageFullName } from './solveLogic.js';
 import { caption, replaceAll } from './system.js';
-
+import { checkSyntax } from './docker.js';
 
 export async function reviewMission(multiLineMission, interfaces) {
     const systemPrompt = [
@@ -313,8 +313,8 @@ function stripSourceCodeInFencedCodeBlock(text) {
     // 코드 블록을 찾지 못한 경우
     return null;
 }
-function plainParser(text, callMode) {
-    let plain = langParser(text, callMode);
+async function plainParser(text, callMode) {
+    let plain = await langParser(text, callMode);
     if (plain) {
         if (callMode === 'generateCode') {
             return {
@@ -371,7 +371,7 @@ function stripTags(fileContent) {
 }
 
 
-function langParser(text, callMode) {
+async function langParser(text, callMode) {
     try {
         text = stripTags(text).join('\n').trim() || text;
         const striped = stripSourceCodeInFencedCodeBlock(text);
@@ -383,53 +383,30 @@ function langParser(text, callMode) {
             languageName = '';
             code = text;
         }
+        let validation = await checkSyntax(singleton.currentWorkingContainerId, code);
         let toolCall = {
             name: null,
             args: null
         }
         if (callMode === 'generateCode') {
-            if (['python', 'py'].includes(languageName.toLowerCase())) {
-                toolCall.name = 'generate_python_code';
+            if (validation.bash) {
+                toolCall.name = 'run_command';
                 toolCall.args = {
-                    python_code: code,
-                    pip_package_list: []
+                    command: code,
                 }
             }
-            else if (['json'].includes(languageName.toLowerCase())) {
-                toolCall.name = 'generate_python_code';
-                toolCall.args = {
-                    python_code: code,
-                    pip_package_list: []
-                }
-            }
-            else if (['javascript', 'js'].includes(languageName.toLowerCase())) {
+            else if (validation.js) {
                 toolCall.name = 'generate_nodejs_code';
                 toolCall.args = {
                     nodejs_code: code,
                     npm_package_list: []
                 }
-            } else {
-                function isValidJavaScriptUsingNewFunction(code) {
-                    try {
-                        new Function(code);
-                        return true;  // 문법적으로 유효
-                    } catch (e) {
-                        return false; // 문법 오류
-                    }
-                }
-                if (2 < Math.random() && isValidJavaScriptUsingNewFunction(code)) {
-                    toolCall.name = 'generate_nodejs_code';
-                    toolCall.args = {
-                        nodejs_code: code,
-                        npm_package_list: []
-                    }
-                } else {
-                    toolCall.name = 'generate_python_code';
-                    toolCall.args = {
-                        python_code: code,
-                        pip_package_list: []
-                    }
-                    // throw new Error('Invalid JavaScript code');
+            }
+            else if (validation.py) {
+                toolCall.name = 'generate_python_code';
+                toolCall.args = {
+                    python_code: code,
+                    pip_package_list: []
                 }
             }
         } else if (callMode === 'evaluateCode') {
@@ -764,7 +741,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     if (tools) {
                         try {
                             let data = result?.content?.filter(c => c.type === 'tool_use')[0];
-                            let rt = !data ? plainParser(result?.content?.[0]?.text, callMode) : null;
+                            let rt = !data ? await plainParser(result?.content?.[0]?.text, callMode) : null;
                             if (rt) return rt;
                             if (!data && forRetry < 1) throw null;
                             return data;
@@ -779,7 +756,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            let rt = !toolCall ? plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -799,7 +776,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            let rt = !toolCall ? plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -819,7 +796,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            let rt = !toolCall ? plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -841,7 +818,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     if (tools) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            let rt = !toolCall ? plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -863,7 +840,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                         try {
                             const parts = result?.candidates?.[0]?.content?.parts;
                             let toolCall = parts.filter(part => part.functionCall)[0]?.functionCall;
-                            let rt = !toolCall ? plainParser(parts.filter(part => part.text)[0].text, callMode) : null;
+                            let rt = !toolCall ? await plainParser(parts.filter(part => part.text)[0].text, callMode) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -1075,6 +1052,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                         }
                     }
                 };
+                toolConfig = {}; // no tool use
             }
 
             const data = {

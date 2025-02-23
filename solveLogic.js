@@ -27,6 +27,7 @@ import { validateAndCreatePaths } from './dataHandler.js';
 import { reviewMission } from './aiFeatures.js';
 import open from 'open';
 import { ensureAppsHomePath } from './dataHandler.js';
+import { checkSyntax } from './docker.js';
 let spinners = {};
 
 export function getSpinners() {
@@ -76,6 +77,18 @@ const prompts = {
                 customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
                 customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
                 customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
+                '',
+                '<PythonCodeGenerationRules>',
+                '  - Do not repeat tasks that have already been performed in previous steps.',
+                '  - The code must be a complete, executable Python file.',
+                '  - Use `print` to display status values and progress at each step.',
+                '  - Print all results that serve as a basis for the agent performing the task.',
+                '  - Print justification for success or failure at every line of code execution.',
+                '  - Use `subprocess` when executing shell commands.',
+                '  - The process must be terminated after code execution.',
+                '  - Do not hardcode data in the source code.',
+                '  - Skip optional tasks.',
+                '</PythonCodeGenerationRules>',
                 '',
                 '<OutputFormat>',
                 '  ```python',
@@ -410,12 +423,19 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         singleton.currentWorkingContainerId = containerId;
         // let browser, page;
 
+
         //multiLineMission
         if (false) await out_print({ mode: 'mission', data: multiLineMission });
 
         const dockerWorkDir = await getConfiguration('dockerWorkDir');
         const maxIterations = await getConfiguration('maxIterations');
         const useDocker = await getConfiguration('useDocker');
+
+        // {
+        //     let ajosfd = await checkSyntax(containerId, 'ls -al; df', 'javascript');
+        //     console.log(ajosfd);
+        //     process.exit(0);
+        // }
 
         // 데이터 임포트 스피너
         // spinners.import = createSpinner('데이터를 가져오는 중...');
@@ -541,8 +561,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 }
 
                 // spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
-                const systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
-                const systemPromptForGemini = await prompts.systemPrompt(multiLineMission, whattodo, useDocker, true);
+                let systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
+                let systemPromptForGemini = await prompts.systemPrompt(multiLineMission, whattodo, useDocker, true);
+                let gemini = (await getConfiguration('llm')) === 'gemini';
+                if (gemini) systemPrompt = systemPromptForGemini;
                 let promptList = await makeRealTransaction({ processTransactions, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission });
                 promptList = JSON.parse(JSON.stringify(promptList));
 

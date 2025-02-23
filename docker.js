@@ -417,6 +417,40 @@ export async function checkIfPythonModuleInstalled(containerId, moduleName) {
     return result.code === 0;
 
 }
+export async function checkSyntax(containerId, code) {
+    const isValid = (result) => { return result.code === 0; }
+    const tmpPyFile = getAppPath('.code_' + Math.random() + ('.code'));
+    const pyFileName = 'AIEXE-data-handling-operation' + ('.code');
+    await writeEnsuredFile(tmpPyFile, code);
+    {
+        await executeInContainer(containerId, 'mkdir -p /chksyntax');
+        let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpPyFile + '" "' + containerId + ':/chksyntax/' + pyFileName + '"');
+    }
+    if ((ensureAppsHomePath(tmpPyFile)) && linuxStyleRemoveDblSlashes(tmpPyFile).includes('/.aiexeauto/workspace/') && await is_file(tmpPyFile) && tmpPyFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
+        await fs.promises.unlink(tmpPyFile);
+    }
+    let validated = {
+        json: false,
+        py: false,
+        js: false,
+        bash: false,
+    }
+    let isJson = false;// = isValid(await executeInContainer(containerId, 'cd /chksyntax && python -m json.tool ' + pyFileName));
+    try {
+        JSON.parse(code);
+        isJson = true;
+    } catch {
+
+    }
+    if (isJson) {
+        validated.json = true;
+        return validated;
+    }
+    validated.py = isValid(await executeInContainer(containerId, 'cd /chksyntax && python -m py_compile ' + pyFileName));
+    validated.js = isValid(await executeInContainer(containerId, 'cd /chksyntax && node --check ' + pyFileName));
+    validated.bash = isValid(await executeInContainer(containerId, 'cd /chksyntax && bash -n ' + pyFileName));
+    return validated;
+}
 export async function runPythonCode(containerId, workDir, code, requiredPackageNames = [], streamGetter = null) {
     for (const packageName of requiredPackageNames) await installPythonModules(containerId, workDir, packageName);
     const tmpPyFile = getAppPath('.code_' + Math.random() + '.py');
