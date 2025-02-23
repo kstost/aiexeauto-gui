@@ -34,6 +34,7 @@ function randomId() {
 }
 let aborting_responsed = false;
 let currentConfig = {};
+const codeExecutionDelay = 0;
 const dockerContainers = {};
 window.electronAPI.receive('mission_aborting_response', (arg) => {
     aborting_responsed = true;
@@ -201,6 +202,18 @@ window.addEventListener('DOMContentLoaded', async () => {
                 return codeRequiredConfirm.includes(actname);
             }
             function handleCodeConfirmation(editor, destroy = false, save = true) {
+                const toolActList = {
+                    apt_install: true,
+                    list_directory: true,
+                    read_file: true,
+                    read_url: true,
+                    remove_directory_recursively: true,
+                    remove_file: true,
+                    rename_file_or_directory: true,
+                    run_command: true,
+                    which_command: true,
+                };
+                if (toolActList[actname]) save = false;
 
                 const executionId = randomId();
                 terminalStreamBoxes[executionId] = new TerminalStreamBox();
@@ -223,13 +236,15 @@ window.addEventListener('DOMContentLoaded', async () => {
             // console.log(actname);
 
             // let confirmed = await await_prompt({ mode: 'run_nodejs_code', actname: actData.name, containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames });
+            // console.log('actname', actname);
+
 
             if (!isCodeRequiredConfirm(actname)) {
                 language = 'javascript';
                 const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                 editor.setSize('100%', '100%');
                 handleCodeConfirmation(editor, true);
-                if (currentConfig['autoCodeExecution']) runButton.click();
+                if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
             }
             else if ((mode === 'whattodo_confirm')) {
                 language = 'text';
@@ -244,7 +259,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                 editor.setSize('100%', '100%');
                 handleCodeConfirmation(editor, true, false);
-                if (currentConfig['autoCodeExecution']) runButton.click();
+                if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
             } else {
                 if (mode === 'run_nodejs_code') {
                     language = 'javascript';
@@ -253,7 +268,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor);
                     });
-                    if (currentConfig['autoCodeExecution']) runButton.click();
+                    if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
                 } else if (mode === 'run_python_code') {
                     language = 'python';
                     const { editor, runButton } = makeCodeBox(pythonCode, 'python');
@@ -261,7 +276,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor);
                     });
-                    if (currentConfig['autoCodeExecution']) runButton.click();
+                    if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
                 } else if (mode === 'run_command') {
                     language = 'bash';
                     const { editor, runButton } = makeCodeBox('# Linux Shell Script\n' + body.command, 'bash', false);
@@ -269,7 +284,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor).destroy();
                     });
-                    if (currentConfig['autoCodeExecution']) runButton.click();
+                    if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
                 }
             }
             scrollBodyToBottomSmoothly();

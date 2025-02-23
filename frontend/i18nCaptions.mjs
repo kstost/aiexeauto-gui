@@ -1,5 +1,6 @@
 export const i18nCaptions = {
     "ko": {
+        "parseResult": "결과를 파싱중...",
         "preparingDocker": "도커 준비중...",
         "codeGeneratorRulesTitle": "코드 생성 규칙",
         "codeGeneratorRulesDescription": "코드 생성 규칙을 지정합니다.",
@@ -107,6 +108,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "parseResult": "Parsing result...",
         "preparingDocker": "Preparing Docker...",
         "codeGeneratorRulesTitle": "Code Generator Rules",
         "codeGeneratorRulesDescription": "You can customize the rules for the Code Generator.",
@@ -214,6 +216,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "parseResult": "結果を解析中...",
         "preparingDocker": "Dockerを準備中...",
         "codeGeneratorRulesTitle": "コード生成ルール",
         "codeGeneratorRulesDescription": "コード生成ルールを指定します。",
@@ -321,6 +324,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "parseResult": "Đang phân tích kết quả...",
         "preparingDocker": "Chuẩn bị Docker...",
         "codeGeneratorRulesTitle": "Quy tắc tạo mã",
         "codeGeneratorRulesDescription": "Bạn có thể tùy chỉnh các quy tắc cho việc tạo mã.",
@@ -428,6 +432,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "parseResult": "正在解析结果...",
         "preparingDocker": "准备Docker...",
         "codeGeneratorRulesTitle": "代码生成规则",
         "codeGeneratorRulesDescription": "您可以自定义代码生成规则。",

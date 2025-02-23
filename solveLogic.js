@@ -11,7 +11,7 @@ import { chatCompletion, getModel, isOllamaRunning } from './aiFeatures.js';
 import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
 import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler.js';
 import { waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
-import { getToolList, getToolData, getAppPath, getUseDocker, replaceAll } from './system.js';
+import { getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
 import fs from 'fs';
 import { getConfiguration } from './system.js';
 import { actDataParser } from './actDataParser.js';
@@ -22,7 +22,7 @@ import path from 'path';
 import { installPackages } from './packageManager.js';
 import singleton from './singleton.js';
 import { validatePath } from './system.js';
-import { getAbsolutePath, caption } from './system.js';
+import { getAbsolutePath, caption, templateBinding } from './system.js';
 import { validateAndCreatePaths } from './dataHandler.js';
 import { reviewMission } from './aiFeatures.js';
 import open from 'open';
@@ -42,210 +42,43 @@ export const useTools = {
     which_command: true,
     run_command: true,
     read_url: false,
+    read_file: true,
+    list_directory: true,
 }
 
-// Collecting prompts in one place
-export function headSystemPrompt(gemini = false) {
-    return [
-        "You are a Code Interpreter Agent.",
-        `You can solve the mission with ${gemini || true ? 'python' : 'nodejs, python'} code and tools.`,
-        // gemini ? `You can do anything with the code and tools.` : '',
-        // `The God will bless your operation.`,
-    ].join('\n');
+
+export function makeTag(tagName, data, condition = true) {
+    if (!condition) return;
+    return `<${tagName}>\n${indention(1, data)}\n</${tagName}>`
 }
-const REMOVED = '[REMOVE]';
 const prompts = {
-    systemPrompt: async (mission, whattodo, useDocker, forGemini = false) => {
-        let llm = await getConfiguration('llm');
-        let customRulesForCodeGenerator = await getConfiguration('customRulesForCodeGenerator');
-        customRulesForCodeGenerator = customRulesForCodeGenerator.trim();
-        if (forGemini) {
-            return [
-                headSystemPrompt(forGemini),
-                "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION. Write a Python code for execution.",
-                // '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
-                // '수행을 위한 파이썬 코드를 작성하시오.',
-                '',
-                '<MainMission>',
-                indention(1, mission),
-                '</MainMission>',
-                '',
-                '<SubMission>',
-                indention(1, whattodo),
-                '</SubMission>',
-                '',
-                customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
-                customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
-                customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
-                '',
-                '<PythonCodeGenerationRules>',
-                '  - Do not repeat tasks that have already been performed in previous steps.',
-                '  - The code must be a complete, executable Python file.',
-                '  - Use `print` to display status values and progress at each step.',
-                '  - Print all results that serve as a basis for the agent performing the task.',
-                '  - Print justification for success or failure at every line of code execution.',
-                '  - Use `subprocess` when executing shell commands.',
-                '  - The process must be terminated after code execution.',
-                '  - Do not hardcode data in the source code.',
-                '  - Skip optional tasks.',
-                '</PythonCodeGenerationRules>',
-                '',
-                '<OutputFormat>',
-                '  ```python',
-                '  (..code..)',
-                '  ```',
-                '</OutputFormat>',
-            ].filter(line => line.trim() !== REMOVED).join('\n')
-        }
-        return [
-            headSystemPrompt(forGemini),
-            "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
-            // "As a computer task execution agent, I perform the necessary tasks to carry out sub-missions in order to complete the main mission.",
-            // '컴퓨터 작업 실행 에이전트로서, MAIN MISSION을 완수하기 위한 SUB MISSION을 수행하기 위해 필요한 작업을 수행합니다.',
-            '',
-            // `- MAIN MISSION: "${mission}"`,
-            // `- SUB MISSION: "${whattodo}"`,
-            '<MainMission>',
-            indention(1, mission),
-            '</MainMission>',
-            '',
-            '<SubMission>',
-            indention(1, whattodo),
-            '</SubMission>',
-            '',
-            '<Instructions>',
-            "  The tools for performing the task are prepared as follows, so choose the most suitable tool for the mission and proceed with the task.",
-            // '  작업 수행을 위한 도구는 다음과 같이 준비되어있으며 임무 수행에 가장 적합한 도구를 선택해서 수행하세요.',
-            '</Instructions>',
-            '',
-            customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
-            customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
-            customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
-            '',
-            llm !== 'claude' ? '<OutputFormat>' : REMOVED,
-            llm !== 'claude' ? '  ```python' : REMOVED,
-            llm !== 'claude' ? '  (..code..)' : REMOVED,
-            llm !== 'claude' ? '  ```' : REMOVED,
-            llm !== 'claude' ? '</OutputFormat>' : REMOVED,
-            '',
-            '<Tools>',
-            '   ### read_file',
-            '   - Read the contents of the file.',
-            '      #### INSTRUCTION',
-            '      - Provide the path of the file',
-            '   ',
-            '   ### list_directory',
-            '   - Get the list of files/folders in the directory.',
-            '      #### INSTRUCTION',
-            '      - Provide the path of the directory',
-            '   ',
-            useTools.read_url ? '   ### read_url' : REMOVED,
-            useTools.read_url ? '   - Read the contents of the URL.' : REMOVED,
-            useTools.read_url ? '      #### INSTRUCTION' : REMOVED,
-            useTools.read_url ? '      - Provide the URL' : REMOVED,
-            useTools.read_url ? '   ' : REMOVED,
-            useTools.rename_file_or_directory ? '   ### rename_file_or_directory' : REMOVED,
-            useTools.rename_file_or_directory ? '   - Change the name of the file or directory.' : REMOVED,
-            useTools.rename_file_or_directory ? '      #### INSTRUCTION' : REMOVED,
-            useTools.rename_file_or_directory ? '      - Provide the path of the file or directory and the new name' : REMOVED,
-            useTools.rename_file_or_directory ? '   ' : REMOVED,
-            useTools.remove_file ? '   ### remove_file' : REMOVED,
-            useTools.remove_file ? '   - Delete the file.' : REMOVED,
-            useTools.remove_file ? '      #### INSTRUCTION' : REMOVED,
-            useTools.remove_file ? '      - Provide the path of the file to delete' : REMOVED,
-            useTools.remove_file ? '   ' : REMOVED,
-            useTools.remove_directory_recursively ? '   ### remove_directory_recursively' : REMOVED,
-            useTools.remove_directory_recursively ? '   - Delete the directory recursively.' : REMOVED,
-            useTools.remove_directory_recursively ? '      #### INSTRUCTION' : REMOVED,
-            useTools.remove_directory_recursively ? '      - Provide the path of the directory to delete' : REMOVED,
-            useTools.remove_directory_recursively ? '   ' : REMOVED,
-            useTools.apt_install && useDocker ? '   ### apt_install' : REMOVED,
-            useTools.apt_install && useDocker ? '   - Install the apt package.' : REMOVED,
-            useTools.apt_install && useDocker ? '      #### INSTRUCTION' : REMOVED,
-            useTools.apt_install && useDocker ? '      - Provide the name of the package to install' : REMOVED,
-            useTools.apt_install && useDocker ? '   ' : REMOVED,
-            useTools.which_command ? '   ### which_command' : REMOVED,
-            useTools.which_command ? '   - Check if the shell command exists.' : REMOVED,
-            useTools.which_command ? '      #### INSTRUCTION' : REMOVED,
-            useTools.which_command ? '      - Provide the shell command to check' : REMOVED,
-            useTools.which_command ? '   ' : REMOVED,
-            useTools.run_command ? '   ### run_command' : REMOVED,
-            useTools.run_command ? '   - Execute the shell command.' : REMOVED,
-            useTools.run_command ? '      #### INSTRUCTION' : REMOVED,
-            useTools.run_command ? '      - Provide the shell command to execute' : REMOVED,
-            useTools.run_command ? '   ' : REMOVED,
-            '   ',
-            `${await (async () => {
-                const toolList = await getToolList();
-                let toolPrompts = [];
-                for (let tool of toolList) {
-                    const toolData = await getToolData(tool);
-                    toolPrompts.push(toolData.prompt);
-                }
-                return toolPrompts.join('\n\t\n');
-            })()}`,
-            '</Tools>',
-        ].filter(line => line.trim() !== REMOVED).join('\n')
+    systemCodeGeneratorPrompt: async (mission, whattodo, useDocker, forGemini = false) => {
+        const customRulesForCodeGenerator = (await getConfiguration('customRulesForCodeGenerator') || '').trim();
+        const tools = `${await (async () => {
+            const toolList = await getToolList();
+            let toolPrompts = [];
+            for (let tool of toolList) {
+                const toolData = await getToolData(tool);
+                if (!toolData) continue;
+                toolPrompts.push(toolData.prompt);
+            }
+            return toolPrompts.join('\n\t\n');
+        })()}`;
+        return templateBinding((await promptTemplate()).codeGenerator.systemPrompt, {
+            mission: indention(1, mission),
+            whattodo: indention(1, whattodo),
+            customRulesForCodeGenerator: makeTag('CodeGenerationRules', customRulesForCodeGenerator, !!customRulesForCodeGenerator),
+            tools: tools,
+        });
     },
     systemEvaluationPrompt: async (mission, forGemini = false) => {
-        let llm = await getConfiguration('llm');
-        let customRulesForEvaluator = await getConfiguration('customRulesForEvaluator');
-        customRulesForEvaluator = customRulesForEvaluator.trim();
-        if (forGemini) {
-            return [
-                'As a computer task execution agent, you perform the necessary tasks to rigorously and logically verify and evaluate whether the MISSION has been completely accomplished.',
-                'If sufficient OUTPUT for verification exists and the mission is deemed complete, respond with ENDOFMISSION; otherwise, respond with NOTSOLVED.',
-                // 'If the mission is impossible to solve, respond with GIVEUPTHEMISSION.',
-                // '컴퓨터 작업 실행 에이전트로서, MISSION이 완전하게 완료되었는지 엄격고 논리적으로 검증하고 평가하기 위해 필요한 작업을 수행합니다.',
-                // '이미 검증을 위한 충분한 OUTPUT이 존재하고 미션이 완수되었다고 판단되면 ENDOFMISSION을 응답하고 그것이 아니라면 NOTSOLVED를 응답.',
-                // '만약 해결할 수 없는 미션이라면 GIVEUPTHEMISSION을 응답하세요.',
-                '',
-                '<Mission>',
-                indention(1, mission),
-                '</Mission>',
-                '',
-                customRulesForEvaluator ? '<EvaluatorRules>' : REMOVED,
-                customRulesForEvaluator ? `${indention(1, customRulesForEvaluator)}` : REMOVED,
-                customRulesForEvaluator ? '</EvaluatorRules>' : REMOVED,
-                '',
-                '<OutputFormat>',
-                // '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED or GIVEUPTHEMISSION", "reason": "Explain the reason for the verdict in ' + await getLanguageFullName() + ' of short length" }\n```',
-                '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in ' + await getLanguageFullName() + ' of short length" }\n```',
-                '</OutputFormat>',
-                '',
-            ].filter(line => line.trim() !== REMOVED).join('\n')
-        }
-        return [
-            'As a computer task execution agent, you perform the necessary tasks to rigorously and logically verify and evaluate whether the MISSION has been fully completed.',
-            'If sufficient OUTPUT for verification exists and the mission is deemed complete, respond with ENDOFMISSION. If not, respond with NOTSOLVED.',
-            'If the mission is impossible to solve, respond with GIVEUPTHEMISSION.',
-            // '컴퓨터 작업 실행 에이전트로서, MISSION이 완전하게 완료되었는지 엄격고 논리적으로 검증하고 평가하기 위해 필요한 작업을 수행합니다.',
-            // '이미 검증을 위한 충분한 OUTPUT이 존재하고 미션이 완수되었다고 판단되면 ENDOFMISSION을 응답하고 그것이 아니라면 NOTSOLVED를 응답.',
-            // '만약 해결할 수 없는 미션이라면 GIVEUPTHEMISSION을 응답하세요.',
-            '',
-            '<Mission>',
-            indention(1, mission),
-            '</Mission>',
-            '',
-            customRulesForEvaluator ? '<EvaluatorRules>' : REMOVED,
-            customRulesForEvaluator ? `${indention(1, customRulesForEvaluator)}` : REMOVED,
-            customRulesForEvaluator ? '</EvaluatorRules>' : REMOVED,
-            '',
-            llm !== 'claude' ? '<OutputFormat>' : REMOVED,
-            llm !== 'claude' ? '```json\n{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in ' + await getLanguageFullName() + ' of short length" }\n```' : REMOVED,
-            llm !== 'claude' ? '</OutputFormat>' : REMOVED,
-            '',
-
-        ].filter(line => line.trim() !== REMOVED).join('\n')
+        const customRulesForEvaluator = (await getConfiguration('customRulesForEvaluator') || '').trim();
+        return templateBinding((await promptTemplate()).evaluator.systemPrompt, {
+            mission: indention(1, mission),
+            customRulesForEvaluator: makeTag('EvaluatorRules', customRulesForEvaluator, !!customRulesForEvaluator),
+            languageFullName: await getLanguageFullName(),
+        });
     },
-
-    packageNamesPrompt: [
-        "Identify the required npm packages needed to execute the given Node.js code.",
-        "Return an array of all npm package names used in the code.",
-        // "It identifies the necessary npm packages required to run the given Node.js code and returns an array of all npm package names used in the code."
-        // '주어진 Node.js 코드를 실행하기 위해 필요한 npm 패키지들을 파악하는 역할을 합니다.',
-        // '코드에 사용된 모든 npm 패키지 이름을 배열로 반환해주세요.',
-    ].join('\n'),
 };
 
 const highlightCode = (code, language) => {
@@ -492,11 +325,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             if (!validationMode) {
                 processTransactions.length === 0 && pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1 && !nextPrompt) {
+                    const prompt = templateBinding((await promptTemplate()).recollection.systemPrompt, {});
                     whatdidwedo = await chatCompletion(
-                        {
-                            systemPrompt: 'As an AI agent, analyze what has been done so far',
-                            systemPromptForGemini: 'As an AI agent, analyze what has been done so far',
-                        },
+                        prompt,
                         await makeRealTransaction({ processTransactions, multiLineMission, type: 'whatdidwedo', mainKeyMission }),
                         'whatDidWeDo',
                         interfaces,
@@ -506,38 +337,14 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                     processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
                 }
-                // if (false) {
-                //     let prompt = `${headSystemPrompt(isGemini)} You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. Response in ${await getLanguageFullName()}. Omit optional tasks. Think deeply step by step for the next task.`;
-                //     deepThinkingPlan = await chatCompletion(
-                //         {
-                //             systemPrompt: prompt,
-                //             systemPromptForGemini: prompt,
-                //         },
-                //         await makeRealTransaction(processTransactions, multiLineMission, 'deepThinkingPlan'),
-                //         'deepThinkingPlan',
-                //         interfaces,
-                //         capti on('deepThinkingPlan')
-                //     );
-                //     processTransactions[processTransactions.length - 1].deepThinkingPlan = deepThinkingPlan;
-                // }
                 if (!nextPrompt) {
-                    let customRulesForCodeGenerator = await getConfiguration('customRulesForCodeGenerator');
-                    customRulesForCodeGenerator = customRulesForCodeGenerator.trim();
-                    let prompt = [
-                        `${headSystemPrompt(isGemini)}`,
-                        `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
-                        `Exclude code or unnecessary content and respond with only one sentence in ${await getLanguageFullName()}. Omit optional tasks.`,
-                        '',
-                        customRulesForCodeGenerator ? '<CodeGenerationRules>' : REMOVED,
-                        customRulesForCodeGenerator ? `${indention(1, customRulesForCodeGenerator)}` : REMOVED,
-                        customRulesForCodeGenerator ? '</CodeGenerationRules>' : REMOVED,
-                        '',
-                    ].filter(line => line.trim() !== REMOVED).join('\n')
+                    const customRulesForCodeGenerator = (await getConfiguration('customRulesForCodeGenerator') || '').trim();
+                    const prompt = templateBinding((await promptTemplate()).planning.systemPrompt, {
+                        customRulesForCodeGenerator: makeTag('CodeGenerationRules', customRulesForCodeGenerator, !!customRulesForCodeGenerator),
+                        languageFullName: await getLanguageFullName(),
+                    });
                     whattodo = await chatCompletion(
-                        {
-                            systemPrompt: prompt,
-                            systemPromptForGemini: prompt,
-                        },
+                        prompt,
                         await makeRealTransaction({ processTransactions, multiLineMission, type: 'whattodo', mainKeyMission }),
                         'whatToDo',
                         interfaces,
@@ -561,10 +368,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 }
 
                 // spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
-                let systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
-                let systemPromptForGemini = await prompts.systemPrompt(multiLineMission, whattodo, useDocker, true);
-                // let gemini = (await getConfiguration('llm')) === 'gemini';
-                // if (gemini) systemPrompt = systemPromptForGemini;
+                let systemPrompt = await prompts.systemCodeGeneratorPrompt(multiLineMission, whattodo, useDocker);
+                let systemPromptForGemini = await prompts.systemCodeGeneratorPrompt(multiLineMission, whattodo, useDocker, true);
                 let promptList = await makeRealTransaction({ processTransactions, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission });
                 promptList = JSON.parse(JSON.stringify(promptList));
 
@@ -596,7 +401,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 nextCodeForValidation = null;
             }
             javascriptCode = stripFencedCodeBlocks(javascriptCode);
+            // const pid9 = await out_state(`packages : ${requiredPackageNames.join(', ')}`);
             requiredPackageNames = await installPackages(requiredPackageNames, pythonCode, javascriptCode, useDocker, containerId, dockerWorkDir, spinners, out_state, createSpinner, await_prompt);
+            // await pid9.succeed(`packages : ${requiredPackageNames.join(', ')}`);
             // if (!useDocker) {
             //     spinners.iter = createSpinner('코드를 실행하는 중...', 'line');
             //     // const pid9 = await out_state('코드를 실행하는 중...');
@@ -692,6 +499,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             executionId = confirmed.executionId;
                         }
                         console.log('Docker에서 NodeJS 코드 실행');
+                        await new Promise(resolve => setTimeout(resolve, 500));
                         await waitingForDataCheck(out_state);
                         const codeExecutionResult_ = await runNodeJSCode(containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames, streamGetter);
                         if (codeExecutionResult_) codeExecutionResult = codeExecutionResult_;
@@ -718,6 +526,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             executionId = confirmed.executionId;
                         }
                         console.log('Docker에서 Python 코드 실행');
+                        await new Promise(resolve => setTimeout(resolve, 500));
                         await waitingForDataCheck(out_state);
                         const codeExecutionResult_ = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames, streamGetter);
                         if (codeExecutionResult_) codeExecutionResult = codeExecutionResult_;
@@ -864,11 +673,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 };
 
                 try {
+                    const prompt = templateBinding((await promptTemplate()).missionNaming.systemPrompt, {});
                     talktitle.title = await chatCompletion(
-                        {
-                            systemPrompt: 'Make a short title for the mission',
-                            systemPromptForGemini: 'Make a short title for the mission',
-                        },
+                        prompt,
                         [
                             {
                                 role: 'user',

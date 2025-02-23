@@ -5,37 +5,19 @@ import fs from 'fs';
 import { useTools, getLanguageFullName } from './solveLogic.js';
 import { caption, replaceAll } from './system.js';
 import { checkSyntax } from './docker.js';
+import { supportLanguage, toolSupport, promptTemplate, templateBinding } from './system.js';
 
 export async function reviewMission(multiLineMission, interfaces) {
-    const systemPrompt = [
-        'You are a prompt-engineer.',
-        'Your task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent.'
-    ].join('\n');
-
-    const userContent = [
-        multiLineMission,
-        '',
-        '------',
-        'Make the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.',
-        '',
-        'Response **only the prompt**.'
-    ].join('\n');
-
-    const result = await chatCompletion(
-        {
-            systemPrompt,
-            systemPromptForGemini: systemPrompt
-        },
+    return await chatCompletion(
+        (await promptTemplate()).reviewMission.systemPrompt,
         [{
             role: 'user',
-            content: userContent
+            content: templateBinding((await promptTemplate()).reviewMission.userPrompt, { multiLineMission })
         }],
         'promptEngineer',
         interfaces,
         caption('reviewMission')
     );
-
-    return result;
 }
 
 
@@ -313,8 +295,11 @@ function stripSourceCodeInFencedCodeBlock(text) {
     // 코드 블록을 찾지 못한 경우
     return null;
 }
-async function plainParser(text, callMode) {
+async function plainParser(text, callMode, interfaces) {
+    const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    let pid6 = await out_state(caption('parseResult')); // `${stateLabel}를 ${model}가 처리중...`
     let plain = await langParser(text, callMode);
+    pid6.dismiss();
     if (plain) {
         if (callMode === 'generateCode') {
             return {
@@ -452,7 +437,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
         systemPrompt = systemPrompt_.systemPrompt;
         systemPromptForGemini = systemPrompt_.systemPromptForGemini;
     }
-    if (!systemPromptForGemini) systemPromptForGemini = systemPrompt;
+    if (!systemPromptForGemini && systemPrompt) systemPromptForGemini = systemPrompt;
+    if (systemPromptForGemini && !systemPrompt) systemPrompt = systemPromptForGemini;
 
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
     async function requestChatCompletion(systemPrompt, promptList, model) {
@@ -504,65 +490,21 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     ).json_schema.schema
                 },
             ],
-            generateCode: [
-                {
-                    "name": "read_file",
-                    "description": "Read a file.",
-                    "input_schema": convertJsonToResponseFormat({ file_path: "" }, { file_path: "file path to read, e.g, ./program/package.json" }).json_schema.schema
-                },
-                {
-                    "name": "list_directory",
-                    "description": "List a directory.",
-                    "input_schema": convertJsonToResponseFormat({ directory_path: "" }, { directory_path: "directory path to list, e.g, ./program" }).json_schema.schema
-                },
-                useTools.read_url ? {
-                    "name": "read_url",
-                    "description": "Read a URL.",
-                    "input_schema": convertJsonToResponseFormat({ url: "" }, { url: "url to read, e.g, https://cokac.com/robots.txt" }).json_schema.schema
-                } : null,
-                useTools.rename_file_or_directory ? {
-                    "name": "rename_file_or_directory",
-                    "description": "Rename a file or directory.",
-                    "input_schema": convertJsonToResponseFormat({ old_path: "", new_path: "" }, { old_path: "old file or directory path to rename, e.g, ./program/package.json", new_path: "new file or directory path to rename, e.g, ./program/package2.json" }).json_schema.schema
-                } : null,
-                useTools.remove_file ? {
-                    "name": "remove_file",
-                    "description": "Remove a file.",
-                    "input_schema": convertJsonToResponseFormat({ file_path: "" }, { file_path: "file path to remove, e.g, ./program/package.json" }).json_schema.schema
-                } : null,
-                useTools.remove_directory_recursively ? {
-                    "name": "remove_directory_recursively",
-                    "description": "Remove a directory recursively.",
-                    "input_schema": convertJsonToResponseFormat({ directory_path: "" }, { directory_path: "directory path to remove recursively, e.g, ./program" }).json_schema.schema
-                } : null,
-                useTools.apt_install && useDocker ? {
-                    "name": "apt_install",
-                    "description": "Install a package using apt.",
-                    "input_schema": convertJsonToResponseFormat({ package_name: "" }, { package_name: "package name to install, e.g, ffmpeg" }).json_schema.schema
-                } : null,
-                useTools.which_command ? {
-                    "name": "which_command",
-                    "description": "Check if a command exists.",
-                    "input_schema": convertJsonToResponseFormat({ command: "" }, { command: "command to check, e.g, ffmpeg" }).json_schema.schema
-                } : null,
-                useTools.run_command ? {
-                    "name": "run_command",
-                    "description": "Run a shell command.",
-                    "input_schema": convertJsonToResponseFormat({ command: "" }, { command: "shell command to run, e.g, ls -al" }).json_schema.schema
-                } : null,
-                ...(await (async () => {
-                    const toolList = await getToolList();
-                    let toolPrompts = [];
-                    for (let tool of toolList) {
-                        const toolData = await getToolData(tool);
-                        toolData.spec.input_schema = convertJsonToResponseFormat(...toolData.spec.input_schema).json_schema.schema;
-                        toolPrompts.push(toolData.spec);
-                    }
-                    return toolPrompts;
-                })())
-            ].filter(t => t !== null),
+            generateCode: (await (async () => {
+                const toolList = await getToolList();
+                let toolPrompts = [];
+                for (let tool of toolList) {
+                    const toolData = await getToolData(tool);
+                    if (!toolData) continue;
+                    toolData.spec.input_schema = convertJsonToResponseFormat(...toolData.spec.input_schema).json_schema.schema;
+                    toolPrompts.push(toolData.spec);
+                }
+                return toolPrompts;
+            })()).filter(t => t !== null),
         }
-        let tools = toolsList[callMode];
+        const generateCodeMode = callMode === 'generateCode';
+        let tools_ofsdijfsadiosoidjaoisjdf = toolsList[callMode];// || []; // 배열이며 0개가 될수도 있음.
+        if (!tools_ofsdijfsadiosoidjaoisjdf || tools_ofsdijfsadiosoidjaoisjdf.length === 0) tools_ofsdijfsadiosoidjaoisjdf = undefined;
 
         const requestAI = async (llm, callMode, data, url, headers) => {
             let toolNameForce = ''; // 페이로드에 tool을 지정해줬음에도 무시해버리는 경우가 있다. 그런경우는 toolNameForce에 지정해주면 지정해준 툴을 사용할 확률이 올라감.
@@ -598,7 +540,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     if (callMode === 'generateCode') {
                         toolNameForce = 'generate_python_code';
                     } else {
-                        toolNameForce = tools[0].name;
+                        toolNameForce = tools_ofsdijfsadiosoidjaoisjdf?.[0]?.name || '';
                     }
                 }
                 function dataPayload(data) {
@@ -738,10 +680,10 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     pid65.dismiss();
                 }
                 if (llm === 'claude') {
-                    if (tools) {
+                    if (tools_ofsdijfsadiosoidjaoisjdf || generateCodeMode) {
                         try {
                             let data = result?.content?.filter(c => c.type === 'tool_use')[0];
-                            let rt = !data ? await plainParser(result?.content?.[0]?.text, callMode) : null;
+                            let rt = !data ? await plainParser(result?.content?.[0]?.text, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!data && forRetry < 1) throw null;
                             return data;
@@ -753,10 +695,10 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     return text || '';
                 }
                 if (llm === 'deepseek') {
-                    if (tools) {
+                    if (tools_ofsdijfsadiosoidjaoisjdf || generateCodeMode) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -773,10 +715,10 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     return text || '';
                 }
                 if (llm === 'groq') {
-                    if (tools) {
+                    if (tools_ofsdijfsadiosoidjaoisjdf || generateCodeMode) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -793,10 +735,10 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     return text || '';
                 }
                 if (llm === 'ollama') {
-                    if (tools) {
+                    if (tools_ofsdijfsadiosoidjaoisjdf || generateCodeMode) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -815,10 +757,10 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
 
                 // New branch for OpenAI
                 if (llm === 'openai') {
-                    if (tools) {
+                    if (tools_ofsdijfsadiosoidjaoisjdf || generateCodeMode) {
                         try {
                             let toolCall = result?.choices?.[0]?.message?.tool_calls?.[0];
-                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode) : null;
+                            let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -836,11 +778,11 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 }
 
                 if (llm === 'gemini') {
-                    if (tools) {
+                    if (tools_ofsdijfsadiosoidjaoisjdf || generateCodeMode) {
                         try {
                             const parts = result?.candidates?.[0]?.content?.parts;
                             let toolCall = parts.filter(part => part.functionCall)[0]?.functionCall;
-                            let rt = !toolCall ? await plainParser(parts.filter(part => part.text)[0].text, callMode) : null;
+                            let rt = !toolCall ? await plainParser(parts.filter(part => part.text)[0].text, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
                             return {
@@ -868,8 +810,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${openaiApiKey}`
             };
-            if (tools) {
-                tools = JSON.parse(JSON.stringify(tools)).map(function_ => {
+            if (tools_ofsdijfsadiosoidjaoisjdf) {
+                tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)).map(function_ => {
                     function_.parameters = function_.input_schema;
                     delete function_.input_schema;
                     return {
@@ -884,7 +826,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
-                tools: tools,
+                tools: tools_ofsdijfsadiosoidjaoisjdf,
             };
             data.messages = [
                 {
@@ -902,8 +844,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${deepseekApiKey}`
             };
-            if (tools) {
-                tools = JSON.parse(JSON.stringify(tools)).map(function_ => {
+            if (tools_ofsdijfsadiosoidjaoisjdf) {
+                tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)).map(function_ => {
                     function_.parameters = function_.input_schema;
                     delete function_.input_schema;
                     return {
@@ -918,7 +860,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
-                tools: tools,
+                tools: tools_ofsdijfsadiosoidjaoisjdf,
             };
             data.messages = [
                 {
@@ -935,8 +877,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${groqApiKey}`
             };
-            if (tools) {
-                tools = JSON.parse(JSON.stringify(tools)).map(function_ => {
+            if (tools_ofsdijfsadiosoidjaoisjdf) {
+                tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)).map(function_ => {
                     function_.parameters = function_.input_schema;
                     delete function_.input_schema;
                     return {
@@ -951,7 +893,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
-                tools: tools,
+                tools: tools_ofsdijfsadiosoidjaoisjdf,
             };
             data.messages = [
                 {
@@ -968,8 +910,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
             const headers = {
                 "Content-Type": "application/json",
             };
-            if (tools) {
-                tools = JSON.parse(JSON.stringify(tools)).map(function_ => {
+            if (tools_ofsdijfsadiosoidjaoisjdf) {
+                tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)).map(function_ => {
                     function_.parameters = function_.input_schema;
                     delete function_.input_schema;
                     return {
@@ -984,7 +926,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
-                tools: tools,
+                tools: tools_ofsdijfsadiosoidjaoisjdf,
             };
             data.messages = [
                 {
@@ -1011,7 +953,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     content: p.content
                 })),
                 max_tokens: 4096, // 토큰 수를 늘림
-                tools: tools,
+                tools: tools_ofsdijfsadiosoidjaoisjdf,
                 tool_choice: tool_choice_list[callMode]
             };
             return await requestAI(llm, callMode, data, url, headers);
@@ -1033,10 +975,10 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
 
             // tools가 있는 경우 Gemini 형식으로 변환
             let toolConfig = null;
-            if (tools) {
+            if (tools_ofsdijfsadiosoidjaoisjdf) {
                 toolConfig = {
                     tools: [{
-                        function_declarations: tools.map(tool => ({
+                        function_declarations: tools_ofsdijfsadiosoidjaoisjdf.map(tool => ({
                             name: tool.name,
                             description: tool.description,
                             parameters: {

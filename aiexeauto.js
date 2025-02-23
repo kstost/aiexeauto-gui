@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { is_dir } from './codeExecution.js';
 import { exportFromDockerForDataCheck } from './docker.js';
+import { supportLanguage, toolSupport } from './system.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function reqRenderer(mode, arg) {

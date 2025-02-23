@@ -1,0 +1,17 @@
+{
+    "name": "remove_directory_recursively",
+    "description": "Remove a directory recursively.",
+    "input_schema": [
+        {
+            "directory_path": ""
+        },
+        {
+            "directory_path": "directory path to remove recursively, e.g, ./program"
+        }
+    ],
+    "available_for": [
+        "claude",
+        "openai",
+        "ollama"
+    ]
+}

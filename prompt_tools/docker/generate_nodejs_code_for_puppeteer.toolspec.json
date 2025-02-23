@@ -12,5 +12,10 @@
             "nodejs_code": "nodejs code for the only one task using puppeteer",
             "npm_package_list": "array of npm package names used in the code"
         }
+    ],
+    "available_for": [
+        "claude",
+        "openai",
+        "ollama"
     ]
 }

@@ -78,8 +78,10 @@ export async function installPackages(requiredPackageNames, pythonCode, javascri
                 // let confirmed = await await_prompt({ mode: 'install_python_module', containerId, dockerWorkDir, packageName });
                 // console.log('Python 설치 확인:', confirmed);
 
+                const pid8 = await out_state(`${packageName} 패키지 확인 중...`);
                 let installed = await isInstalledPythonModule(containerId, dockerWorkDir, packageName);
                 console.log('Python 패키지 설치 여부:', installed);
+                await pid8.dismiss();
 
                 if (!installed) {
                     // spinners.iter = createSpinner(`${packageName} 설치중...`);

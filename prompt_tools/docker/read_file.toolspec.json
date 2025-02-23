@@ -1,0 +1,17 @@
+{
+    "name": "read_file",
+    "description": "Read a file.",
+    "input_schema": [
+        {
+            "file_path": ""
+        },
+        {
+            "file_path": "file path to read, e.g, ./program/package.json"
+        }
+    ],
+    "available_for": [
+        "claude",
+        "openai",
+        "ollama"
+    ]
+}

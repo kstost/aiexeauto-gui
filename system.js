@@ -12,9 +12,6 @@ import singleton from './singleton.js';
 import { i18nCaptions } from './frontend/i18nCaptions.mjs';
 import { app } from 'electron';
 
-// function asfasdff(){
-//     wfwef;
-// }
 export function getSystemLangCode() {
     try {
         return app.getLocale().split('-')[0] || 'en'
@@ -65,6 +62,361 @@ export async function getUseDocker() {
 // - llama-3.3-70b-versatile
 // - llama-3.1-8b-instant
 //---------------------------------
+function arrayAsText(array) {
+    return array.join('\n');
+}
+export function templateBinding(template, data) {
+    Object.keys(data).forEach(key => {
+        const placeholder = `{{${key}}}`;
+        while (template.includes(placeholder)) {
+            template = template.split(placeholder).join(data[key] || '');
+        }
+    });
+    return template;
+}
+export async function promptTemplate() {
+    let llm = await getConfiguration('llm');
+    // let customRulesForCodeGenerator = await getConfiguration('customRulesForCodeGenerator');
+    // let customRulesForEvaluator = await getConfiguration('customRulesForEvaluator');
+
+    // await getcon
+    const templateBase = {};
+    templateBase.transactions = {};
+    templateBase.transactions.userPrompt = arrayAsText([
+        '{{codeExecutionOutput}}',
+        '',
+        '{{whatdidwedo}}',
+        '',
+        '{{nextTasks}}',
+        '',
+        '{{nextTasksToDo}}',
+        '',
+    ]);
+    templateBase.transactions.assistantPrompt = arrayAsText([
+        '{{codeForNextTasks}}',
+    ]);
+
+    templateBase.missionNaming = {};
+    templateBase.missionNaming.systemPrompt = arrayAsText([
+        'Make a short title for the mission'
+    ]);
+
+
+    templateBase.deepThinkingPlan = {};
+    templateBase.deepThinkingPlan.userPrompt = arrayAsText([
+        '',
+        '{{last}}',
+        '',
+        '{{mission}}',
+        '',
+        '<Instructions>',
+        '  <Rule>Consider the mission and the current progress so far.</Rule>',
+        '  <Rule>Think deeply step by step for the next task.</Rule>',
+        '  <Rule>Skip optional tasks.</Rule>',
+        '  <Rule>Do not include code.</Rule>',
+        `  <Rule>Respond in {{languageFullName}}.</Rule>`,
+        '</Instructions>',
+        '',
+        `Let's think step by step.`,
+    ]);
+
+    templateBase.recollection = {};
+    templateBase.recollection.systemPrompt = arrayAsText([
+        'As an AI agent, analyze what has been done so far'
+    ]);
+    templateBase.recollection.userPrompt = arrayAsText([
+        '{{last}}',
+        '',
+        '{{mission}}',
+        '',
+        '{{mainKeyMission}}',
+        '',
+        '<WritingGuidelines>',
+        '  <Rule>Summarize the tasks performed so far.</Rule>',
+        '  <Rule>Write only the core content in a concise manner.</Rule>',
+        '  <Rule>Use only simple and plain expressions.</Rule>',
+        '  <Rule>Do not include code.</Rule>',
+        `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
+        '</WritingGuidelines>',
+        '',
+        'As an AI agent, please summarize the tasks performed so far.',
+    ]);
+
+
+    templateBase.planning = {};
+    templateBase.planning.userPrompt = arrayAsText([
+        '',
+        '{{last}}',
+        '',
+        '{{mission}}',
+        '',
+        '{{mainKeyMission}}',
+        '',
+        '{{deepThinkingPlan}}',
+        '',
+        '<Instructions>',
+        '  <Rule>Consider the mission and the current progress so far.</Rule>',
+        '  <Rule>Determine what to do next logically.</Rule>',
+        '  <Rule>Skip optional tasks.</Rule>',
+        '  <Rule>Do not include code.</Rule>',
+        `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
+        '</Instructions>',
+        '',
+        'Tell me what task to perform next right away!',
+    ]);
+    templateBase.planning.systemPrompt = arrayAsText([
+        "You are a Code Interpreter Agent.",
+        `You can solve the mission with Python code and tools.`,
+        `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
+        `Exclude code or unnecessary content and respond with only one sentence in {{languageFullName}}. Omit optional tasks.`,
+        '',
+        '{{customRulesForCodeGenerator}}',
+
+    ]);
+
+    templateBase.evaluator = {};
+    templateBase.evaluator.userPrompt = arrayAsText([
+        '{{last}}',
+        '',
+        '{{mainKeyMission}}',
+        '',
+        `<MissionEvaluation>`,
+        `   <CompletionCheck>`,
+        `      Does the progress so far and current output indicate mission completion?`,
+        `   </CompletionCheck>`,
+        `   <ActionDetermination>`,
+        `      Judge what to do to complete the mission by the Output of the Execution and the history we did so far.`,
+        `   </ActionDetermination>`,
+        `</MissionEvaluation>`,
+        ``,
+        '<OutputFormat>',
+        '```json',
+        '{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in {{languageFullName}} of short length" }',
+        '```',
+        '</OutputFormat>',
+        ``,
+        `Determine mission completion and decide next steps.`,
+    ]);
+    templateBase.evaluator.systemPrompt = arrayAsText([
+        'As a computer task execution agent, you perform the necessary tasks to rigorously and logically verify and evaluate whether the MISSION has been fully completed.',
+        'If sufficient OUTPUT for verification exists and the mission is deemed complete, respond with ENDOFMISSION. If not, respond with NOTSOLVED.',
+        'If the mission is impossible to solve, respond with GIVEUPTHEMISSION.',
+        '',
+        '<Mission>',
+        '{{mission}}',
+        '</Mission>',
+        '',
+        '{{customRulesForEvaluator}}',
+        '',
+        '<OutputFormat>',
+        '```json',
+        '{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in {{languageFullName}} of short length" }',
+        '```',
+        '</OutputFormat>',
+        '',
+    ]);
+    if (llm === 'gemini') {
+        templateBase.evaluator.systemPrompt = arrayAsText([
+            'As a computer task execution agent, you perform the necessary tasks to rigorously and logically verify and evaluate whether the MISSION has been completely accomplished.',
+            'If sufficient OUTPUT for verification exists and the mission is deemed complete, respond with ENDOFMISSION; otherwise, respond with NOTSOLVED.',
+            '',
+            '<Mission>',
+            '{{mission}}',
+            '</Mission>',
+            '',
+            '{{customRulesForEvaluator}}',
+            '',
+            '<OutputFormat>',
+            '```json',
+            '{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in {{languageFullName}} of short length" }',
+            '```',
+            '</OutputFormat>',
+            '',
+        ]);
+    } else if (llm === 'claude') {
+        templateBase.evaluator.systemPrompt = arrayAsText([
+            'As a computer task execution agent, you perform the necessary tasks to rigorously and logically verify and evaluate whether the MISSION has been completely accomplished.',
+            'If sufficient OUTPUT for verification exists and the mission is deemed complete, respond with ENDOFMISSION; otherwise, respond with NOTSOLVED.',
+            '',
+            '<Mission>',
+            '{{mission}}',
+            '</Mission>',
+            '',
+            '{{customRulesForEvaluator}}',
+            '',
+        ]);
+    }
+
+    templateBase.codeGenerator = {};
+    templateBase.codeGenerator.userPrompt = arrayAsText([
+        '',
+        '{{last}}',
+        '',
+        '{{evaluationText}}',
+        '',
+        '{{whatdidwedo}}',
+        '',
+        '{{deepThinkingPlan}}',
+        '',
+        '{{whattodo}}',
+        '',
+        '{{mainKeyMission}}',
+        '',
+        'Make the code.',
+    ]);
+    templateBase.codeGenerator.systemPrompt = arrayAsText([
+        "You are a Code Interpreter Agent.",
+        `You can solve the mission with Javascript or Python code and tools.`,
+        "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
+        '',
+        '<MainMission>',
+        '{{mission}}',
+        '</MainMission>',
+        '',
+        '<SubMission>',
+        '{{whattodo}}',
+        '</SubMission>',
+        '',
+        '{{customRulesForCodeGenerator}}',
+        '',
+        '<OutputFormat>',
+        '  ```python',
+        '  (..code..)',
+        '  ```',
+        '</OutputFormat>',
+        '',
+        '<Tools>',
+        '{{tools}}',
+        '</Tools>',
+    ]);
+    if (llm === 'gemini') {
+        templateBase.codeGenerator.systemPrompt = arrayAsText([
+            "You are a Code Interpreter Agent.",
+            `You can solve the mission with Python code and tools.`,
+            "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION. Write a Python code for execution.",
+            '',
+            '<MainMission>',
+            '{{mission}}',
+            '</MainMission>',
+            '',
+            '<SubMission>',
+            '{{whattodo}}',
+            '</SubMission>',
+            '',
+            '{{customRulesForCodeGenerator}}',
+            '',
+            '<PythonCodeGenerationRules>',
+            '  - Do not repeat tasks that have already been performed in previous steps.',
+            '  - The code must be a complete, executable Python file.',
+            '  - Use `print` to display status values and progress at each step.',
+            '  - Print all results that serve as a basis for the agent performing the task.',
+            '  - Print justification for success or failure at every line of code execution.',
+            '  - Use `subprocess` when executing shell commands.',
+            '  - The process must be terminated after code execution.',
+            '  - Do not hardcode data in the source code.',
+            '  - Skip optional tasks.',
+            '</PythonCodeGenerationRules>',
+            '',
+            '<OutputFormat>',
+            '  ```python',
+            '  (..code..)',
+            '  ```',
+            '</OutputFormat>',
+        ])
+        templateBase.codeGenerator.userPrompt = arrayAsText([
+            '',
+            '{{last}}',
+            '',
+            '{{evaluationText}}',
+            '',
+            '{{whatdidwedo}}',
+            '',
+            '{{deepThinkingPlan}}',
+            '',
+            '{{whattodo}}',
+            '',
+            '{{mainKeyMission}}',
+            '',
+            'Make the Python code.',
+        ]);
+    } else if (llm === 'claude') {
+        templateBase.codeGenerator.systemPrompt = arrayAsText([
+            "You are a Code Interpreter Agent.",
+            `You can solve the mission with Javascript or Python code and tools.`,
+            "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
+            '',
+            '<MainMission>',
+            '{{mission}}',
+            '</MainMission>',
+            '',
+            '<SubMission>',
+            '{{whattodo}}',
+            '</SubMission>',
+            '',
+            '{{customRulesForCodeGenerator}}',
+            '',
+            '<Tools>',
+            '{{tools}}',
+            '</Tools>',
+        ]);
+
+    } else {
+        // templateBase.codeGenerator.systemPrompt = ;
+    }
+
+
+    templateBase.reviewMission = {};
+    templateBase.reviewMission.systemPrompt = arrayAsText([
+        'You are a prompt-engineer.',
+        'Your task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent.'
+    ]);
+    templateBase.reviewMission.userPrompt = arrayAsText([
+        '{{multiLineMission}}',
+        '',
+        '------',
+        'Make the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.',
+        '',
+        'Response **only the prompt**.'
+    ]);
+
+    // const templateBase = {
+    //     codeGenerator: {
+    //         // systemPrompt: arrayAsText([
+    //         //     'You are a prompt-engineer.',
+    //         //     'Your task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent.'
+    //         // ]),
+    //         // userPrompt: arrayAsText([
+    //         //     '{{multiLineMission}}',
+    //         // ]),
+    //     },
+    //     reviewMission: {
+    //     },
+    // }
+    return templateBase;
+
+}
+export async function supportLanguage() {
+    const llm = await getConfiguration('llm');
+    return ({
+        claude: { js: true, python: true, bash: true },
+        groq: { js: false, python: true, bash: false },
+        deepseek: { js: false, python: true, bash: false },
+        openai: { js: false, python: true, bash: false },
+        ollama: { js: false, python: true, bash: false },
+        gemini: { js: false, python: true, bash: false },
+    })[llm] || { js: false, python: false, bash: false };
+}
+export async function toolSupport() {
+    const llm = await getConfiguration('llm');
+    return ({
+        claude: true,
+        groq: false,
+        deepseek: false,
+        openai: false,
+        ollama: false,
+        gemini: false,
+    })[llm] || false;
+}
 export async function loadConfiguration() {
     let config = {
         claudeApiKey: "",
@@ -193,27 +545,32 @@ export async function loadConfiguration() {
     return config_;
 }
 export async function getToolList() {
-    const llm = await getConfiguration('llm');
+    // const llm = await getConfiguration('llm');
     const useDocker = await getConfiguration('useDocker');
     const container = useDocker ? 'docker' : 'localenv';
     const toolList = await fs.promises.readdir(getCodePath(`prompt_tools/${container}`));
     let candidateList;
     candidateList = toolList.filter(tool => tool.endsWith('.toolspec.json')).map(tool => tool.replace(/\.toolspec\.json$/, ''));
-    if (llm === 'gemini' || true) {
-        candidateList = candidateList.filter(tool => tool.includes('_python_'));
-    }
+    // if (llm === 'gemini' || true) {
+    //     candidateList = candidateList.filter(tool => tool.includes('_python_'));
+    // }
     return candidateList;
 }
 export async function getToolData(toolName) {
+    const llm = await getConfiguration('llm');
     const useDocker = await getConfiguration('useDocker');
     const container = useDocker ? 'docker' : 'localenv';
     const toolPrompt = getCodePath(`prompt_tools/${container}/${toolName}.md`);
     const toolSpecPath = getCodePath(`prompt_tools/${container}/${toolName}.toolspec.json`);
     const toolSpec = await fs.promises.readFile(toolSpecPath, 'utf8');
     const prompt = await fs.promises.readFile(toolPrompt, 'utf8');
+    const spec = JSON.parse(toolSpec);
+    const included = spec.available_for.includes(llm);
+    delete spec.available_for;
+    if (!included) return null;
     return {
         prompt,
-        spec: JSON.parse(toolSpec)
+        spec
     };
 }
 export function getCodePath(itemPath) {

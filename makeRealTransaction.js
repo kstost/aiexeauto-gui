@@ -1,5 +1,6 @@
-import { omitMiddlePart } from './solveLogic.js';
+import { omitMiddlePart, makeTag } from './solveLogic.js';
 import { makeCodePrompt, indention } from './makeCodePrompt.js';
+import { templateBinding, promptTemplate } from './system.js';
 export async function makeRealTransaction({ processTransactions, multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission }) {
     let realTransactions = [];
     for (let i = 0; i < processTransactions.length; i++) {
@@ -17,60 +18,17 @@ export async function makeRealTransaction({ processTransactions, multiLineMissio
         }
 
         const printWhatToDo = whattodo && mainkeymission !== whattodo;
+        const usersTurn = role === 'user';
         let data = {
             role,
-            content: (role === 'user' ? (output ? [
-                '<CodeExecutionOutput>',
-                // 'OUTPUT OF THE EXECUTION:',
-                // '```shell',
-                // `$ node code.js`,
-                indention(1, output),//output
-                // '```',
-                '</CodeExecutionOutput>',
-                '',
-                whatdidwedo ? '<WorkDoneSoFar>' : '',
-                whatdidwedo ? indention(1, whatdidwedo) : '',
-                whatdidwedo ? '</WorkDoneSoFar>' : '',
-                '',
-                printWhatToDo ? '<NextTasks>' : '',
-                printWhatToDo ? indention(1, whattodo) : '',
-                printWhatToDo ? '</NextTasks>' : '',
-                '',
-                !printWhatToDo && !notcurrentmission && mainkeymission ? '<NextTasksToDo>' : '',
-                !printWhatToDo && !notcurrentmission && mainkeymission ? indention(1, mainkeymission) : '',
-                !printWhatToDo && !notcurrentmission && mainkeymission ? '</NextTasksToDo>' : '',
-            ] : [
-                '<CodeExecutionOutput>',
-                // 'NO OUTPUT. THE EXECUTION COMPLETED WITHOUT ANY OUTPUT.',
-                // '```shell',
-                // `$ node code.js`,
-                // `$`,
-                // '```',
-                indention(1, '(no output)'),
-                '</CodeExecutionOutput>',
-                '',
-                whatdidwedo ? '<WorkDoneSoFar>' : '',
-                whatdidwedo ? indention(1, whatdidwedo) : '',
-                whatdidwedo ? '</WorkDoneSoFar>' : '',
-                '',
-                printWhatToDo ? '<NextTasks>' : '',
-                printWhatToDo ? indention(1, whattodo) : '',
-                printWhatToDo ? '</NextTasks>' : '',
-                '',
-                !printWhatToDo && !notcurrentmission && mainkeymission ? '<NextTasksToDo>' : '',
-                !printWhatToDo && !notcurrentmission && mainkeymission ? indention(1, mainkeymission) : '',
-                !printWhatToDo && !notcurrentmission && mainkeymission ? '</NextTasksToDo>' : '',
-            ]) : [
-                '<CodeForNextTasks>',
-                indention(1, code),
-                '</CodeForNextTasks>',
-                // '',
-                // whatdidwedo ? 'WHAT DID WE DO:' : '',
-                // whatdidwedo ? whatdidwedo : '',
-                // '',
-                // 'WHAT TO DO:',
-                // whattodo,
-            ]).join('\n'),
+            content: usersTurn?templateBinding((await promptTemplate()).transactions.userPrompt, {
+                codeExecutionOutput: makeTag('CodeExecutionOutput', output || '(no output)'),
+                whatdidwedo: makeTag('WorkDoneSoFar', whatdidwedo, !!whatdidwedo),
+                nextTasks: printWhatToDo?makeTag('NextTasks', whattodo, !!whattodo):'',
+                nextTasksToDo: !printWhatToDo && !notcurrentmission && mainkeymission?makeTag('NextTasksToDo', mainkeymission, !!mainkeymission):'',
+            }):templateBinding((await promptTemplate()).transactions.assistantPrompt, {
+                codeForNextTasks: makeTag('CodeForNextTasks', code),
+            }),
         };
         realTransactions.push(data);
     }

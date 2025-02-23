@@ -1,0 +1,17 @@
+{
+    "name": "list_directory",
+    "description": "List a directory.",
+    "input_schema": [
+        {
+            "directory_path": ""
+        },
+        {
+            "directory_path": "directory path to list, e.g, ./program"
+        }
+    ],
+    "available_for": [
+        "claude",
+        "openai",
+        "ollama"
+    ]
+}
