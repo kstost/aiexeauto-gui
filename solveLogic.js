@@ -563,8 +563,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 // spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
                 let systemPrompt = await prompts.systemPrompt(multiLineMission, whattodo, useDocker);
                 let systemPromptForGemini = await prompts.systemPrompt(multiLineMission, whattodo, useDocker, true);
-                let gemini = (await getConfiguration('llm')) === 'gemini';
-                if (gemini) systemPrompt = systemPromptForGemini;
+                // let gemini = (await getConfiguration('llm')) === 'gemini';
+                // if (gemini) systemPrompt = systemPromptForGemini;
                 let promptList = await makeRealTransaction({ processTransactions, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission });
                 promptList = JSON.parse(JSON.stringify(promptList));
 

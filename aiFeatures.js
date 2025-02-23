@@ -1072,7 +1072,9 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
         }
     }
     const model = await getModel();
-    const responseData = await requestChatCompletion(systemPrompt, promptList, model);
+    const llm = await getConfiguration('llm');
+    const gemini = llm === 'gemini';
+    const responseData = await requestChatCompletion(gemini ? systemPromptForGemini : systemPrompt, promptList, model);
     let actData = responseData;
     if (actData && actData?.input && actData?.input?.constructor === Object) {
         Object.keys(actData.input).forEach(key => {
