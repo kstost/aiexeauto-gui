@@ -163,6 +163,7 @@ export async function makeConfigUI(configurationContainer) {
         <option value="" disabled selected>${caption('selectModel')}</option>
         <option value="claude-3-5-haiku-20241022">claude-3-5-haiku-20241022 (Faster, cheaper)</option>
         <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 (More refined tasks)</option>
+        <option value="claude-3-7-sonnet-20250219">claude-3-7-sonnet-20250219 (More refined tasks)</option>
     `;
     claudeModelContainer.appendChild(claudeModelSelect);
     claudeGroup.appendChild(claudeModelRow);
