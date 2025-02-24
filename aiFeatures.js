@@ -7,17 +7,122 @@ import { caption, replaceAll } from './system.js';
 import { checkSyntax } from './docker.js';
 import { supportLanguage, toolSupport, promptTemplate, templateBinding } from './system.js';
 
+export function isExceedMaxTokens(result) {
+    /*
+
+groq
+{
+    "error": {
+      "message": "Request too large for model `llama-3.3-70b-versatile` in organization `org_01hqtz1cm2feeth6d01jzb4pja` service tier `on_demand` on : Limit 100000, Requested 1025089, please reduce your message size and try again. Visit https://console.groq.com/docs/rate-limits for more information.",
+      "type": "",
+      "code": "rate_limit_exceeded"
+    }
+}
+
+gemini
+{
+    "error": {
+      "code": 400,
+      "message": "The input token count (3900085) exceeds the maximum number of tokens allowed (1000000).",
+      "status": "INVALID_ARGUMENT"
+    }
+}
+
+openai
+{
+    "error": {
+      "message": "Request too large for gpt-4o-mini in organization org-sNVSyMhLDHMNWywXhadvBKLZ on tokens per min (TPM): Limit 200000, Requested 950082. The input or output tokens must be reduced in order to run successfully. Visit https://platform.openai.com/account/rate-limits to learn more.",
+      "type": "tokens",
+      "param": null,
+      "code": "rate_limit_exceeded"
+    }
+}
+
+deepseek
+{
+    "error": {
+      "message": "This model's maximum context length is 65536 tokens. However, you requested 1800071 tokens (1800071 in the messages, 0 in the completion). Please reduce the length of the messages or completion.",
+      "type": "invalid_request_error",
+      "param": null,
+      "code": "invalid_request_error"
+    }
+}
+
+claude
+{
+    "type": "error",
+    "error": {
+      "type": "invalid_request_error",
+      "message": "prompt is too long: 213159 tokens > 200000 maximum"
+    }
+}
+
+
+    */
+    const type = result?.error?.type
+    const code = result?.error?.code
+    const status = result?.error?.status
+    if (!type && !code && !status) return false;
+    return [type, code, status].filter(item => {
+        return ['invalid_request_error', 'rate_limit_exceeded', 'INVALID_ARGUMENT'].includes(item);
+    }).length > 0;
+}
+export function areBothSame(processTransactions, reduceLevel) {
+    let a = trimProcessTransactions(processTransactions, reduceLevel - 1);
+    let b = trimProcessTransactions(processTransactions, reduceLevel - 0);
+    return JSON.stringify(a) === JSON.stringify(b);
+}
+export function trimProcessTransactions(processTransactions, reduceLevel) {
+    const backedUp = JSON.parse(JSON.stringify(processTransactions));
+    processTransactions = JSON.parse(JSON.stringify(processTransactions));
+    if (!reduceLevel) reduceLevel = 0;
+    if (reduceLevel === 0) return processTransactions;
+    for (let i = 0; i < reduceLevel; i++) {
+        let conditionCheck = 0;
+        if (processTransactions?.[0]?.class === 'output') conditionCheck++;
+        if (processTransactions?.[1]?.class === 'code') conditionCheck++;
+        if (conditionCheck === 2) {
+            processTransactions.shift();
+            processTransactions.shift();
+        } else {
+            break;
+        }
+    }
+    const last = processTransactions[processTransactions.length - 1];
+    if (last && last?.class === 'output') {
+        last.data = null;
+        return processTransactions;
+    }
+    return backedUp;
+}
+export async function exceedCatcher(fn, reducer) {
+    while (true) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (error?.exceedError) {
+                if (reducer()) throw new Error('Context Window Exceed');
+                continue;
+            }
+            throw error;
+        }
+    }
+}
 export async function reviewMission(multiLineMission, interfaces) {
-    return await chatCompletion(
-        (await promptTemplate()).reviewMission.systemPrompt,
-        [{
-            role: 'user',
-            content: templateBinding((await promptTemplate()).reviewMission.userPrompt, { multiLineMission })
-        }],
-        'promptEngineer',
-        interfaces,
-        caption('reviewMission')
-    );
+    let result;
+    result = await exceedCatcher(async () => {
+        return await chatCompletion(
+            (await promptTemplate()).reviewMission.systemPrompt,
+            [{
+                role: 'user',
+                content: templateBinding((await promptTemplate()).reviewMission.userPrompt, { multiLineMission })
+            }],
+            'promptEngineer',
+            interfaces,
+            caption('reviewMission')
+        );
+    }, () => true);
+    return result;
 }
 
 
@@ -575,7 +680,6 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     });
                     singleton.abortController = singleton.abortController.filter(c => c !== controller);
                     result = await response.text();
-                    console.log('result', result);
                 } catch (err) {
                     // aiMissionAborted:`${stateLabel}를 ${model}가 처리 중단 (${err.message})`
                     let aiMissionAborted = caption('aiMissionAborted');
@@ -586,6 +690,119 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     throw new Error(caption('missionAborted'));
                 } finally {
                     pid6.dismiss();
+                }
+                {
+                    /*
+gemini
+{
+   "system_instruction": {
+      "parts": [
+         {
+            "text": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
+         }
+      ]
+   },
+   "contents": [
+      {
+         "role": "user",
+         "parts": [
+            {
+               "text": "print 1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
+            }
+         ]
+      }
+   ],
+   "generationConfig": {
+      "temperature": 0.1,
+      "topP": 0.6,
+      "topK": 10
+   }
+}
+
+groq
+{
+   "model": "llama-3.3-70b-versatile",
+   "messages": [
+      {
+         "role": "system",
+         "content": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
+      },
+      {
+         "role": "user",
+         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
+      }
+   ]
+}
+
+ollama
+{
+   "model": "qwen2.5:14b",
+   "messages": [
+      {
+         "role": "system",
+         "content": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
+      },
+      {
+         "role": "user",
+         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
+      }
+   ]
+}
+
+openai
+{
+   "model": "gpt-4o-mini",
+   "messages": [
+      {
+         "role": "system",
+         "content": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
+      },
+      {
+         "role": "user",
+         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
+      }
+   ]
+}
+
+deepseek
+{
+   "model": "deepseek-chat",
+   "messages": [
+      {
+         "role": "system",
+         "content": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
+      },
+      {
+         "role": "user",
+         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
+      }
+   ]
+}
+
+claude
+{
+   "model": "claude-3-5-sonnet-20241022",
+   "system": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent.",
+   "messages": [
+      {
+         "role": "user",
+         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
+      }
+   ],
+   "max_tokens": 4096
+}
+
+
+
+                    */
+                    try {
+                        const _result = JSON.parse(result);
+                        if (isExceedMaxTokens(_result)) {
+                            throw { exceedError: true };
+                        }
+                    } catch {
+
+                    }
                 }
                 if (!result) {
                     let pid64 = await out_state(``);
@@ -1009,7 +1226,6 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     topK: 10
                 }
             };
-            console.log('data', JSON.stringify(data, null, 2));
             return await requestAI(llm, callMode, data, url, headers);
         }
     }

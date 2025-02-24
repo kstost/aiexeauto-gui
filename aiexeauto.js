@@ -32,21 +32,18 @@ export function isTaskAborted(taskId) {
 
 let prompt = process.argv[2];
 if (prompt === 'version') {
-    console.log('1.0.34');
     process.exit(0);
 } else if (prompt === 'config') {
     let configKey = process.argv[3];
     let configValue = process.argv[4];
     (async () => {
         await setConfiguration(configKey, configValue);
-        console.log(`${chalk.cyan(configKey)} ${chalk.green('설정이 완료되었습니다.')}`);
         process.exit(0);
     })();
 } else {
     if (false) {
         await installProcess(false);
         let resutl = await shell_exec('print(json)');
-        console.log(resutl);
     }
 
     const apiMethods = {
@@ -110,30 +107,14 @@ if (prompt === 'version') {
             }
         },
         async saveWork(body) {
-            console.log('saveWork 함수 시작');
-            console.log('body 데이터:', body);
-
             let { filename, data } = body;
-            console.log('파일명:', filename);
-            console.log('저장할 데이터:', data);
-
             let path = getAppPath('list/' + filename);
-            console.log('저장 경로:', path);
-
             if (ensureAppsHomePath(path)) {
-                console.log('경로 검증 성공');
-                console.log('파일 쓰기 시작');
-                console.log('데이터 타입:', typeof data);
-                console.log('데이터 내용:', JSON.stringify(data, null, 2));
                 await fs.promises.writeFile(path, JSON.stringify(data, null, 2));
-                console.log('파일 쓰기 완료');
-                console.log('파일 크기:', fs.statSync(path).size, 'bytes');
                 return true;
             } else {
-                console.log('경로 검증 실패');
             }
 
-            console.log('경로 검증 실패');
             return false;
         },
         async loadWork(body) {
@@ -189,8 +170,8 @@ if (prompt === 'version') {
         },
         async ve1nppvpath(body) {
             // ㅊ...
-            console.log(body);
-            return await application(body.prompt, body.inputFolderPath, body.outputFolderPath, body.containerIdToUse, body.processTransactions, body.talktitle);
+            // console.log(body);
+            return await application(body.prompt, body.inputFolderPath, body.outputFolderPath, body.containerIdToUse, body.processTransactions, body.talktitle, body.reduceLevel);
         },
         async ve1nvpath(body) {
             if (false) if (isTaskAborted(body.__taskId)) return;
@@ -206,7 +187,8 @@ if (prompt === 'version') {
             return await open(body.url);
         }
     }
-    async function application(prompt, dataSourcePath, dataOutputPath, containerIdToUse, processTransactions, talktitle) {
+    async function application(prompt, dataSourcePath, dataOutputPath, containerIdToUse, processTransactions, talktitle, reduceLevel) {
+        if (!reduceLevel) reduceLevel = 0;
         const taskId = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
         // console.log('taskId', taskId);
         singleton.missionAborting = false;
@@ -215,7 +197,6 @@ if (prompt === 'version') {
                 await reqRenderer('operation_done', body)
             },
             async out_stream(body) {
-                console.log('out_stream....', body);
                 await reqRenderer('out_stream', body)
             },
             async out_print(data) {
@@ -277,8 +258,6 @@ if (prompt === 'version') {
                 }
             }
         };
-        console.log('dataSourcePath', dataSourcePath);
-        console.log('dataOutputPath', dataOutputPath);
         dataOutputPath = await getOutputPath(taskId);
         let dataSourceNotAssigned = !dataSourcePath;
         let dataOutputNotAssigned = !dataOutputPath;
@@ -292,11 +271,12 @@ if (prompt === 'version') {
         let containerId;
         // let processTransactions;
         try {
-            let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle });
+            let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle, reduceLevel });
             exported = solved.exported;
             containerId = solved.containerId;
             processTransactions = solved.processTransactions;
             talktitle = solved.talktitle;
+            reduceLevel = solved.reduceLevel;
         } catch (err) {
         } finally {
             if (dataSourceNotAssigned) {
@@ -333,7 +313,7 @@ if (prompt === 'version') {
                 }
             }
         }
-        return { resultPath, containerId, processTransactions, talktitle };
+        return { resultPath, containerId, processTransactions, talktitle, reduceLevel };
         // })();
 
     }
@@ -458,7 +438,6 @@ if (prompt === 'version') {
             try {
                 const data = arg.arg;
                 const mode = arg.mode;
-                console.log(mode, data);
                 if (mode === 'planEditable') {
                     await setConfiguration('planEditable', data.checked);
                 }

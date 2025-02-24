@@ -7,7 +7,7 @@ import ora from 'ora';
 import boxen from 'boxen';
 import axios from 'axios';
 import { importData, exportData } from './dataHandler.js';
-import { chatCompletion, getModel, isOllamaRunning } from './aiFeatures.js';
+import { chatCompletion, getModel, isOllamaRunning, exceedCatcher, trimProcessTransactions, areBothSame } from './aiFeatures.js';
 import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
 import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler.js';
 import { waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
@@ -140,9 +140,10 @@ export function omitMiddlePart(text, length = 1024) {
         : text).trim();
 }
 
-export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle }) {
+export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle, reduceLevel }) {
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
     // const pid1 = await out_state(caption('solvingLogic'));
+    if (!reduceLevel) reduceLevel = 0;
     let keepMode = processTransactions.length > 0;
     processTransactions.forEach(transaction => {
         transaction.notcurrentmission = true;
@@ -326,13 +327,16 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 processTransactions.length === 0 && pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1 && !nextPrompt) {
                     const prompt = templateBinding((await promptTemplate()).recollection.systemPrompt, {});
-                    whatdidwedo = await chatCompletion(
-                        prompt,
-                        await makeRealTransaction({ processTransactions, multiLineMission, type: 'whatdidwedo', mainKeyMission }),
-                        'whatDidWeDo',
-                        interfaces,
-                        caption('whatDidWeDo')
-                    );
+                    await exceedCatcher(async () => {
+                        const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
+                        whatdidwedo = await chatCompletion(
+                            prompt,
+                            await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'whatdidwedo', mainKeyMission }),
+                            'whatDidWeDo',
+                            interfaces,
+                            caption('whatDidWeDo')
+                        );
+                    }, () => areBothSame(processTransactions, ++reduceLevel));
                     if (whatdidwedo) whatdidwedo = whatdidwedo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
                     if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                     processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
@@ -343,13 +347,16 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         customRulesForCodeGenerator: makeTag('CodeGenerationRules', customRulesForCodeGenerator, !!customRulesForCodeGenerator),
                         languageFullName: await getLanguageFullName(),
                     });
-                    whattodo = await chatCompletion(
-                        prompt,
-                        await makeRealTransaction({ processTransactions, multiLineMission, type: 'whattodo', mainKeyMission }),
-                        'whatToDo',
-                        interfaces,
-                        caption('whatToDo')
-                    );
+                    await exceedCatcher(async () => {
+                        const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
+                        whattodo = await chatCompletion(
+                            prompt,
+                            await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'whattodo', mainKeyMission }),
+                            'whatToDo',
+                            interfaces,
+                            caption('whatToDo')
+                        );
+                    }, () => areBothSame(processTransactions, ++reduceLevel));
                     if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
                     if (await getConfiguration('planEditable')) {
                         let confirmed = await await_prompt({ mode: 'whattodo_confirm', actname: 'whattodo_confirm', containerId, dockerWorkDir, whattodo });
@@ -370,20 +377,23 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 // spinners.iter = createSpinner(`${modelName}가 코드를 생성하는 중...`);
                 let systemPrompt = await prompts.systemCodeGeneratorPrompt(multiLineMission, whattodo, useDocker);
                 let systemPromptForGemini = await prompts.systemCodeGeneratorPrompt(multiLineMission, whattodo, useDocker, true);
-                let promptList = await makeRealTransaction({ processTransactions, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission });
-                promptList = JSON.parse(JSON.stringify(promptList));
 
                 while (true) {
-                    actData = await chatCompletion(
-                        { systemPrompt, systemPromptForGemini },
-                        promptList,
-                        'generateCode',
-                        interfaces,
-                        caption('codeGeneration')
-                    );
-                    console.log('actData', actData);
+                    await exceedCatcher(async () => {
+                        const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
+                        let promptList = await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission });
+                        promptList = JSON.parse(JSON.stringify(promptList));
+                        actData = await chatCompletion(
+                            { systemPrompt, systemPromptForGemini },
+                            promptList,
+                            'generateCode',
+                            interfaces,
+                            caption('codeGeneration')
+                        );
+                    }, () => areBothSame(processTransactions, ++reduceLevel));
+                    // console.log('actData', actData);
                     let actDataResult = await actDataParser({ actData });
-                    console.log('actDataResult', actDataResult);
+                    // console.log('actDataResult', actDataResult);
                     javascriptCode = actDataResult.javascriptCode || '';
                     requiredPackageNames = actDataResult.requiredPackageNames || [];
                     pythonCode = actDataResult.pythonCode || '';
@@ -451,14 +461,11 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             };
             let runCodeFactor = false;
             let errorList = {};
-            console.log('코드 실행 시작');
             let executionId;
             const streamGetter = async (str) => {
-                console.log('스트림 처리 시작');
                 if (!useDocker) return;
                 process.stdout.write(str);
                 if (executionId) {
-                    console.log('스트림 출력 전송');
                     await out_stream({ executionId, stream: str, state: 'stdout' });
                 }
             }
@@ -486,19 +493,14 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             try {
 
                 if (!pythonCode && javascriptCode) {
-                    console.log('JavaScript 코드 실행 준비');
                     let javascriptCodeToRun = javascriptCodeBack ? javascriptCodeBack : javascriptCode;
                     if (useDocker) {
-                        console.log('Docker 환경에서 JavaScript 실행');
                         if (!confirmedd) {
-                            console.log('JavaScript 코드 확인 프롬프트 요청');
                             let confirmed = await await_prompt({ mode: 'run_nodejs_code', actname: actData.name, containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames });
                             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
-                            console.log('confirmedjs', confirmed);
                             javascriptCodeToRun = confirmed.confirmedCode;
                             executionId = confirmed.executionId;
                         }
-                        console.log('Docker에서 NodeJS 코드 실행');
                         await new Promise(resolve => setTimeout(resolve, 500));
                         await waitingForDataCheck(out_state);
                         const codeExecutionResult_ = await runNodeJSCode(containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames, streamGetter);
@@ -514,18 +516,13 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         // result = await runCode(page, javascriptCodeToRun, requiredPackageNames);
                     }
                 } else if (!javascriptCode && pythonCode) {
-                    console.log('Python 코드 실행 준비');
                     if (useDocker) {
-                        console.log('Docker 환경에서 Python 실행');
                         if (!confirmedd) {
-                            console.log('Python 코드 확인 프롬프트 요청');
                             let confirmed = await await_prompt({ mode: 'run_python_code', actname: actData.name, containerId, dockerWorkDir, pythonCode, requiredPackageNames });
                             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
-                            console.log('confirmedpy', confirmed);
                             pythonCode = confirmed.confirmedCode;
                             executionId = confirmed.executionId;
                         }
-                        console.log('Docker에서 Python 코드 실행');
                         await new Promise(resolve => setTimeout(resolve, 500));
                         await waitingForDataCheck(out_state);
                         const codeExecutionResult_ = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames, streamGetter);
@@ -562,17 +559,21 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             // }
             if (true) {
                 // spinners.iter = createSpinner('작업 검증중입니다.');
+                let actData;
+                await exceedCatcher(async () => {
+                    const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
+                    actData = await chatCompletion(
+                        {
+                            systemPrompt: await prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath),
+                            systemPromptForGemini: await prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath, true),
+                        },
+                        await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'evaluation', mainKeyMission }),
+                        'evaluateCode',
+                        interfaces,
+                        caption('evaluation')
+                    );
+                }, () => areBothSame(processTransactions, ++reduceLevel));
 
-                let actData = await chatCompletion(
-                    {
-                        systemPrompt: await prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath),
-                        systemPromptForGemini: await prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath, true),
-                    },
-                    await makeRealTransaction({ processTransactions, multiLineMission, type: 'evaluation', mainKeyMission }),
-                    'evaluateCode',
-                    interfaces,
-                    caption('evaluation')
-                );
                 const { evaluation, reason } = actData.input;
                 if ((evaluation.replace(/[^A-Z]/g, '') || '').toUpperCase().trim() === 'ENDOFMISSION') {
                     // if (spinners.iter) {
@@ -674,26 +675,29 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
                 try {
                     const prompt = templateBinding((await promptTemplate()).missionNaming.systemPrompt, {});
-                    talktitle.title = await chatCompletion(
-                        prompt,
-                        [
-                            {
-                                role: 'user',
-                                content: [
-                                    `<Mission>`,
-                                    `${multiLineMission}`,
-                                    `</Mission>`,
-                                    `<WhatDidWeDo>`,
-                                    `${processTransactions.map(a => a.whatdidwedo).join('\n\n')}`,
-                                    `</WhatDidWeDo>`,
-                                    `What is the title of the mission?`
-                                ].join('\n')
-                            }
-                        ],
-                        '',
-                        interfaces,
-                        caption('namingMission')
-                    );
+                    await exceedCatcher(async () => {
+                        const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
+                        talktitle.title = await chatCompletion(
+                            prompt,
+                            [
+                                {
+                                    role: 'user',
+                                    content: [
+                                        `<Mission>`,
+                                        `${multiLineMission}`,
+                                        `</Mission>`,
+                                        `<WhatDidWeDo>`,
+                                        `${processTransactions_.map(a => a.whatdidwedo).join('\n\n')}`,
+                                        `</WhatDidWeDo>`,
+                                        `What is the title of the mission?`
+                                    ].join('\n')
+                                }
+                            ],
+                            '',
+                            interfaces,
+                            caption('namingMission')
+                        );
+                    }, () => areBothSame(processTransactions, ++reduceLevel));
                 } catch { }
                 if (!talktitle) {
                     talktitle.title = new Date().toISOString();
@@ -705,5 +709,5 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         }
 
     }
-    return { exported, containerId, processTransactions, talktitle };
+    return { exported, containerId, processTransactions, talktitle, reduceLevel };
 }

@@ -944,13 +944,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         workData.containerIdToUse = containerIdToUse;
 
         fixWorkData(workData);
-        let task = reqAPI('ve1nppvpath', { prompt: promptInput.input.value, inputFolderPath: getInputFolderPath(), outputFolderPath: '', containerIdToUse, processTransactions: workData.processTransactions || [], talktitle: workData.talktitle });
+        let task = reqAPI('ve1nppvpath', { prompt: promptInput.input.value, inputFolderPath: getInputFolderPath(), outputFolderPath: '', containerIdToUse, processTransactions: workData.processTransactions || [], talktitle: workData.talktitle, reduceLevel: workData.reduceLevel || 0 });
         let taskId = task.taskId;
         if (false) await abortTask(taskId);
         // console.log(await task.promise);
-        let { resultPath, containerId, processTransactions, talktitle } = await task.promise;
+        let { resultPath, containerId, processTransactions, talktitle, reduceLevel } = await task.promise;
         let doneWithNothing = processTransactions.length === 0 || !talktitle;
         workData.talktitle = talktitle;
+        workData.reduceLevel = reduceLevel;
         Object.keys(dockerContainers).forEach(key => delete dockerContainers[key]);
         dockerContainers[containerId] = true;
         // console.log(containerId);
