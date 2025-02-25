@@ -17,5 +17,5 @@
     "npm_package_list": [
         "mathjs"
     ],
-    "activate": true
+    "activate": false
 }

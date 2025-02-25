@@ -1,0 +1,20 @@
+{
+    "description": "Translate text to another language.",
+    "instructions": [
+        "Specify the target language."
+    ],
+    "input": [
+        {
+            "text": "",
+            "targetLanguage": ""
+        },
+        {
+            "text": "Text to translate",
+            "targetLanguage": "Target language for translation (e.g. Korean, English, Japanese etc.)"
+        }
+    ],
+    "npm_package_list": [
+        "openai"
+    ],
+    "activate": false
+}
