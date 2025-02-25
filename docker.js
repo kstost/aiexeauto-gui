@@ -188,21 +188,52 @@ export async function importToDocker(containerId, workDir, inputDir) {
     result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + inputDir + '/." "' + containerId + ':' + workDir + '"');
     if (result.code !== 0) throw new Error('input 폴더 복사 실패');
 }
-
-export async function exportFromDocker(containerId, workDir, outputDir, directoryStructureBeforeOperation) {
-    const prefixName = 'AIEXE-data-handling-';
-    const removeList = [
-        'node_modules', '.git', '.vscode',
-        'AIEXE-data-handling-tmpfile.tar',
-        'AIEXE-data-handling-exportData.js',
-        'AIEXE-data-handling-operation.js',
-        'package-lock.json', 'package.json'
-    ];
+export async function backupWorkspace(containerId, workDir) {
+    const removeList = ['node_modules', 'package.json'];
     const commandList = [];
-    commandList.push(`mkdir -p /nodework/`);
-    for (const item of removeList) commandList.push(`rm -rf ${workDir}/${item}`);
-    commandList.push(`rm -rf ${workDir}/${prefixName}*`);
+    commandList.push(`rm -rf /backupWorkspace/`);
+    commandList.push(`mkdir -p /backupWorkspace/`);
+    for (const item of removeList) commandList.push(`mv ${workDir}/${item} /backupWorkspace/${item}`);
     await executeInContainer(containerId, commandList.join(' && '));
+}
+export async function restoreWorkspace(containerId, workDir) {
+    const removeList = ['node_modules', 'package.json'];
+    const commandList = [];
+    commandList.push(`rm -rf ${workDir}`);
+    commandList.push(`mkdir -p ${workDir}`);
+    for (const item of removeList) commandList.push(`mv /backupWorkspace/${item} ${workDir}/${item}`);
+    commandList.push(`ls -1 ${workDir}`);
+    let { code, stdout } = await executeInContainer(containerId, commandList.join(' && '));
+    if (code !== 0) return false;
+    return stdout.trim().split('\n').filter(item => removeList.includes(item.trim())).length === removeList.length;
+}
+export async function isNodeInitialized(containerId, workDir) {
+    const removeList = ['node_modules', 'package.json'];
+    const commandList = [];
+    commandList.push(`ls -1 ${workDir}`);
+    let { code, stdout } = await executeInContainer(containerId, commandList.join(' && '));
+    if (code !== 0) return false;
+    return stdout.trim().split('\n').filter(item => removeList.includes(item.trim())).length === removeList.length;
+}
+export async function exportFromDocker(containerId, workDir, outputDir, directoryStructureBeforeOperation) {
+    {
+        await backupWorkspace(containerId, workDir);
+    }
+    {
+        const prefixName = 'AIEXE-data-handling-';
+        const removeList = [
+            'node_modules', '.git', '.vscode',
+            'AIEXE-data-handling-tmpfile.tar',
+            'AIEXE-data-handling-exportData.js',
+            'AIEXE-data-handling-operation.js',
+            'package-lock.json', 'package.json'
+        ];
+        const commandList = [];
+        commandList.push(`mkdir -p /nodework/`);
+        for (const item of removeList) commandList.push(`rm -rf ${workDir}/${item}`);
+        commandList.push(`rm -rf ${workDir}/${prefixName}*`);
+        await executeInContainer(containerId, commandList.join(' && '));
+    }
     let structure;
     {
         const tmpJsFile = getAppPath('.code_' + Math.random() + '.js');
@@ -284,15 +315,6 @@ export async function exportFromDockerForDataCheck(containerId, dataOutputPath) 
     singleton.beingDataCheck = true;
     try {
         async function _exportFromDockerForDataCheck(containerId, workDir, outputDir) {
-            // const prefixName = 'AIEXE-data-handling-';
-            // const removeList = [
-            //     'node_modules', '.git', '.vscode',
-            //     'AIEXE-data-handling-tmpfile.tar',
-            //     'AIEXE-data-handling-exportData.js',
-            //     'AIEXE-data-handling-operation.js',
-            //     'package-lock.json', 'package.json'
-            // ];
-            // const commandList = [];
             let outputDirPreview = outputDir;
             while (outputDirPreview.endsWith('/') || outputDirPreview.endsWith('\\')) {
                 outputDirPreview = outputDirPreview.slice(0, -1);
@@ -324,104 +346,49 @@ export async function exportFromDockerForDataCheck(containerId, dataOutputPath) 
 }
 
 export async function initNodeProject(containerId, workDir) {
-    if (npmInit) return;
-    npmInit = true;
-    let result = await executeInContainer(containerId, 'cd ' + workDir + ' && npm init -y');
+    if (await isNodeInitialized(containerId, workDir)) return;
+    const commandList = [];
+    commandList.push(`rm -rf ${workDir}`);
+    commandList.push(`mkdir -p ${workDir}`);
+    commandList.push(`cd ${workDir}`);
+    commandList.push(`npm init -y && mkdir -p node_modules`);
+    let result = await executeInContainer(containerId, commandList.join(' && '));
+    return result.code === 0;
 }
 
-const installNPMHistory = {};
-let npmInit = false;
-const installPIPHistory = {};
-let pipInit = false;
-export function flushNPMHistory() {
-    Object.keys(installNPMHistory).forEach(key => {
-        delete installNPMHistory[key];
-    });
+export async function isInstalledNodeModule(containerId, workDir, moduleName) {
+    let result = await executeInContainer(containerId, 'cd ' + workDir + ' && npm list --json');
+    const json = JSON.parse(result.stdout);
+    const installed = json.dependencies?.[moduleName];
+    return !!installed;
 }
-export function isInstalledNodeModule(moduleName) {
-    return !!installNPMHistory[moduleName.toLowerCase()];
-}
-export function isInInstalledPackageList(moduleName) {
-    return !!singleton.installedPackages[moduleName.toLowerCase()];
-}
-
 export async function installNodeModules(containerId, workDir, moduleName) {
     moduleName = moduleName.trim();
     if (!moduleName) return;
-    if (isInInstalledPackageList(moduleName)) return;
+    if (await isInstalledNodeModule(containerId, workDir, moduleName)) return;
     await initNodeProject(containerId, workDir);
-    if (!isInstalledNodeModule(moduleName)) {
-        installNPMHistory[moduleName.toLowerCase()] = true;
-        let result = await executeInContainer(containerId, 'cd ' + workDir + ' && npm install ' + moduleName + '');
-        if (result.code === 0) singleton.installedPackages[moduleName.toLowerCase()] = true;
-        return result.code === 0;
-    }
+    // if (!(await isInstalledNodeModule(containerId, workDir, moduleName))) {
+    let result = await executeInContainer(containerId, 'cd ' + workDir + ' && npm install ' + moduleName + '');
+    // if (result.code === 0) singleton.installedPackages[moduleName.toLowerCase()] = true;
+    return result.code === 0;
+    // }
 }
 export async function isInstalledPythonModule(containerId, workDir, moduleName) {
-    if (isInInstalledPackageList(moduleName)) return true;
-    return await checkIfPythonModuleInstalled(containerId, moduleName);
-    // let piplist = await executeInContainer(containerId, 'cd ' + workDir + ' && pip show ' + moduleName + '');
-    // return (!!piplist.stdout.trim()) && piplist.code === 0;
-}
-export async function initPythonProject(containerId, workDir) {
-    if (pipInit) return;
-    pipInit = true;
-    if (false) await executeInContainer(containerId, 'cd ' + workDir + ' && pip install --upgrade pip');
+    let result = await executeInContainer(containerId, 'cd ' + workDir + ' && pip list --format=json');
+    const json = JSON.parse(result.stdout);
+    return !!(json.filter(info => info.name === moduleName).length);
 }
 export async function installPythonModules(containerId, workDir, moduleName) {
     moduleName = moduleName.trim();
     if (!moduleName) return;
-    if (isInInstalledPackageList(moduleName)) return true;
-    await initPythonProject(containerId, workDir);
+    if (await isInstalledPythonModule(containerId, workDir, moduleName)) return true;
     if (!await isInstalledPythonModule(containerId, workDir, moduleName)) {
-        installPIPHistory[moduleName.toLowerCase()] = true;
         let result = await executeInContainer(containerId, 'cd ' + workDir + ' && pip install ' + moduleName + '');
-        if (result.code === 0) singleton.installedPackages[moduleName.toLowerCase()] = true;
+        // if (result.code === 0) singleton.installedPackages[moduleName.toLowerCase()] = true;
         return result.code === 0;
     }
 }
-export async function checkIfPythonModuleInstalled(containerId, moduleName) {
-    if (isInInstalledPackageList(moduleName)) return true;
 
-    const workDir = await getConfiguration('dockerWorkDir');
-    let code = [
-        `import ${moduleName}`,
-        `try:`,
-        `    exit(0)`,
-        `except ImportError:`,
-        `    exit(1)`,
-    ].join('\n');
-    const streamGetter = null;
-    const tmpPyFile = getAppPath('.code_module_checker_' + Math.random() + '.py');
-    const pyFileName = 'AIEXE-data-handling-operation-module_checker.py';
-
-    code = [
-        `import os`,
-        `os.remove('${pyFileName}')`,
-        code
-    ].join('\n');
-
-    await writeEnsuredFile(tmpPyFile, code);
-
-    {
-        let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpPyFile + '" "' + containerId + ':' + workDir + '/' + pyFileName + '"');
-
-        if (result.code !== 0) throw new Error('임시 PY 파일 복사 실패');
-    }
-    // [remove.073] unlink - /Users/kst/.aiexeauto/workspace/.code_0.7196721389583982.py
-    if ((ensureAppsHomePath(tmpPyFile)) && linuxStyleRemoveDblSlashes(tmpPyFile).includes('/.aiexeauto/workspace/') && await is_file(tmpPyFile) && tmpPyFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
-        console.log(`[remove.073] unlink - ${tmpPyFile}`);
-        await fs.promises.unlink(tmpPyFile);
-    } else {
-        console.log(`[remove.073!] unlink - ${tmpPyFile}`);
-    }
-
-
-    let result = await executeInContainer(containerId, 'cd ' + workDir + ' && python -u ' + pyFileName, streamGetter);
-    result.output = `${result.stderr}\n\n${result.stdout}`;
-    return result.code === 0;
-
-}
 export async function checkSyntax(containerId, code) {
     const isValid = (result) => { return result.code === 0; }
     const tmpPyFile = getAppPath('.code_' + Math.random() + ('.code'));

@@ -26,7 +26,7 @@ import singleton from './singleton.js';
 function ignorePackages(packageList) {
     if (!packageList) return [];
     const ignorePackages = [
-        ...Object.keys(singleton.installedPackages),
+        // ...Object.keys(singleton.installedPackages),
         `listDirectory`,
         `aptInstall`,
         `child_process`,
@@ -50,9 +50,10 @@ export async function installPackages(requiredPackageNames, pythonCode, javascri
 
             if (!pythonCode && javascriptCode) {
                 console.log('JavaScript 패키지 설치 흐름 진입');
-                let installed = useDocker ? isInstalledNodeModule(packageName) : isInstalledNpmPackage(packageName);
+                const pid8 = await out_state(`${packageName} 패키지 확인 중...`);
+                let installed = useDocker ? await isInstalledNodeModule(containerId, dockerWorkDir, packageName) : isInstalledNpmPackage(packageName);
                 console.log('패키지 설치 여부:', installed, 'Docker 사용:', useDocker);
-
+                await pid8.dismiss();
                 if (!installed) {
                     // spinners.iter = createSpinner(`${packageName} 설치중.....`);
                     const pid7 = await out_state(`${packageName} 설치중.....`);

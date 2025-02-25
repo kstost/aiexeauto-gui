@@ -10,7 +10,7 @@ import { importData, exportData } from './dataHandler.js';
 import { chatCompletion, getModel, isOllamaRunning, exceedCatcher, trimProcessTransactions, areBothSame } from './aiFeatures.js';
 import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
 import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler.js';
-import { flushNPMHistory, waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
+import { isNodeInitialized, initNodeProject, restoreWorkspace, waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
 import { cloneCustomTool, getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
 import fs from 'fs';
 import { getConfiguration } from './system.js';
@@ -160,9 +160,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
     // const pid54 = await out_state(`미션 착수 준비중...`);
     // while (singleton.installedPackages.length) singleton.installedPackages.splice(0, 1);
-    Object.keys(singleton.installedPackages).forEach(key => {
-        delete singleton.installedPackages[key];
-    });
+    // Object.keys(singleton.installedPackages).forEach(key => {
+    //     delete singleton.installedPackages[key];
+    // });
 
     const openaiApiKey = await getConfiguration('openaiApiKey');
     const retrivalFolder = getAppPath('retrival');
@@ -255,7 +255,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             await cleanContainer(containerId);
         }
         singleton.currentWorkingContainerId = containerId;
-        flushNPMHistory(); // 사용안해도 되도록 처리해야함.
+
         // let browser, page;
 
 
@@ -266,6 +266,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         const maxIterations = await getConfiguration('maxIterations');
         const useDocker = await getConfiguration('useDocker');
 
+        if (!(await restoreWorkspace(containerId, dockerWorkDir))) {
+            await initNodeProject(containerId, dockerWorkDir);
+        }
         // {
         //     let ajosfd = await checkSyntax(containerId, 'ls -al; df', 'javascript');
         //     console.log(ajosfd);
