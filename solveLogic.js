@@ -674,7 +674,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 };
 
                 try {
-                    const prompt = templateBinding((await promptTemplate()).missionNaming.systemPrompt, {});
+                    const prompt = templateBinding((await promptTemplate()).missionNaming.systemPrompt, {
+                        languageFullName: await getLanguageFullName(),
+                    });
                     await exceedCatcher(async () => {
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
                         talktitle.title = await chatCompletion(

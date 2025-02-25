@@ -6,6 +6,7 @@ import { useTools, getLanguageFullName } from './solveLogic.js';
 import { caption, replaceAll } from './system.js';
 import { checkSyntax } from './docker.js';
 import { supportLanguage, toolSupport, promptTemplate, templateBinding } from './system.js';
+import envConst from './envConst.js';
 
 export function isExceedMaxTokens(result) {
     /*
@@ -1207,11 +1208,11 @@ claude
                     }],
                     tool_config: {
                         function_calling_config: {
-                            mode: "auto"
+                            mode: "ANY"
                         }
                     }
                 };
-                toolConfig = {}; // no tool use
+                if (!envConst.whether_to_tool_use_in_gemini) toolConfig = {}; // no tool use
             }
 
             const data = {

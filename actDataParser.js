@@ -39,7 +39,7 @@ export async function actDataParser({ actData }) {
             `                })`,
             `            });`,
             `        });`,
-            `        if (stdout.trim().length === 0 && stderr.trim().length === 0) console.log('(출력결과 없이 수행되었습니다)');`,
+            `        if (stdout.trim().length === 0 && stderr.trim().length === 0) console.log('(No output result)');`,
             `        process.exit(result.code);`,
             `    }`,
             `    main();`,
@@ -69,6 +69,9 @@ export async function actDataParser({ actData }) {
             requiredPackageNames = actData.input.pip_package_list;
         } else if (actData.name === 'list_directory') {
             if (is_none_data(actData?.input?.directory_path)) throw null;
+            if (!actData.input.directory_path) actData.input.directory_path = './';
+            actData.input.directory_path = `${actData.input.directory_path}/`;
+            while (actData.input.directory_path.includes('//')) actData.input.directory_path = actData.input.directory_path.replace('//', '/');
             javascriptCode = [
                 `const listDirectory = require('listDirectory');`,
                 `console.log(await listDirectory('${actData.input.directory_path}'));`,
@@ -76,20 +79,26 @@ export async function actDataParser({ actData }) {
             javascriptCodeBack = [
                 `const fs = require('fs');`,
                 `const exists = fs.existsSync('${actData.input.directory_path}');`,
-                `if(!exists){console.error('❌ ${actData.input.directory_path} 조회할 디렉토리가 존재하지 않습니다');process.exit(1);}`,
+                `if(!exists){console.error('❌ Directory does not exist to list: ${actData.input.directory_path}');process.exit(1);}`,
                 `let result = fs.readdirSync('${actData.input.directory_path}');`,
                 `result = result.filter(item => !['node_modules', 'package.json', 'package-lock.json'].includes(item));`,
                 `console.log('## Directory Contents of ${actData.input.directory_path}');`,
-                `if(result.length === 0){console.log('⚠️ 디렉토리가 비어있습니다');process.exit(0);}`,
+                `if(result.length === 0){console.log('⚠️ Directory is empty');process.exit(0);}`,
                 `// 폴더 먼저 출력`,
                 `for(let item of result) {`,
-                `    const isDirectory = fs.statSync('${actData.input.directory_path}/'+item).isDirectory();`,
-                `    if(isDirectory) console.log('📁 ' + '${actData.input.directory_path}/'+item+'/');`,
+                `    const isDirectory = fs.statSync('${actData.input.directory_path}'+item).isDirectory();`,
+                `    if(isDirectory) console.log('📁 ' + '${actData.input.directory_path}'+item+'/');`,
                 `}`,
                 `// 파일 출력`,
                 `for(let item of result) {`,
-                `    const isDirectory = fs.statSync('${actData.input.directory_path}/'+item).isDirectory();`,
-                `    if(!isDirectory) console.log('📄 ' + '${actData.input.directory_path}/'+item);`,
+                `    const isDirectory = fs.statSync('${actData.input.directory_path}'+item).isDirectory();`,
+                `    if(isDirectory) continue;`,
+                `    let fileSize = fs.statSync('${actData.input.directory_path}'+item).size;`,
+                `    let fileSizeUnit = 'bytes';`,
+                `    if(fileSize>1024){fileSize=fileSize/1024;fileSizeUnit='KB';}`,
+                `    if(fileSize>1024){fileSize=fileSize/1024;fileSizeUnit='MB';}`,
+                `    if(fileSize>1024){fileSize=fileSize/1024;fileSizeUnit='GB';}`,
+                `    console.log('📄 ' + '${actData.input.directory_path}'+item + ' ('+fileSize.toFixed(1)+' '+fileSizeUnit+') ');`,
                 `}`,
             ].join('\n');
         } else if (actData.name === 'apt_install') {
@@ -132,11 +141,11 @@ export async function actDataParser({ actData }) {
             javascriptCodeBack = [
                 `const fs = require('fs');`,
                 `const exists = fs.existsSync('${actData.input.file_path}');`,
-                `if(!exists){console.error('❌ ${actData.input.file_path} 읽을 파일이 존재하지 않습니다');process.exit(1);}`,
+                `if(!exists){console.error('❌ File does not exist to read: ${actData.input.file_path}');process.exit(1);}`,
                 `const result = fs.readFileSync('${actData.input.file_path}', 'utf8');`,
                 `const trimmed = result.trim();`,
                 `if (trimmed.length === 0||fs.statSync('${actData.input.file_path}').size === 0) {`,
-                `    console.log('⚠️ ${actData.input.file_path} 파일이 비어있습니다 (0 bytes)');`,
+                `    console.log('⚠️ ${actData.input.file_path} is empty (0 bytes)');`,
                 `    process.exit(0);`,
                 `}`,
                 `console.log('📄 Contents of ${actData.input.file_path}');`,
@@ -151,14 +160,15 @@ export async function actDataParser({ actData }) {
             javascriptCodeBack = [
                 `const fs = require('fs');`,
                 `const exists = fs.existsSync('${actData.input.file_path}');`,
-                `if(!exists){console.error('❌ ${actData.input.file_path} 삭제할 파일이 존재하지 않습니다');process.exit(1);}`,
+                `if(!exists){console.error('❌ File does not exist to delete: ${actData.input.file_path}');process.exit(1);}`,
                 `fs.unlinkSync('${actData.input.file_path}');`,
                 `const result = fs.existsSync('${actData.input.file_path}');`,
                 `if (result) {`,
-                `    console.error('❌ 파일이 여전히 존재합니다: ${actData.input.file_path}');`,
+                `    console.error('❌ File still exists: ${actData.input.file_path}');`,
                 `    process.exit(1);`,
                 `} else {`,
-                `    console.log('✅ 파일이 성공적으로 삭제되었습니다');`,
+                `    console.log('✅ File successfully deleted');`,
+                `    console.log('Deleted file: ${actData.input.file_path}');`,
                 `}`,
             ].join('\n');
         } else if (actData.name === 'remove_directory_recursively') {
@@ -170,14 +180,14 @@ export async function actDataParser({ actData }) {
             javascriptCodeBack = [
                 `const fs = require('fs');`,
                 `const exists = fs.existsSync('${actData.input.directory_path}');`,
-                `if(!exists){console.error('❌ ${actData.input.directory_path} 삭제할 디렉토리가 존재하지 않습니다');process.exit(1);}`,
+                `if(!exists){console.error('❌ Directory does not exist to delete: ${actData.input.directory_path}');process.exit(1);}`,
                 `fs.rmSync('${actData.input.directory_path}', { recursive: true, force: true });`,
                 `const result = fs.existsSync('${actData.input.directory_path}');`,
                 `if (result) {`,
-                `    console.error('❌ 디렉토리가 여전히 존재합니다: ${actData.input.directory_path}');`,
+                `    console.error('❌ Directory still exists: ${actData.input.directory_path}');`,
                 `    process.exit(1);`,
                 `} else {`,
-                `    console.log('✅ 디렉토리가 성공적으로 삭제되었습니다');`,
+                `    console.log('✅ Directory successfully deleted');`,
                 `}`,
             ].join('\n');
         } else if (actData.name === 'rename_file_or_directory') {
@@ -190,13 +200,13 @@ export async function actDataParser({ actData }) {
             javascriptCodeBack = [
                 `const fs = require('fs');`,
                 `const exists = fs.existsSync('${actData.input.old_path}');`,
-                `if(!exists){console.error('❌ ${actData.input.old_path} 이름을 변경할 파일 또는 디렉토리가 존재하지 않습니다');process.exit(1);}`,
+                `if(!exists){console.error('❌ File or directory does not exist to rename: ${actData.input.old_path}');process.exit(1);}`,
                 `fs.renameSync('${actData.input.old_path}', '${actData.input.new_path}');`,
                 `const result = fs.existsSync('${actData.input.new_path}');`,
                 `if (result) {`,
-                `    console.log('✅ 파일 또는 디렉토리가 성공적으로 이름이 변경되었습니다');`,
+                `    console.log('✅ File or directory successfully renamed');`,
                 `} else {`,
-                `    console.error('❌ 파일 또는 디렉토리가 이름 변경에 실패했습니다');`,
+                `    console.error('❌ File or directory failed to rename: ${actData.input.old_path}');`,
                 `    process.exit(1);`,
                 `}`,
             ].join('\n');

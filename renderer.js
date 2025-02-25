@@ -9,6 +9,7 @@ import { customRulesUI } from './frontend/customRulesUI.mjs';
 import singleton from './frontend/singleton.mjs';
 import { getConfig, setConfig, caption } from './frontend/system.mjs';
 import { makeCodeBox } from './frontend/makeCodeBox.mjs';
+import envConst from './envConst.js';
 
 function fixWorkData(workData) {
     if (!workData.processTransactions) workData.processTransactions = [];
@@ -1281,7 +1282,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     //     scrollableListContainer.appendChild(sampleItem);
     // }
-
 
 });
 

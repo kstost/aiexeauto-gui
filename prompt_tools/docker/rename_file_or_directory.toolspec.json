@@ -14,6 +14,7 @@
     "available_for": [
         "claude",
         "openai",
-        "ollama"
+        "ollama",
+        "gemini"
     ]
 }

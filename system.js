@@ -11,6 +11,7 @@ import { writeEnsuredFile, ensureAppsHomePath } from './dataHandler.js';
 import singleton from './singleton.js';
 import { i18nCaptions } from './frontend/i18nCaptions.mjs';
 import { app } from 'electron';
+import envConst from './envConst.js';
 
 export function getSystemLangCode() {
     try {
@@ -98,7 +99,9 @@ export async function promptTemplate() {
 
     templateBase.missionNaming = {};
     templateBase.missionNaming.systemPrompt = arrayAsText([
-        'Make a short title for the mission'
+        'Make a short title for the mission',
+        '',
+        'Response in one short plain text sentence in {{languageFullName}}.',
     ]);
 
 
@@ -141,6 +144,26 @@ export async function promptTemplate() {
         '',
         'As an AI agent, please summarize the tasks performed so far.',
     ]);
+    if (llm === 'gemini') {
+        templateBase.recollection.userPrompt = arrayAsText([
+            '{{last}}',
+            '',
+            '{{mission}}',
+            '',
+            '{{mainKeyMission}}',
+            '',
+            '<WritingGuidelines>',
+            '  <Rule>Summarize the tasks performed so far.</Rule>',
+            '  <Rule>Write only the core content in a concise manner.</Rule>',
+            '  <Rule>Use only simple and plain expressions.</Rule>',
+            '  <Rule>Do not include code.</Rule>',
+            '  <Rule>You can NOT interact with the user.</Rule>',
+            `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
+            '</WritingGuidelines>',
+            '',
+            'As an AI agent, please summarize the tasks performed so far.',
+        ]);
+    }
 
 
     templateBase.planning = {};
@@ -173,6 +196,38 @@ export async function promptTemplate() {
         '{{customRulesForCodeGenerator}}',
 
     ]);
+    if ((envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
+        templateBase.planning.userPrompt = arrayAsText([
+            '',
+            '{{last}}',
+            '',
+            '{{mission}}',
+            '',
+            '{{mainKeyMission}}',
+            '',
+            '{{deepThinkingPlan}}',
+            '',
+            '<Instructions>',
+            '  <Rule>Consider the mission and the current progress so far.</Rule>',
+            '  <Rule>Determine what to do next logically.</Rule>',
+            '  <Rule>Skip optional tasks.</Rule>',
+            '  <Rule>Do not include code.</Rule>',
+            '  <Rule>You can NOT interact with the user.</Rule>',
+            `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
+            '</Instructions>',
+            '',
+            'Tell me what task to perform next right away!',
+        ]);
+        templateBase.planning.systemPrompt = arrayAsText([
+            "You are a Code Interpreter Agent.",
+            `You can solve the mission with Python code and tools.`,
+            `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
+            `Exclude code or unnecessary content and respond with only one sentence in {{languageFullName}}. Omit optional tasks.`,
+            '',
+            '{{customRulesForCodeGenerator}}',
+        ]);
+
+    }
 
     templateBase.evaluator = {};
     templateBase.evaluator.userPrompt = arrayAsText([
@@ -289,7 +344,7 @@ export async function promptTemplate() {
         '{{tools}}',
         '</Tools>',
     ]);
-    if (llm === 'gemini') {
+    if ((!envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
         templateBase.codeGenerator.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
             `You can solve the mission with Python code and tools.`,
@@ -323,6 +378,48 @@ export async function promptTemplate() {
             '  ```',
             '</OutputFormat>',
         ])
+        templateBase.codeGenerator.userPrompt = arrayAsText([
+            '',
+            '{{last}}',
+            '',
+            '{{evaluationText}}',
+            '',
+            '{{whatdidwedo}}',
+            '',
+            '{{deepThinkingPlan}}',
+            '',
+            '{{whattodo}}',
+            '',
+            '{{mainKeyMission}}',
+            '',
+            'Make the Python code.',
+        ]);
+    } else if ((envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
+        templateBase.codeGenerator.systemPrompt = arrayAsText([
+            "You are a Code Interpreter Agent.",
+            `You can solve the mission with Python code and tools.`,
+            "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
+            '',
+            '<MainMission>',
+            '{{mission}}',
+            '</MainMission>',
+            '',
+            '<SubMission>',
+            '{{whattodo}}',
+            '</SubMission>',
+            '',
+            '{{customRulesForCodeGenerator}}',
+            '',
+            '<Tools>',
+            '{{tools}}',
+            '</Tools>',
+            '',
+            '<Reminder>',
+            // '- Remeber that you can not use `default_api` in the code.',
+            '- Remeber that you can not use `input` for confirmation in the code.',
+            '- If the task can be accomplished with tools, select from the available tools.',
+            '</Reminder>',
+        ]);
         templateBase.codeGenerator.userPrompt = arrayAsText([
             '',
             '{{last}}',
@@ -378,6 +475,22 @@ export async function promptTemplate() {
         '',
         'Response **only the prompt**.'
     ]);
+    if (llm === 'gemini') {
+        templateBase.reviewMission.userPrompt = arrayAsText([
+            '{{multiLineMission}}',
+            '',
+            '------',
+            'Make the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.',
+            '',
+            '<WritingGuidelines>',
+            '  <Rule>Write only the core content in a concise manner.</Rule>',
+            '  <Rule>Do not include code.</Rule>',
+            '  <Rule>You can NOT interact with the user.</Rule>',
+            '</WritingGuidelines>',
+            '',
+            'Response **only the prompt**.'
+        ]);
+    }
 
     // const templateBase = {
     //     codeGenerator: {

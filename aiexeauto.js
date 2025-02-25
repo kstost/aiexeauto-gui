@@ -18,6 +18,7 @@ import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js
 import { is_dir } from './codeExecution.js';
 import { exportFromDockerForDataCheck } from './docker.js';
 import { supportLanguage, toolSupport } from './system.js';
+import envConst from './envConst.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function reqRenderer(mode, arg) {
@@ -319,7 +320,7 @@ if (prompt === 'version') {
     }
     if (true) {
 
-        const devmode = false;
+        const devmode = envConst.devmode;
         function createWindow() {
             const win = new BrowserWindow({
                 show: false, // 처음에 창을 숨깁니다.

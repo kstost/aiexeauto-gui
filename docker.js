@@ -456,9 +456,72 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     const tmpPyFile = getAppPath('.code_' + Math.random() + '.py');
     const pyFileName = 'AIEXE-data-handling-operation.py';
 
+    const threespaces = ' '.repeat(3);
+    if (false) {
+        // const venv_path = await getPythonVenvPath();
+        // if (!venv_path) return;
+        // const importsScriptPath = `${venv_path}/${preprocessing}.py`;
+        // if (await isItem(importsScriptPath)) return;
+        // await writeEnsuredFile(importsScriptPath, [
+        // ].join('\n'));
+
+    }
+    const warninglist = ["DeprecationWarning", "UserWarning", "FutureWarning", "ImportWarning", "RuntimeWarning", "SyntaxWarning", "PendingDeprecationWarning", "ResourceWarning", "InsecureRequestWarning", "InsecurePlatformWarning"];
+    const modulelist = ["abc", "argparse", "array", "ast", "asyncio", "atexit", "base64", "bdb", "binascii", "bisect", "builtins", "bz2", "calendar", "cmath", "cmd", "code", "codecs", "codeop", "collections", "colorsys", "compileall", "concurrent", "configparser", "contextlib", "contextvars", "copy", "copyreg", "cProfile", "csv", "ctypes", "dataclasses", "datetime", "dbm", "decimal", "difflib", "dis", "doctest", "email", "encodings", "ensurepip", "enum", "errno", "faulthandler", "filecmp", "fileinput", "fnmatch", "fractions", "ftplib", "functools", "gc", "getopt", "getpass", "gettext", "glob", "graphlib", "gzip", "hashlib", "heapq", "hmac", "html", "http", "imaplib", "importlib", "inspect", "io", "ipaddress", "itertools", "json", "keyword", "linecache", "locale", "logging", "lzma", "mailbox", "mailcap", "marshal", "math", "mimetypes", "mmap", "modulefinder", "multiprocessing", "netrc", "nntplib", "numbers", "operator", "optparse", "os", "pathlib", "pdb", "pickle", "pickletools", "pkgutil", "platform", "plistlib", "poplib", "posixpath", "pprint", "profile", "pstats", "pty", "pwd", "py_compile", "pyclbr", "pydoc", "queue", "quopri", "random", "re", "reprlib", "rlcompleter", "runpy", "sched", "secrets", "select", "selectors", "shelve", "shlex", "shutil", "signal", "site", "smtpd", "smtplib", "sndhdr", "socket", "socketserver", "sqlite3", "ssl", "stat", "statistics", "string", "stringprep", "struct", "subprocess", "sunau", "symtable", "sys", "sysconfig", "syslog", "tabnanny", "tarfile", "telnetlib", "tempfile", "test", "textwrap", "threading", "time", "timeit", "token", "tokenize", "trace", "traceback", "tracemalloc", "tty", "turtle", "types", "typing", "unicodedata", "unittest", "urllib", "uu", "uuid", "venv", "warnings", "wave", "weakref", "webbrowser", "wsgiref", "xdrlib", "xml", "xmlrpc", "zipapp", "zipfile", "zipimport", "zlib", "zoneinfo", "numpy", "pandas", "matplotlib", "seaborn", "scipy", "tensorflow", "keras", "torch", "statsmodels", "xgboost", "lightgbm", "gensim", "nltk", "pillow", "requests", "beautifulsoup4", "mahotas", "simplecv", "pycairo", "pyglet", "openpyxl", "xlrd", "xlwt", "pyexcel", "PyPDF2", "reportlab", "moviepy", "vidgear", "imutils", "pytube", "pafy"];
     code = [
         `import os`,
         `os.remove('${pyFileName}')`,
+        `# ${'-'.repeat(80)}`,
+        `# Please understand that the code is quite long. AI often omits necessary modules when executing code. To address this, I have prepared code at the top that imports commonly used module packages. The main logic of the code created by the AI can be found at the bottom of this code.`,
+        `# ${'-'.repeat(80)}`,
+        `${warninglist.map(name => `try:\n${threespaces}import warnings\n${threespaces}warnings.filterwarnings("ignore", category=${name})\nexcept Exception as e:\n${threespaces}pass`).join('\n')}`,
+        `${modulelist.map(name => `try:\n${threespaces}import ${name}\nexcept Exception as e:\n${threespaces}pass`).join('\n')}`,
+        `# ${'-'.repeat(80)}`,
+        `def guider(tool_name, *args, **kwargs):`,
+        `    args_str = ', '.join([f'{k}={v}' for k,v in kwargs.items()])`,
+        `    print(f'"{tool_name}" tool을 이용하여 다음 입력으로({args_str}) 디렉토리 목록을 조회합니다.')`,
+        `    return ''`,
+        `class default_api:`,
+        `    @staticmethod`,
+        `    def generate_nodejs_code(*args, **kwargs):`,
+        `        return guider('generate_nodejs_code', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def generate_nodejs_code_for_puppeteer(*args, **kwargs):`,
+        `        return guider('generate_nodejs_code_for_puppeteer', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def generate_python_code(*args, **kwargs):`,
+        `        return guider('generate_python_code', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def list_directory(*args, **kwargs):`,
+        `        return guider('list_directory', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def apt_install(*args, **kwargs):`,
+        `        return guider('apt_install', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def which_command(*args, **kwargs):`,
+        `        return guider('which_command', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def run_command(*args, **kwargs):`,
+        `        return guider('run_command', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def read_file(*args, **kwargs):`,
+        `        return guider('read_file', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def remove_file(*args, **kwargs):`,
+        `        return guider('remove_file', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def remove_directory_recursively(*args, **kwargs):`,
+        `        return guider('remove_directory_recursively', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def rename_file_or_directory(*args, **kwargs):`,
+        `        return guider('rename_file_or_directory', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def read_url(*args, **kwargs):`,
+        `        return guider('read_url', *args, **kwargs)`,
+        `    @staticmethod`,
+        `    def cdnjs_finder(*args, **kwargs):`,
+        `        return guider('cdnjs_finder', *args, **kwargs)`,
+        `# ${'-'.repeat(80)}`,
         code
     ].join('\n');
 
