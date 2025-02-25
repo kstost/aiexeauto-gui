@@ -13,5 +13,5 @@
             "npm_package_list": "array of npm package names used in the code"
         }
     ],
-    "activate": true
+    "activate": false
 }
