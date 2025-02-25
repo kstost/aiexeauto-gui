@@ -333,6 +333,11 @@ const installNPMHistory = {};
 let npmInit = false;
 const installPIPHistory = {};
 let pipInit = false;
+export function flushNPMHistory() {
+    Object.keys(installNPMHistory).forEach(key => {
+        delete installNPMHistory[key];
+    });
+}
 export function isInstalledNodeModule(moduleName) {
     return !!installNPMHistory[moduleName.toLowerCase()];
 }

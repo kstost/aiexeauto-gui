@@ -176,13 +176,14 @@ export async function actDataParser({ actData }) {
             // other tool
             const name = actData.name;
             const input = JSON.parse(JSON.stringify(actData.input));
-            const { spec } = await getToolData(name);
+            const { spec, npm_package_list } = await getToolData(name);
             const rule = spec.input_schema[0];
             const desc = spec.input_schema[1];
             const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
             const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
             if (structure1 === structure2) {
                 javascriptCode = javascriptCodeBack = await loadToolCode(actData);
+                if (npm_package_list) requiredPackageNames = npm_package_list;
             }
         }
         /*

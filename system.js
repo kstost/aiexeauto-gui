@@ -807,22 +807,28 @@ export async function getToolData(toolName) {
         let data = await getCustomToolList(toolName);
         const spec = data[`${toolName}.toolspec.json`];
         const activate = !!spec.activate;//.includes(llm);
+        const npm_package_list = spec.npm_package_list;
         delete spec.activate;
+        delete spec.npm_package_list;
         if (!activate) return null;
         return {
             prompt: data[`${toolName}.md`],
-            spec
+            spec,
+            npm_package_list
         };
     } else {
         const toolSpec = await fs.promises.readFile(toolSpecPath, 'utf8');
         const prompt = await fs.promises.readFile(toolPrompt, 'utf8');
         const spec = JSON.parse(toolSpec);
         const activate = !!spec.activate;//.includes(llm);
+        const npm_package_list = spec.npm_package_list;
         delete spec.activate;
+        delete spec.npm_package_list;
         if (!activate) return null;
         return {
             prompt,
-            spec
+            spec,
+            npm_package_list
         };
     }
 }

@@ -14,5 +14,8 @@
             "number2": "Second number to sum"
         }
     ],
+    "npm_package_list": [
+        "mathjs"
+    ],
     "activate": true
 }
