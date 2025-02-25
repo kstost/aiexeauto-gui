@@ -81,24 +81,15 @@ export async function actDataParser({ actData }) {
             if (!actData.input.directory_path) actData.input.directory_path = './';
             actData.input.directory_path = `${actData.input.directory_path}/`;
             while (actData.input.directory_path.includes('//')) actData.input.directory_path = actData.input.directory_path.replace('//', '/');
-            javascriptCode = [
-                `const listDirectory = require('listDirectory');`,
-                `console.log(await listDirectory('${actData.input.directory_path}'));`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.directory_path}\``;
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'apt_install') {
             if (is_none_data(actData?.input?.package_name)) throw null;
-            javascriptCode = [
-                `const aptInstall = require('aptInstall');`,
-                `console.log(await aptInstall('${actData.input.package_name}'));`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.package_name}\``;
             javascriptCodeBack = shellCommander(`apt install -y ${actData.input.package_name}`);
         } else if (actData.name === 'which_command') {
             if (is_none_data(actData?.input?.command)) throw null;
-            javascriptCode = [
-                `const whichCommand = require('whichCommand');`,
-                `console.log(await whichCommand('${actData.input.command}'));`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.command}\``;
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'run_command') {
             if (is_none_data(actData?.input?.command)) throw null;
@@ -108,32 +99,20 @@ export async function actDataParser({ actData }) {
             javascriptCodeBack = shellCommander(actData.input.command);
         } else if (actData.name === 'read_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
-            javascriptCode = [
-                `const readFile = require('readFile');`,
-                `console.log(await readFile('${actData.input.file_path}'));`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.file_path}\``;
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'remove_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
-            javascriptCode = [
-                `const removeFile = require('removeFile');`,
-                `console.log(await removeFile('${actData.input.file_path}'));`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.file_path}\``;
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'remove_directory_recursively') {
             if (is_none_data(actData?.input?.directory_path)) throw null;
-            javascriptCode = [
-                `const removeDirectory = require('removeDirectory');`,
-                `console.log(await removeDirectory('${actData.input.directory_path}'));`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.directory_path}\``;
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'rename_file_or_directory') {
             if (is_none_data(actData?.input?.old_path)) throw null;
             if (is_none_data(actData?.input?.new_path)) throw null;
-            javascriptCode = [
-                `const renameFileOrDirectory = require('renameFileOrDirectory');`,
-                `console.log(await renameFileOrDirectory('${actData.input.old_path}', '${actData.input.new_path}'));`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.old_path}\` and \`${actData.input.new_path}\``;
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'read_url') {
             if (is_none_data(actData?.input?.url)) throw null;
@@ -142,12 +121,7 @@ export async function actDataParser({ actData }) {
             let data = result.data;
             if (typeof data !== 'string') data = JSON.stringify(data);
             let ob = { data };
-            javascriptCode = [
-                `const axios = require('axios');`,
-                `const result = await axios.get('${url}');`,
-                `console.log('🌏 Contents of ${url}');`,
-                `console.log(result.data);`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${url}\``;
             javascriptCodeBack = [
                 `console.log('🌏 Contents of ${url}');`,
                 `console.log((${JSON.stringify(ob)}).data);`,
@@ -162,12 +136,7 @@ export async function actDataParser({ actData }) {
             let sum = [...url_list1];
             let printData = sum.map(a => `${a.name} - ${a.latest}`).join('\n');
             if (sum.length === 0) printData = 'NOT FOUND';
-            javascriptCode = [
-                `const cdnjsFinder = require('cdnjsFinder');`,
-                `const cdnLibraryURL = await cdnjsFinder('${actData.input.package_name}');`,
-                `console.log('🌏 CDN Library URL of ${actData.input.package_name}');`,
-                `console.log(cdnLibraryURL);`,
-            ].join('\n');
+            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.package_name}\``;
             javascriptCodeBack = [
                 `console.log('🌏 CDN Library URL of ${actData.input.package_name}');`,
                 `console.log((${JSON.stringify({ printData })}).printData);`,
@@ -182,7 +151,8 @@ export async function actDataParser({ actData }) {
             const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
             const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
             if (structure1 === structure2) {
-                javascriptCode = javascriptCodeBack = await loadToolCode(actData);
+                javascriptCode = `// Run \`${actData.name}\` function with value \`${JSON.stringify(actData.input)}\``;
+                javascriptCodeBack = await loadToolCode(actData);
                 if (npm_package_list) requiredPackageNames = npm_package_list;
             }
         }
