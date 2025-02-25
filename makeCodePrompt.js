@@ -2,11 +2,11 @@ import { makeTag, omitMiddlePart, getLanguageFullName } from './solveLogic.js';
 import { getConfiguration } from './system.js';
 import { templateBinding } from './system.js';
 import { promptTemplate } from './system.js';
-export function indention(num = 1, string = null) {
+export function indention(num = 1, string = null, indentation = 2) {
     if (string) {
-        return string.split('\n').map(line => ' '.repeat(num * 2) + line).join('\n');
+        return string.split('\n').map(line => ' '.repeat(num * indentation) + line).join('\n');
     } else {
-        return ' '.repeat(num * 2);
+        return ' '.repeat(num * indentation);
     }
 }
 export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission) {
@@ -56,7 +56,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
                 last: lastMessage,
                 mission: makeTag('OurGoal', mission, !!mission),
                 mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
-                deepThinkingPlan: deepThinkingPlan?makeTag('Plan', deepThinkingPlan, !!deepThinkingPlan):'',
+                deepThinkingPlan: deepThinkingPlan ? makeTag('Plan', deepThinkingPlan, !!deepThinkingPlan) : '',
                 languageFullName: await getLanguageFullName(),
             }),
         };

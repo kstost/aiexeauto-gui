@@ -1,0 +1,18 @@
+{
+    "description": "Sum two numbers.",
+    "instructions": [
+        "float number is allowed.",
+        "Negative numbers are not allowed"
+    ],
+    "input": [
+        {
+            "number1": 0,
+            "number2": 0
+        },
+        {
+            "number1": "First number to sum",
+            "number2": "Second number to sum"
+        }
+    ],
+    "activate": true
+}

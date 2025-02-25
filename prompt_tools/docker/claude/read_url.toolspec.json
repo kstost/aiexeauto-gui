@@ -1,0 +1,13 @@
+{
+    "name": "read_url",
+    "description": "Read a URL.",
+    "input_schema": [
+        {
+            "url": ""
+        },
+        {
+            "url": "url to read, e.g, https://cokac.com/robots.txt"
+        }
+    ],
+    "activate": true
+}

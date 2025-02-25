@@ -1,0 +1,13 @@
+{
+    "name": "apt_install",
+    "description": "Install a package using apt.",
+    "input_schema": [
+        {
+            "package_name": ""
+        },
+        {
+            "package_name": "package name to install, e.g, ffmpeg"
+        }
+    ],
+    "activate": true
+}

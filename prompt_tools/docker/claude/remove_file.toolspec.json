@@ -1,0 +1,13 @@
+{
+    "name": "remove_file",
+    "description": "Remove a file.",
+    "input_schema": [
+        {
+            "file_path": ""
+        },
+        {
+            "file_path": "file path to remove, e.g, ./program/package.json"
+        }
+    ],
+    "activate": true
+}

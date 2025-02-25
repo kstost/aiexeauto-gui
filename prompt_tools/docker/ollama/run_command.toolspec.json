@@ -1,0 +1,13 @@
+{
+    "name": "run_command",
+    "description": "Run a shell command.",
+    "input_schema": [
+        {
+            "command": ""
+        },
+        {
+            "command": "shell command to run, e.g, ls -al"
+        }
+    ],
+    "activate": true
+}

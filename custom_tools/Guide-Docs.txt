@@ -1,0 +1,33 @@
++---------------------------------+
+|                                 |
+|    Custom Tools Making Guide    |
+|                                 |
++---------------------------------+
+본 문서파일은 자동생성된 문서이며 언제든 변경될 수 있으므로 여기에 중요한 정보를 담지 마세요.
+
+
+{
+    "description": "Sum two numbers.",
+    "instructions": [
+        "float number is allowed.",
+        "Negative numbers are not allowed"
+    ],
+    "input": [
+        {
+            "number1": 0,
+            "number2": 0
+        },
+        {
+            "number1": "First number to sum",
+            "number2": "Second number to sum"
+        }
+    ],
+    "activate": true
+}
+
+
+
+
+async function tool({ number1, number2 }) {
+    console.log(`${number1} + ${number2} = ${number1 + number2}`);
+}

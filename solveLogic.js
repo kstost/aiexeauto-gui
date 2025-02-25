@@ -11,7 +11,7 @@ import { chatCompletion, getModel, isOllamaRunning, exceedCatcher, trimProcessTr
 import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
 import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler.js';
 import { waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
-import { getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
+import { cloneCustomTool, getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
 import fs from 'fs';
 import { getConfiguration } from './system.js';
 import { actDataParser } from './actDataParser.js';
@@ -283,7 +283,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             // Local Environment
         }
         await pid3.dismiss();
-        if (!keepMode) multiLineMission = await reviewMission(multiLineMission, interfaces);
+
+
+        if (12313 < Math.random()) if (!keepMode) multiLineMission = await reviewMission(multiLineMission, interfaces);
         let nextPrompt;
         let mainKeyMission;// = multiLineMission;
         if (keepMode) {
@@ -342,10 +344,22 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
                 }
                 if (!nextPrompt) {
+                    const tools = `${await (async () => {
+                        const toolList = await getToolList();
+                        let toolPrompts = [];
+                        for (let tool of toolList) {
+                            const toolData = await getToolData(tool);
+                            if (!toolData) continue;
+                            toolPrompts.push(toolData.prompt);
+                        }
+                        return toolPrompts.join('\n\t\n');
+                    })()}`;
+
                     const customRulesForCodeGenerator = (await getConfiguration('customRulesForCodeGenerator') || '').trim();
                     const prompt = templateBinding((await promptTemplate()).planning.systemPrompt, {
                         customRulesForCodeGenerator: makeTag('CodeGenerationRules', customRulesForCodeGenerator, !!customRulesForCodeGenerator),
                         languageFullName: await getLanguageFullName(),
+                        tools: tools,
                     });
                     await exceedCatcher(async () => {
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);

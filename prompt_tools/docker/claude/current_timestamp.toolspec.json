@@ -1,0 +1,9 @@
+{
+    "name": "current_timestamp",
+    "description": "Get the current timestamp.",
+    "input_schema": [
+        {},
+        {}
+    ],
+    "activate": true
+}

@@ -1,0 +1,13 @@
+{
+    "name": "which_command",
+    "description": "Check if a command exists.",
+    "input_schema": [
+        {
+            "command": ""
+        },
+        {
+            "command": "command to check, e.g, ffmpeg"
+        }
+    ],
+    "activate": true
+}

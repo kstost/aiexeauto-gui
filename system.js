@@ -12,7 +12,8 @@ import singleton from './singleton.js';
 import { i18nCaptions } from './frontend/i18nCaptions.mjs';
 import { app } from 'electron';
 import envConst from './envConst.js';
-
+import { indention } from './makeCodePrompt.js';
+import { is_file, is_dir } from './codeExecution.js';
 export function getSystemLangCode() {
     try {
         return app.getLocale().split('-')[0] || 'en'
@@ -182,6 +183,7 @@ export async function promptTemplate() {
         '  <Rule>Determine what to do next logically.</Rule>',
         '  <Rule>Skip optional tasks.</Rule>',
         '  <Rule>Do not include code.</Rule>',
+        '  <Rule>Do not mention technical methods.</Rule>',
         `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
         '</Instructions>',
         '',
@@ -189,14 +191,55 @@ export async function promptTemplate() {
     ]);
     templateBase.planning.systemPrompt = arrayAsText([
         "You are a Code Interpreter Agent.",
-        `You can solve the mission with Python code and tools.`,
+        `You can solve the mission with Python code or Function calling Tools.`,
         `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
         `Exclude code or unnecessary content and respond with only one sentence in {{languageFullName}}. Omit optional tasks.`,
         '',
         '{{customRulesForCodeGenerator}}',
+        '',
+        '<Tools>',
+        '{{tools}}',
+        '</Tools>',
 
     ]);
     if ((envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
+        templateBase.planning.userPrompt = arrayAsText([
+            '',
+            '{{last}}',
+            '',
+            '{{mission}}',
+            '',
+            '{{mainKeyMission}}',
+            '',
+            '{{deepThinkingPlan}}',
+            '',
+            '<Instructions>',
+            '  <Rule>Consider the mission and the current progress so far.</Rule>',
+            '  <Rule>Determine what to do next logically.</Rule>',
+            '  <Rule>Skip optional tasks.</Rule>',
+            '  <Rule>Do not include code.</Rule>',
+            '  <Rule>You can NOT interact with the user.</Rule>',
+            '  <Rule>Do not mention technical methods.</Rule>',
+            `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
+            '</Instructions>',
+            '',
+            'Tell me what task to perform next right away!',
+        ]);
+        templateBase.planning.systemPrompt = arrayAsText([
+            "You are a Code Interpreter Agent.",
+            `You can solve the mission with Python code or Function calling Tools.`,
+            `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
+            `Exclude code or unnecessary content and respond with only one sentence in {{languageFullName}}. Omit optional tasks.`,
+            '',
+            '{{customRulesForCodeGenerator}}',
+            '',
+            '<Tools>',
+            '{{tools}}',
+            '</Tools>',
+        ]);
+
+    }
+    else if ((!envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
         templateBase.planning.userPrompt = arrayAsText([
             '',
             '{{last}}',
@@ -220,14 +263,16 @@ export async function promptTemplate() {
         ]);
         templateBase.planning.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
-            `You can solve the mission with Python code and tools.`,
+            `You can solve the mission with Python code or Function calling Tools.`,
             `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
             `Exclude code or unnecessary content and respond with only one sentence in {{languageFullName}}. Omit optional tasks.`,
             '',
             '{{customRulesForCodeGenerator}}',
+            '',
         ]);
 
     }
+
 
     templateBase.evaluator = {};
     templateBase.evaluator.userPrompt = arrayAsText([
@@ -321,7 +366,7 @@ export async function promptTemplate() {
     ]);
     templateBase.codeGenerator.systemPrompt = arrayAsText([
         "You are a Code Interpreter Agent.",
-        `You can solve the mission with Javascript or Python code and tools.`,
+        `You can solve the mission with Javascript or Python code or Function calling Tools.`,
         "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
         '',
         '<MainMission>',
@@ -347,7 +392,7 @@ export async function promptTemplate() {
     if ((!envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
         templateBase.codeGenerator.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
-            `You can solve the mission with Python code and tools.`,
+            `You can solve the mission with Python code or Function calling Tools.`,
             "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION. Write a Python code for execution.",
             '',
             '<MainMission>',
@@ -397,7 +442,7 @@ export async function promptTemplate() {
     } else if ((envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
         templateBase.codeGenerator.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
-            `You can solve the mission with Python code and tools.`,
+            `You can solve the mission with Python code or Function calling Tools.`,
             "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
             '',
             '<MainMission>',
@@ -439,7 +484,7 @@ export async function promptTemplate() {
     } else if (llm === 'claude') {
         templateBase.codeGenerator.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
-            `You can solve the mission with Javascript or Python code and tools.`,
+            `You can solve the mission with Javascript or Python code or Function calling Tools.`,
             "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
             '',
             '<MainMission>',
@@ -657,34 +702,129 @@ export async function loadConfiguration() {
 
     return config_;
 }
+export async function getToolCode(toolName) {
+    try {
+        const toolCodeFilePath = getCodePath(`tool_code/${toolName}.js`);
+        const toolCode = await fs.promises.readFile(toolCodeFilePath, 'utf8');
+        return toolCode;
+    } catch {
+        try {
+            const data = await getCustomToolList(toolName);
+            return data[`${toolName}.js`];
+        } catch { }
+    }
+    return '';
+}
+//----------------------
+export async function cloneCustomTool() {
+    const customPath = '.aiexeauto/custom_tools';
+    const workspace = getHomePath(customPath);
+    if (fs.existsSync(workspace)) {
+        const source = getCodePath(`custom_tools/Guide-Docs.txt`);
+        const target = getHomePath(`${customPath}/Guide-Docs.txt`);
+        if (ensureAppsHomePath(target)) {
+            await fs.promises.copyFile(source, target);
+        } else {
+            console.log(`[cloneCustomTool.002!] cp - ${source} ${target}`);
+        }
+        return;
+    }
+    fs.mkdirSync(workspace, { recursive: true });
+    const customToolPath = getCodePath(`custom_tools/`);
+    const customToolList = await fs.promises.readdir(customToolPath);
+    for (const tool of customToolList) {
+        const source = getCodePath(`custom_tools/${tool}`);
+        const target = getHomePath(`${customPath}/${tool}`);
+        if (ensureAppsHomePath(target)) {
+            await fs.promises.copyFile(source, target);
+        } else {
+            console.log(`[cloneCustomTool.001!] cp - ${source} ${target}`);
+        }
+    }
+}
+export async function getCustomToolList(toolName) {
+    const candidateList = {};
+    try {
+        const customPath = '.aiexeauto/custom_tools';
+        const workspace = getHomePath(customPath);
+        if (!(await fs.promises.stat(workspace)).isDirectory()) return candidateList;
+        const customToolList = await fs.promises.readdir(workspace);
+        for (const tool of customToolList) {
+            if (!tool.endsWith('.json')) continue;
+            const name = tool.replace(/\.json$/, '');
+            if (toolName && toolName !== name) continue;
+
+            const codePath = getHomePath(customPath + '/' + name + '.js');
+            if (!(await fs.promises.stat(codePath)).isFile()) continue;
+            candidateList[`${name}.js`] = await fs.promises.readFile(codePath, 'utf8');
+
+            const toolSpecPath = getHomePath(`${customPath}/${tool}`);
+            const data = await fs.promises.readFile(toolSpecPath, 'utf8');
+            const parsed = JSON.parse(data);
+            if (!parsed.activate) continue;
+            const toolspec = JSON.parse(JSON.stringify(parsed));
+            delete toolspec.instructions;
+            toolspec.input_schema = toolspec.input;
+            delete toolspec.input;
+            toolspec.name = name;
+            let markdownDocument = [
+                `### ${name}`,
+                `- ${parsed.description}`,
+                parsed.instructions.length > 0 ? indention(1, '#### INSTRUCTION', 3) : '',
+                indention(1, parsed.instructions.map(instruction => `- ${instruction}`).join('\n'), 3),
+            ].filter(line => line.trim()).join('\n');
+            markdownDocument = indention(1, markdownDocument, 3);
+            candidateList[`${name}.md`] = markdownDocument;
+            candidateList[`${name}.toolspec.json`] = toolspec;
+        }
+    } catch { }
+    return candidateList;
+}
+//------------------------------------------------
 export async function getToolList() {
-    // const llm = await getConfiguration('llm');
+    const llm = await getConfiguration('llm');
     const useDocker = await getConfiguration('useDocker');
     const container = useDocker ? 'docker' : 'localenv';
-    const toolList = await fs.promises.readdir(getCodePath(`prompt_tools/${container}`));
+    const toolList = await fs.promises.readdir(getCodePath(`prompt_tools/${container}/${llm}`));
     let candidateList;
     candidateList = toolList.filter(tool => tool.endsWith('.toolspec.json')).map(tool => tool.replace(/\.toolspec\.json$/, ''));
     // if (llm === 'gemini' || true) {
     //     candidateList = candidateList.filter(tool => tool.includes('_python_'));
     // }
-    return candidateList;
+    let customTools = await getCustomToolList();
+    Object.keys(customTools).forEach(tool => {
+        tool.endsWith('.toolspec.json') && candidateList.push(tool.replace(/\.toolspec\.json$/, ''));
+    });
+    return [...new Set(candidateList)];
 }
 export async function getToolData(toolName) {
     const llm = await getConfiguration('llm');
     const useDocker = await getConfiguration('useDocker');
     const container = useDocker ? 'docker' : 'localenv';
-    const toolPrompt = getCodePath(`prompt_tools/${container}/${toolName}.md`);
-    const toolSpecPath = getCodePath(`prompt_tools/${container}/${toolName}.toolspec.json`);
-    const toolSpec = await fs.promises.readFile(toolSpecPath, 'utf8');
-    const prompt = await fs.promises.readFile(toolPrompt, 'utf8');
-    const spec = JSON.parse(toolSpec);
-    const included = spec.available_for.includes(llm);
-    delete spec.available_for;
-    if (!included) return null;
-    return {
-        prompt,
-        spec
-    };
+    const toolPrompt = getCodePath(`prompt_tools/${container}/${llm}/${toolName}.md`);
+    const toolSpecPath = getCodePath(`prompt_tools/${container}/${llm}/${toolName}.toolspec.json`);
+    if (!(await is_file(toolPrompt)) || !(await is_file(toolSpecPath))) {
+        let data = await getCustomToolList(toolName);
+        const spec = data[`${toolName}.toolspec.json`];
+        const activate = !!spec.activate;//.includes(llm);
+        delete spec.activate;
+        if (!activate) return null;
+        return {
+            prompt: data[`${toolName}.md`],
+            spec
+        };
+    } else {
+        const toolSpec = await fs.promises.readFile(toolSpecPath, 'utf8');
+        const prompt = await fs.promises.readFile(toolPrompt, 'utf8');
+        const spec = JSON.parse(toolSpec);
+        const activate = !!spec.activate;//.includes(llm);
+        delete spec.activate;
+        if (!activate) return null;
+        return {
+            prompt,
+            spec
+        };
+    }
 }
 export function getCodePath(itemPath) {
     return getAbsolutePath(path.join(__dirname, itemPath));
@@ -887,7 +1027,27 @@ export async function prepareOutputDir(outputDir, overwrite, doNotCreate = false
 
 
 
+export function sortKeyOfObject(obj) {
+    // 배열인 경우, 각 요소를 재귀적으로 처리
+    if (Array.isArray(obj)) {
+        return obj.map(item => sortKeyOfObject(item));
+    }
 
+    // 객체인 경우, key를 정렬한 뒤 재귀적으로 처리
+    if (obj !== null && typeof obj === 'object') {
+        const sortedObject = {};
+        const keys = Object.keys(obj).sort();
+
+        keys.forEach(key => {
+            sortedObject[key] = sortKeyOfObject(obj[key]);
+        });
+
+        return sortedObject;
+    }
+
+    // 기본 자료형(문자열, 숫자 등)은 그대로 반환
+    return obj;
+}
 
 
 

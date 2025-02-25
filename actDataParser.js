@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
 export async function actDataParser({ actData }) {
     const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
     let toolingFailed = false;
@@ -51,6 +52,14 @@ export async function actDataParser({ actData }) {
         if (data === '') return true;
         return false;
     }
+    async function loadToolCode(actData) {
+        const code = await getToolCode(actData.name);
+        if (!code) return '';
+        return [
+            // code,
+            `(async()=>{try{await (${code})(${JSON.stringify(actData.input)});}catch{}})();`,
+        ].join('\n');
+    }
     let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack;
     try {
 
@@ -76,31 +85,7 @@ export async function actDataParser({ actData }) {
                 `const listDirectory = require('listDirectory');`,
                 `console.log(await listDirectory('${actData.input.directory_path}'));`,
             ].join('\n');
-            javascriptCodeBack = [
-                `const fs = require('fs');`,
-                `const exists = fs.existsSync('${actData.input.directory_path}');`,
-                `if(!exists){console.error('❌ Directory does not exist to list: ${actData.input.directory_path}');process.exit(1);}`,
-                `let result = fs.readdirSync('${actData.input.directory_path}');`,
-                `result = result.filter(item => !['node_modules', 'package.json', 'package-lock.json'].includes(item));`,
-                `console.log('## Directory Contents of ${actData.input.directory_path}');`,
-                `if(result.length === 0){console.log('⚠️ Directory is empty');process.exit(0);}`,
-                `// 폴더 먼저 출력`,
-                `for(let item of result) {`,
-                `    const isDirectory = fs.statSync('${actData.input.directory_path}'+item).isDirectory();`,
-                `    if(isDirectory) console.log('📁 ' + '${actData.input.directory_path}'+item+'/');`,
-                `}`,
-                `// 파일 출력`,
-                `for(let item of result) {`,
-                `    const isDirectory = fs.statSync('${actData.input.directory_path}'+item).isDirectory();`,
-                `    if(isDirectory) continue;`,
-                `    let fileSize = fs.statSync('${actData.input.directory_path}'+item).size;`,
-                `    let fileSizeUnit = 'bytes';`,
-                `    if(fileSize>1024){fileSize=fileSize/1024;fileSizeUnit='KB';}`,
-                `    if(fileSize>1024){fileSize=fileSize/1024;fileSizeUnit='MB';}`,
-                `    if(fileSize>1024){fileSize=fileSize/1024;fileSizeUnit='GB';}`,
-                `    console.log('📄 ' + '${actData.input.directory_path}'+item + ' ('+fileSize.toFixed(1)+' '+fileSizeUnit+') ');`,
-                `}`,
-            ].join('\n');
+            javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'apt_install') {
             if (is_none_data(actData?.input?.package_name)) throw null;
             javascriptCode = [
@@ -114,18 +99,7 @@ export async function actDataParser({ actData }) {
                 `const whichCommand = require('whichCommand');`,
                 `console.log(await whichCommand('${actData.input.command}'));`,
             ].join('\n');
-            javascriptCodeBack = [
-                `const { spawnSync } = require('child_process');`,
-                `const result = spawnSync('which', ['${actData.input.command}'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, encoding: 'utf-8' });`,
-                `const output = result.stderr.toString() + result.stdout.toString();`,
-                `const outputExists = output.trim().length>0;`,
-                'const backtick = "`";',
-                `const notFound = '(❌ ${actData.input.command} Command is not available)';`,
-                `if (result.status === 0) console.log(outputExists?backtick+'${actData.input.command}'+backtick+' Command is available.'+String.fromCharCode(10)+'Path: '+output+String.fromCharCode(10).repeat(2)+'You can use this with subprocess in python':notFound);`,
-                `if (result.status !== 0) console.error(notFound);`,
-                `if (false && result.status !== 0) console.error('❌ Failed to run '+backtick+'which'+backtick+' command'+(outputExists?String.fromCharCode(10)+output:''));`,
-                `process.exit(result.status);`,
-            ].join('\n');
+            javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'run_command') {
             if (is_none_data(actData?.input?.command)) throw null;
             javascriptCode = [
@@ -138,58 +112,21 @@ export async function actDataParser({ actData }) {
                 `const readFile = require('readFile');`,
                 `console.log(await readFile('${actData.input.file_path}'));`,
             ].join('\n');
-            javascriptCodeBack = [
-                `const fs = require('fs');`,
-                `const exists = fs.existsSync('${actData.input.file_path}');`,
-                `if(!exists){console.error('❌ File does not exist to read: ${actData.input.file_path}');process.exit(1);}`,
-                `const result = fs.readFileSync('${actData.input.file_path}', 'utf8');`,
-                `const trimmed = result.trim();`,
-                `if (trimmed.length === 0||fs.statSync('${actData.input.file_path}').size === 0) {`,
-                `    console.log('⚠️ ${actData.input.file_path} is empty (0 bytes)');`,
-                `    process.exit(0);`,
-                `}`,
-                `console.log('📄 Contents of ${actData.input.file_path}');`,
-                `console.log(result);`,
-            ].join('\n');
+            javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'remove_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
             javascriptCode = [
                 `const removeFile = require('removeFile');`,
                 `console.log(await removeFile('${actData.input.file_path}'));`,
             ].join('\n');
-            javascriptCodeBack = [
-                `const fs = require('fs');`,
-                `const exists = fs.existsSync('${actData.input.file_path}');`,
-                `if(!exists){console.error('❌ File does not exist to delete: ${actData.input.file_path}');process.exit(1);}`,
-                `fs.unlinkSync('${actData.input.file_path}');`,
-                `const result = fs.existsSync('${actData.input.file_path}');`,
-                `if (result) {`,
-                `    console.error('❌ File still exists: ${actData.input.file_path}');`,
-                `    process.exit(1);`,
-                `} else {`,
-                `    console.log('✅ File successfully deleted');`,
-                `    console.log('Deleted file: ${actData.input.file_path}');`,
-                `}`,
-            ].join('\n');
+            javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'remove_directory_recursively') {
             if (is_none_data(actData?.input?.directory_path)) throw null;
             javascriptCode = [
                 `const removeDirectory = require('removeDirectory');`,
                 `console.log(await removeDirectory('${actData.input.directory_path}'));`,
             ].join('\n');
-            javascriptCodeBack = [
-                `const fs = require('fs');`,
-                `const exists = fs.existsSync('${actData.input.directory_path}');`,
-                `if(!exists){console.error('❌ Directory does not exist to delete: ${actData.input.directory_path}');process.exit(1);}`,
-                `fs.rmSync('${actData.input.directory_path}', { recursive: true, force: true });`,
-                `const result = fs.existsSync('${actData.input.directory_path}');`,
-                `if (result) {`,
-                `    console.error('❌ Directory still exists: ${actData.input.directory_path}');`,
-                `    process.exit(1);`,
-                `} else {`,
-                `    console.log('✅ Directory successfully deleted');`,
-                `}`,
-            ].join('\n');
+            javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'rename_file_or_directory') {
             if (is_none_data(actData?.input?.old_path)) throw null;
             if (is_none_data(actData?.input?.new_path)) throw null;
@@ -197,19 +134,7 @@ export async function actDataParser({ actData }) {
                 `const renameFileOrDirectory = require('renameFileOrDirectory');`,
                 `console.log(await renameFileOrDirectory('${actData.input.old_path}', '${actData.input.new_path}'));`,
             ].join('\n');
-            javascriptCodeBack = [
-                `const fs = require('fs');`,
-                `const exists = fs.existsSync('${actData.input.old_path}');`,
-                `if(!exists){console.error('❌ File or directory does not exist to rename: ${actData.input.old_path}');process.exit(1);}`,
-                `fs.renameSync('${actData.input.old_path}', '${actData.input.new_path}');`,
-                `const result = fs.existsSync('${actData.input.new_path}');`,
-                `if (result) {`,
-                `    console.log('✅ File or directory successfully renamed');`,
-                `} else {`,
-                `    console.error('❌ File or directory failed to rename: ${actData.input.old_path}');`,
-                `    process.exit(1);`,
-                `}`,
-            ].join('\n');
+            javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'read_url') {
             if (is_none_data(actData?.input?.url)) throw null;
             const url = actData.input.url;
@@ -248,7 +173,17 @@ export async function actDataParser({ actData }) {
                 `console.log((${JSON.stringify({ printData })}).printData);`,
             ].join('\n');
         } else {
-            // no tool found
+            // other tool
+            const name = actData.name;
+            const input = JSON.parse(JSON.stringify(actData.input));
+            const { spec } = await getToolData(name);
+            const rule = spec.input_schema[0];
+            const desc = spec.input_schema[1];
+            const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
+            const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
+            if (structure1 === structure2) {
+                javascriptCode = javascriptCodeBack = await loadToolCode(actData);
+            }
         }
         /*
             코드 수행결과 javascriptCode || pythonCode 둘중에 하나는 존재해야해.

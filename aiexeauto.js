@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { is_dir } from './codeExecution.js';
 import { exportFromDockerForDataCheck } from './docker.js';
-import { supportLanguage, toolSupport } from './system.js';
+import { cloneCustomTool, getToolList, supportLanguage, toolSupport } from './system.js';
 import envConst from './envConst.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -106,6 +106,15 @@ if (prompt === 'version') {
             } catch (err) {
                 return null;
             }
+        },
+        async toolList(body) {
+            await cloneCustomTool();
+            if (body.open) {
+                const customPath = '.aiexeauto/custom_tools';
+                const workspace = getHomePath(customPath);
+                await open(workspace);
+            }
+            return await getToolList();
         },
         async saveWork(body) {
             let { filename, data } = body;

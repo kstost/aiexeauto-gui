@@ -37,6 +37,7 @@ let aborting_responsed = false;
 let currentConfig = {};
 const codeExecutionDelay = 0;
 const dockerContainers = {};
+const toolList = [];// = {};
 window.electronAPI.receive('mission_aborting_response', (arg) => {
     aborting_responsed = true;
 });
@@ -203,17 +204,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                 return codeRequiredConfirm.includes(actname);
             }
             function handleCodeConfirmation(editor, destroy = false, save = true) {
-                const toolActList = {
-                    apt_install: true,
-                    list_directory: true,
-                    read_file: true,
-                    read_url: true,
-                    remove_directory_recursively: true,
-                    remove_file: true,
-                    rename_file_or_directory: true,
-                    run_command: true,
-                    which_command: true,
-                };
+                const toolActList = {};
+                toolList.forEach(tool => toolActList[tool] = true);
                 if (toolActList[actname]) save = false;
 
                 const executionId = randomId();
@@ -392,6 +384,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         { text: caption('missionSolving'), mode: 'missionSolving' },
         { text: caption('configuration'), mode: 'configuration' },
         { text: caption('customrules'), mode: 'customrules' },
+        { text: caption('customtool'), mode: 'customtool' },
         { text: caption('youtube'), mode: 'youtube' },
         { text: caption('class'), mode: 'class' }
     ];
@@ -419,6 +412,20 @@ window.addEventListener('DOMContentLoaded', async () => {
                     }
                     await singleton.loadConfigurations();
                     turnWindow(menuItem.mode);
+                } else if (menuItem.mode === 'customtool') {
+                    if (operationDoing) {
+                        alert(caption('missionDoing'));
+                        return;
+                    }
+                    //..
+                    {
+                        let task = reqAPI('toolList', { open: true });
+                        let data = await task.promise;
+                        // while (toolList.length) toolList.pop();
+                        // toolList.push(...data);
+                    }
+
+
                 } else if (menuItem.mode === 'customrules') {
                     if (operationDoing) {
                         alert(caption('configChangeNotAllowed'));
@@ -748,6 +755,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         // parentContainer.style.opacity = '1';
         // parentContainer.style
         // inputContainer.style.display = 'none';
+
+        {
+            let task = reqAPI('toolList', {});
+            let data = await task.promise;
+            while (toolList.length) toolList.pop();
+            toolList.push(...data);
+        }
+
 
 
 
