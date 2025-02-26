@@ -425,6 +425,11 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     requiredPackageNames = actDataResult.requiredPackageNames || [];
                     pythonCode = actDataResult.pythonCode || '';
                     javascriptCodeBack = actDataResult.javascriptCodeBack || '';
+                    if (pythonCode) {
+                        pythonCode = pythonCode.split('\n').filter(line => {
+                            return line.trim() !== 'import default_api'
+                        }).join('\n');
+                    }
                     if (!pythonCode && !javascriptCode) {
                         const pp33 = await out_state('');
                         await pp33.fail(caption('codeGenerationFailed'));

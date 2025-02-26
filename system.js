@@ -739,7 +739,7 @@ export async function getToolCode(toolName) {
         } catch {
             try {
                 const data = await getCustomToolList(toolName);
-                return data[`${toolName}.js`];
+                return data[toolName].js;
             } catch { }
         }
         return '';
@@ -750,24 +750,25 @@ export async function getToolCode(toolName) {
     let code__ = `
         (async (params)=>{
             try {
+                const savingAvailable = false;
                 const fs = require('fs');
                 let tmpmemPath = '/tmpmem/';
-                if(!fs.existsSync(tmpmemPath)) fs.mkdirSync(tmpmemPath, { recursive: true });
+                if(savingAvailable) if(!fs.existsSync(tmpmemPath)) fs.mkdirSync(tmpmemPath, { recursive: true });
                 let saveData = await (${code})(params);
-                console.log('')
                 let returnData = saveData;
+                if(!savingAvailable) return returnData;
                 saveData = saveData === undefined ? '' : saveData;
                 saveData = saveData === null ? '' : saveData;
                 if (saveData.constructor === String) {
-                    let randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.txt';
+                    let randomAlphabetFileName = Math.random().toString(36).substring(2, 7)+'.txt';
                     fs.writeFileSync(tmpmemPath + randomAlphabetFileName, saveData);
                     console.log('- The return value of ${toolName} is saved in file /tmpmem/'+randomAlphabetFileName);
                 } else if (saveData.constructor === Object || saveData.constructor === Array) {
-                    let randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.json';
+                    let randomAlphabetFileName = Math.random().toString(36).substring(2, 7)+'.txt';
                     fs.writeFileSync(tmpmemPath + randomAlphabetFileName, JSON.stringify(saveData));
                     console.log('- The return value of ${toolName} is saved in file /tmpmem/'+randomAlphabetFileName);
                 } else {
-                    let randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.json';
+                    let randomAlphabetFileName = Math.random().toString(36).substring(2, 7)+'.txt';
                     fs.writeFileSync(tmpmemPath + randomAlphabetFileName, saveData+'');
                     console.log('- The return value of ${toolName} is saved in file /tmpmem/'+randomAlphabetFileName);
                 }
@@ -819,11 +820,8 @@ export async function getCustomToolList(toolName) {
             if (!tool.endsWith('.json')) continue;
             const name = tool.replace(/\.json$/, '');
             if (toolName && toolName !== name) continue;
-
             const codePath = getHomePath(customPath + '/' + name + '.js');
             if (!(await fs.promises.stat(codePath)).isFile()) continue;
-            candidateList[`${name}.js`] = await fs.promises.readFile(codePath, 'utf8');
-
             const toolSpecPath = getHomePath(`${customPath}/${tool}`);
             const data = await fs.promises.readFile(toolSpecPath, 'utf8');
             const parsed = JSON.parse(data);
@@ -833,63 +831,82 @@ export async function getCustomToolList(toolName) {
             toolspec.input_schema = toolspec.input;
             delete toolspec.input;
             toolspec.name = name;
-            let markdownDocument = [
-                `### ${name}`,
-                `- ${parsed.description}`,
-                parsed.return_description ? indention(1, '#### RETURN VALUE', 3) : '',
-                parsed.return_description ? indention(1, '- ' + `${parsed.return_description}`, 3) : '',
-                parsed.instructions.length > 0 ? indention(1, '#### INSTRUCTION', 3) : '',
-                indention(1, parsed.instructions.map(instruction => `- ${instruction}`).join('\n'), 3),
-            ].filter(line => line.trim()).join('\n');
-            markdownDocument = indention(1, markdownDocument, 3);
-            candidateList[`${name}.md`] = markdownDocument;
-            candidateList[`${name}.toolspec.json`] = toolspec;
+            candidateList[name] = {};
+            candidateList[name].js = await fs.promises.readFile(codePath, 'utf8');
+            candidateList[name].spec = toolspec;
         }
     } catch { }
     return candidateList;
 }
+export async function makeMdWithSpec(name) {
+    const parsed = await getToolSpec(name);
+    console.log('DDDDDDDDDDDDDD', parsed);
+    if (!parsed) return '';
+    let rule = Object.keys(parsed.input_schema[0]).map(key => {
+        let type = parsed.input_schema[0][key].constructor.name
+        return `${key}:${type}`;
+    }).join(', ');
+    let markdownDocument = [
+        `## \`${name}\` function tool`,
+        indention(1, `* Use: ${parsed.description}`, 3), // `${parsed.description}`
+        parsed.return_description && parsed.return_type ? indention(1, '* Spec: ' + `result:${parsed.return_type} = default_api.${name}(${rule})`, 3) : '',
+        // parsed.return_description && parsed.return_type ? indention(1, '  - ' + `result:${parsed.return_type} = default_api.${name}(${rule})`, 3) : '',
+        parsed.return_description && parsed.return_type ? indention(1, `* Return: \`${parsed.return_type}\` type, ${parsed.return_description}`, 3) : '',
+        // parsed.return_description && parsed.return_type ? indention(1, '  - ' + `${parsed.return_description}`, 3) : '',
+        parsed.instructions && parsed.instructions.length > 0 ? indention(1, '* Instructions:', 3) : '',
+        parsed.instructions && indention(1, parsed.instructions.map(instruction => `  - ${instruction}`).join('\n'), 3),
+    ].filter(line => line?.trim()).join('\n');
+    markdownDocument = indention(1, markdownDocument, 3);
+    return markdownDocument;
+}
 //------------------------------------------------
-export async function getToolList() {
+export async function getPromptToolPath() {
     const llm = await getConfiguration('llm');
     const useDocker = await getConfiguration('useDocker');
     const container = useDocker ? 'docker' : 'localenv';
-    const toolList = await fs.promises.readdir(getCodePath(`prompt_tools/${container}/${llm}`));
-    let candidateList;
-    candidateList = toolList.filter(tool => tool.endsWith('.toolspec.json')).map(tool => tool.replace(/\.toolspec\.json$/, ''));
-    // if (llm === 'gemini' || true) {
-    //     candidateList = candidateList.filter(tool => tool.includes('_python_'));
-    // }
-    let customTools = await getCustomToolList();
-    Object.keys(customTools).forEach(tool => {
-        tool.endsWith('.toolspec.json') && candidateList.push(tool.replace(/\.toolspec\.json$/, ''));
+    let candidate1 = getCodePath(`prompt_tools/${container}/default`);
+    let candidate2 = getCodePath(`prompt_tools/${container}/${llm}`);
+    let list = [];
+    if (await is_dir(candidate2)) list.push(candidate2);
+    if (await is_dir(candidate1)) list.push(candidate1);
+    return list;
+}
+export async function getToolList() {
+    let list = await getPromptToolPath();
+    let rlist = [];
+    for (const path of list) {
+        const toolList = await fs.promises.readdir(path);
+        let clist = toolList.filter(tool => tool.endsWith('.toolspec.json')).map(tool => tool.replace(/\.toolspec\.json$/, ''));
+        rlist.push(...clist);
+    }
+    Object.keys(await getCustomToolList()).forEach(tool => {
+        rlist.push(tool);
     });
-    return [...new Set(candidateList)];
+    return [...new Set(rlist)];
+}
+export async function getToolSpec(toolName) {
+    const pathList = await getPromptToolPath();
+    let data;
+    for (const path of pathList) {
+        const toolSpecPath = `${path}/${toolName}.toolspec.json`;
+        if (!(await is_file(toolSpecPath))) continue;
+        const toolSpec = await fs.promises.readFile(toolSpecPath, 'utf8');
+        data = JSON.parse(toolSpec);
+    }
+    data = data || (await getCustomToolList(toolName))[toolName].spec;
+    if (data) {
+        if (!data.input_schema) data.input_schema = data.input;
+        if (!data.input) data.input = data.input_schema;
+    }
+    return data;
 }
 export async function getToolData(toolName) {
-    const llm = await getConfiguration('llm');
-    const useDocker = await getConfiguration('useDocker');
-    const container = useDocker ? 'docker' : 'localenv';
-    const toolPrompt = getCodePath(`prompt_tools/${container}/${llm}/${toolName}.md`);
-    const toolSpecPath = getCodePath(`prompt_tools/${container}/${llm}/${toolName}.toolspec.json`);
-    if (!(await is_file(toolPrompt)) || !(await is_file(toolSpecPath))) {
-        let data = await getCustomToolList(toolName);
-        const spec = data[`${toolName}.toolspec.json`];
-        const activate = !!spec.activate;//.includes(llm);
-        const npm_package_list = spec.npm_package_list;
-        const return_description = spec.return_description;
-        delete spec.activate;
-        delete spec.npm_package_list;
-        delete spec.return_description;
-        if (!activate) return null;
-        return {
-            prompt: data[`${toolName}.md`],
-            spec,
-            npm_package_list,
-            return_description
-        };
-    } else {
+    let paths = await getPromptToolPath();
+    for (const path of paths) {
+        const toolSpecPath = `${path}/${toolName}.toolspec.json`;
+        if (!(await is_file(toolSpecPath))) continue;
         const toolSpec = await fs.promises.readFile(toolSpecPath, 'utf8');
-        const prompt = await fs.promises.readFile(toolPrompt, 'utf8');
+        const prompt = await makeMdWithSpec(toolName);
         const spec = JSON.parse(toolSpec);
         const activate = !!spec.activate;//.includes(llm);
         const npm_package_list = spec.npm_package_list;
@@ -897,6 +914,9 @@ export async function getToolData(toolName) {
         delete spec.activate;
         delete spec.npm_package_list;
         delete spec.return_description;
+        delete spec.return_type;
+        delete spec.only_use_in_code;
+        delete spec.instructions;
         if (!activate) return null;
         return {
             prompt,
@@ -905,6 +925,24 @@ export async function getToolData(toolName) {
             return_description
         };
     }
+    let data = await getCustomToolList(toolName);
+    const spec = data[toolName].spec;
+    const activate = !!spec.activate;//.includes(llm);
+    const npm_package_list = spec.npm_package_list;
+    const return_description = spec.return_description;
+    delete spec.activate;
+    delete spec.npm_package_list;
+    delete spec.return_description;
+    delete spec.return_type;
+    delete spec.only_use_in_code;
+    delete spec.instructions;
+if (!activate) return null;
+    return {
+        prompt: await makeMdWithSpec(toolName),
+        spec,
+        npm_package_list,
+        return_description
+    };
 }
 export function getCodePath(itemPath) {
     return getAbsolutePath(path.join(__dirname, itemPath));

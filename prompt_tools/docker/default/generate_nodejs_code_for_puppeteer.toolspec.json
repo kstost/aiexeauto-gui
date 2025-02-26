@@ -1,0 +1,35 @@
+{
+    "name": "generate_nodejs_code_for_puppeteer",
+    "description": "Generate NodeJS code to perform tasks using puppeteer.",
+    "instructions": [
+        "Do not repeat tasks already performed in previous steps.",
+        "The code must be a complete and executable single JavaScript file.",
+        "Use the `--no-sandbox` option when executing.",
+        "Use `console.log` to display status and progress at each step.",
+        "Use `console.table` when outputting tables.",
+        "Print all results that serve as the basis for the agent performing the task.",
+        "Print supporting evidence for determining the success of each code execution step.",
+        "If visualization is required, generate the output as a web page using appropriate visualization libraries with HTML, CSS, and JavaScript.",
+        "If visualization is required, use JavaScript libraries via CDN links in `<script>` tags without additional installation.",
+        "If image processing is required, use the `sharp` library from npm.",
+        "When executing shell commands, use `spawnSync` from the `child_process` module.",
+        "Ensure that the process terminates after execution.",
+        "Do not hardcode data in the source code.",
+        "Omit optional tasks."
+    ],
+    "input_schema": [
+        {
+            "nodejs_code": "",
+            "npm_package_list": [
+                ""
+            ]
+        },
+        {
+            "nodejs_code": "nodejs code for the only one task using puppeteer",
+            "npm_package_list": "array of npm package names used in the code"
+        }
+    ],
+    "activate": false,
+    "return_description": "",
+    "return_type": ""
+}

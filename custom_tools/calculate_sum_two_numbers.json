@@ -5,6 +5,7 @@
         "Negative numbers are not allowed"
     ],
     "return_description": "Number of sum",
+    "return_type": "Number",
     "input": [
         {
             "number1": 0,
@@ -15,6 +16,7 @@
             "number2": "Second number to sum"
         }
     ],
+    "only_use_in_code": true,
     "npm_package_list": [
         "mathjs"
     ],

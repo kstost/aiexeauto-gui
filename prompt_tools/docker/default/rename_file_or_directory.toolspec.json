@@ -1,0 +1,21 @@
+{
+    "name": "rename_file_or_directory",
+    "description": "Rename a file or directory.",
+    "instructions": [
+        "Provide the path of the file or directory and the new name"
+    ],
+    "input_schema": [
+        {
+            "old_path": "",
+            "new_path": ""
+        },
+        {
+            "old_path": "old file or directory path to rename, e.g, ./program/package.json",
+            "new_path": "new file or directory path to rename, e.g, ./program/package2.json"
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": true,
+    "return_description": "Boolean value indicating whether the file or directory was successfully renamed.",
+    "return_type": "Boolean"
+}

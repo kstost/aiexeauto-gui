@@ -1,0 +1,19 @@
+{
+    "name": "remove_file",
+    "description": "Remove a file.",
+    "instructions": [
+        "Provide the path of the file to delete"
+    ],
+    "input_schema": [
+        {
+            "file_path": ""
+        },
+        {
+            "file_path": "file path to remove, e.g, ./program/package.json"
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": true,
+    "return_description": "Boolean value indicating whether the file was successfully deleted.",
+    "return_type": "Boolean"
+}

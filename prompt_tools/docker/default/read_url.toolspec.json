@@ -1,0 +1,18 @@
+{
+    "name": "read_url",
+    "description": "Read the contents of the URL.",
+    "instructions": [
+        "Provide the URL"
+    ],
+    "input_schema": [
+        {
+            "url": ""
+        },
+        {
+            "url": "url to read, e.g, https://cokac.com/robots.txt"
+        }
+    ],
+    "activate": true,
+    "return_description": "String of the content of the URL.",
+    "return_type": "String"
+}

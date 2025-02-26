@@ -328,6 +328,13 @@ if (prompt === 'version') {
 
     }
     if (true) {
+        // ㅅㄷㄴㅅ 
+        // 테스트 코드
+        // let list = await getToolList();
+        // console.log(list);
+        // process.exit(0);
+    }
+    if (true) {
 
         const devmode = envConst.devmode;
         function createWindow() {

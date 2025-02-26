@@ -1,0 +1,18 @@
+{
+    "name": "read_file",
+    "description": "Read the contents of the file.",
+    "instructions": [
+        "Provide the path of the file"
+    ],
+    "input_schema": [
+        {
+            "file_path": ""
+        },
+        {
+            "file_path": "file path to read, e.g, ./program/package.json"
+        }
+    ],
+    "activate": true,
+    "return_description": "String of the contents of the file.",
+    "return_type": "String"
+}

@@ -1,0 +1,18 @@
+{
+    "name": "list_directory",
+    "description": "Get the list of files/folders in the directory.",
+    "instructions": [
+        "Provide the path of the directory"
+    ],
+    "input_schema": [
+        {
+            "directory_path": ""
+        },
+        {
+            "directory_path": "directory path to list, e.g, ./program"
+        }
+    ],
+    "activate": true,
+    "return_description": "Array of objects with type, name, and size. type is 'directory' or 'file'. size is the size of the file in bytes. name is the name of the file or directory.",
+    "return_type": "Array"
+}

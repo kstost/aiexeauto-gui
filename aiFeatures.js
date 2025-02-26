@@ -621,6 +621,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 for (let tool of toolList) {
                     const toolData = await getToolData(tool);
                     if (!toolData) continue;
+                    if (toolData.spec.only_use_in_code) continue;
                     toolData.spec.input_schema = convertJsonToResponseFormat(...toolData.spec.input_schema).json_schema.schema;
                     toolPrompts.push(toolData.spec);
                 }
@@ -629,6 +630,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
         }
         const generateCodeMode = callMode === 'generateCode';
         let tools_ofsdijfsadiosoidjaoisjdf = toolsList[callMode];// || []; // 배열이며 0개가 될수도 있음.
+        // if (generateCodeMode) console.log('asdfsdfsdfsdfs', JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf, null, 2))
+        // if (generateCodeMode) process.exit(0);
         if (!tools_ofsdijfsadiosoidjaoisjdf || tools_ofsdijfsadiosoidjaoisjdf.length === 0) tools_ofsdijfsadiosoidjaoisjdf = undefined;
 
         const requestAI = async (llm, callMode, data, url, headers) => {
@@ -888,15 +891,6 @@ claude
                         exponentialBackoffCount *= 1.5;
                         waitTime *= exponentialBackoffCount;
                         waitTime = Math.ceil(waitTime);
-                        // ollamaServerNotRunning:'Ollama API서버 확인에 문제가 있습니다.'
-                        // processing:`${stateLabel}를 ${model}가 처리중...`
-                        // aiMissionAborted:`${stateLabel}를 ${model}가 처리 중단 (${err.message})`
-                        // aiNoResult:`${model}가 ${stateLabel} 처리한 결과가 없음`
-                        // aiRetryWaiting:`${model}가 ${stateLabel} 처리 재시도 대기`
-                        // aiAnalyzingResult:`${stateLabel} 처리 데이터 분석 중`
-                        // aiAnalyzingResultFailed:`${stateLabel} 처리 데이터 분석 실패`
-                        // aiRetryWaiting:`${model}가 ${stateLabel} 처리 재시도 대기`
-                        // aiRetryWaitingSecondLeft:`${model}가 ${stateLabel} 처리 재시도 대기 {{second}}초 남음`
                         let aiRetryWaitingSecondLeft = caption('aiRetryWaitingSecondLeft');
                         aiRetryWaitingSecondLeft = replaceAll(aiRetryWaitingSecondLeft, '{{model}}', model);
                         aiRetryWaitingSecondLeft = replaceAll(aiRetryWaitingSecondLeft, '{{stateLabel}}', stateLabel);

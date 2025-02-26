@@ -4,6 +4,7 @@
         "Specify the target language."
     ],
     "return_description": "String of translated text",
+    "return_type": "String",
     "input": [
         {
             "text": "",
@@ -14,6 +15,7 @@
             "targetLanguage": "Target language for translation (e.g. Korean, English, Japanese etc.)"
         }
     ],
+    "only_use_in_code": true,
     "npm_package_list": [
         "openai"
     ],

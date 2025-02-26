@@ -1,0 +1,19 @@
+{
+    "name": "remove_directory_recursively",
+    "description": "Remove a directory recursively.",
+    "instructions": [
+        "Provide the path of the directory to delete"
+    ],
+    "input_schema": [
+        {
+            "directory_path": ""
+        },
+        {
+            "directory_path": "directory path to remove recursively, e.g, ./program"
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": true,
+    "return_description": "Boolean value indicating whether the directory was successfully deleted.",
+    "return_type": "Boolean"
+}
