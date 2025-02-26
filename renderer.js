@@ -384,7 +384,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         { text: caption('missionSolving'), mode: 'missionSolving' },
         { text: caption('configuration'), mode: 'configuration' },
         { text: caption('customrules'), mode: 'customrules' },
-        // { text: caption('customtool'), mode: 'customtool' },
+        { text: caption('customtool'), mode: 'customtool' },
         { text: caption('youtube'), mode: 'youtube' },
         { text: caption('class'), mode: 'class' }
     ];

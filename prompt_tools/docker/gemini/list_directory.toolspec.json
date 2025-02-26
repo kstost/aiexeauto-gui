@@ -9,5 +9,6 @@
             "directory_path": "directory path to list, e.g, ./program"
         }
     ],
-    "activate": true
+    "activate": true,
+    "return_description": ""
 }

@@ -9,5 +9,6 @@
             "file_path": "file path to read, e.g, ./program/package.json"
         }
     ],
-    "activate": true
+    "activate": true,
+    "return_description": ""
 }

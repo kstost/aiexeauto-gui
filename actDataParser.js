@@ -62,6 +62,13 @@ export async function actDataParser({ actData }) {
     }
     let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack;
     try {
+        function formatToolCode(actData) {
+            let input = actData.input;
+            let keys = Object.keys(input);
+            let values = Object.values(input);
+            let formattedInput = keys.map((key, index) => `${key}="${values[index]}"`).join(',');
+            return `default_api.${actData.name}(${formattedInput})`;
+        }
 
 
         if (actData.name === 'generate_nodejs_code') {
@@ -81,15 +88,15 @@ export async function actDataParser({ actData }) {
             if (!actData.input.directory_path) actData.input.directory_path = './';
             actData.input.directory_path = `${actData.input.directory_path}/`;
             while (actData.input.directory_path.includes('//')) actData.input.directory_path = actData.input.directory_path.replace('//', '/');
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.directory_path}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'apt_install') {
             if (is_none_data(actData?.input?.package_name)) throw null;
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.package_name}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = shellCommander(`apt install -y ${actData.input.package_name}`);
         } else if (actData.name === 'which_command') {
             if (is_none_data(actData?.input?.command)) throw null;
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.command}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'run_command') {
             if (is_none_data(actData?.input?.command)) throw null;
@@ -99,20 +106,20 @@ export async function actDataParser({ actData }) {
             javascriptCodeBack = shellCommander(actData.input.command);
         } else if (actData.name === 'read_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.file_path}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'remove_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.file_path}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'remove_directory_recursively') {
             if (is_none_data(actData?.input?.directory_path)) throw null;
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.directory_path}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'rename_file_or_directory') {
             if (is_none_data(actData?.input?.old_path)) throw null;
             if (is_none_data(actData?.input?.new_path)) throw null;
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.old_path}\` and \`${actData.input.new_path}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'read_url') {
             if (is_none_data(actData?.input?.url)) throw null;
@@ -121,7 +128,7 @@ export async function actDataParser({ actData }) {
             let data = result.data;
             if (typeof data !== 'string') data = JSON.stringify(data);
             let ob = { data };
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${url}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = [
                 `console.log('🌏 Contents of ${url}');`,
                 `console.log((${JSON.stringify(ob)}).data);`,
@@ -136,7 +143,7 @@ export async function actDataParser({ actData }) {
             let sum = [...url_list1];
             let printData = sum.map(a => `${a.name} - ${a.latest}`).join('\n');
             if (sum.length === 0) printData = 'NOT FOUND';
-            javascriptCode = `// Run \`${actData.name}\` function with value \`${actData.input.package_name}\``;
+            javascriptCode = formatToolCode(actData);
             javascriptCodeBack = [
                 `console.log('🌏 CDN Library URL of ${actData.input.package_name}');`,
                 `console.log((${JSON.stringify({ printData })}).printData);`,
@@ -151,7 +158,7 @@ export async function actDataParser({ actData }) {
             const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
             const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
             if (structure1 === structure2) {
-                javascriptCode = `// Run \`${actData.name}\` function with value \`${JSON.stringify(actData.input)}\``;
+                javascriptCode = formatToolCode(actData);
                 javascriptCodeBack = await loadToolCode(actData);
                 if (npm_package_list) requiredPackageNames = npm_package_list;
             }

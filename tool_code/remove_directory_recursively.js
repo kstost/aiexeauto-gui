@@ -7,8 +7,13 @@ async function remove_directory_recursively(input) {
     const result = fs.existsSync(directory_path);
     if (result) {
         console.error('❌ Directory still exists: ' + directory_path + '');
-        process.exit(1);
+        // process.exit(1);
     } else {
         console.log('✅ Directory successfully deleted');
     }
+    /*
+    One line explanation of the return data:
+    Boolean value indicating whether the directory was successfully deleted.
+    */
+    return !result;
 }

@@ -9,5 +9,6 @@
             "package_name": "package name to install, e.g, ffmpeg"
         }
     ],
-    "activate": true
+    "activate": true,
+    "return_description": ""
 }

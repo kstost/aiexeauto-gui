@@ -1,3 +1,5 @@
 function current_timestamp() {
-    console.log(new Date().toISOString());
+    const timestamp = new Date().toISOString();
+    console.log(timestamp);
+    return timestamp;
 }

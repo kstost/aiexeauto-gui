@@ -36,7 +36,8 @@ Custom Tools Making Guide
     "npm_package_list": [
         "mathjs"
     ],
-    "activate": true
+    "activate": true,
+    "return_description": "Number of sum"
 }
 ```
 
@@ -65,6 +66,10 @@ Custom Tools Making Guide
 5) **activate**  
    - 해당 도구의 활성화 여부를 나타내는 불리언 값입니다.  
    - `true`면 에이전트에서 이 도구를 사용 가능하도록 설정한다는 의미입니다.
+
+6) **return_description**
+   - 도구가 반환하는 값에 대한 설명입니다.
+   - 예: "Number of sum" (두 숫자의 합계)
 
 -------------------------------------------------------------------------------
 2. 실제 도구(Javascript 파일) 구현

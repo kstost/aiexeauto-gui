@@ -425,7 +425,26 @@ async function plainParser(text, callMode, interfaces) {
         }
     }
 }
-function stripTags(fileContent) {
+export function cleanDescription(description) {
+    try {
+        if (description) {
+            description = `${description}`;
+            let det = stripTags(description)[0] || '';
+            if (!det) return description;
+            description = `${stripTags(description) || ''}`;
+            description = description.trim();
+            while (description.startsWith('//')) {
+                description = description.slice(1);
+            }
+            description = description.trim();
+            description = description.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+            return description;
+        }
+    } catch (error) {
+    }
+    return '';
+}
+export function stripTags(fileContent) {
     // 태그 이름이 무엇이든 상관없이 모든 태그 쌍의 내용을 추출하는 정규표현식 (global flag 사용)
     const regex = /<([A-Za-z0-9_-]+)>([\s\S]*?)<\/\1>/g;
     const results = [];

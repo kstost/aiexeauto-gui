@@ -9,5 +9,6 @@
             "directory_path": "directory path to remove recursively, e.g, ./program"
         }
     ],
-    "activate": true
+    "activate": true,
+    "return_description": "Boolean value indicating whether the directory was successfully deleted."
 }

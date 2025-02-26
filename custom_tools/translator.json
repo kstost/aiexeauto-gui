@@ -3,6 +3,7 @@
     "instructions": [
         "Specify the target language."
     ],
+    "return_description": "String of translated text",
     "input": [
         {
             "text": "",

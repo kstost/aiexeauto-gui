@@ -388,6 +388,11 @@ export async function promptTemplate() {
         '<Tools>',
         '{{tools}}',
         '</Tools>',
+        '',
+        '<ToolsUsageInCode>',
+        '  If you need to use tools in the code, use `default_api` class.',
+        '  The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+        '</ToolsUsageInCode>',
     ]);
     if ((!envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
         templateBase.codeGenerator.systemPrompt = arrayAsText([
@@ -459,6 +464,11 @@ export async function promptTemplate() {
             '{{tools}}',
             '</Tools>',
             '',
+            '<ToolsUsageInCode>',
+            '  If you need to use tools in the code, use `default_api` class.',
+            '  The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+            '</ToolsUsageInCode>',
+            '',
             '<Reminder>',
             // '- Remeber that you can not use `default_api` in the code.',
             '- Remeber that you can not use `input` for confirmation in the code.',
@@ -500,6 +510,11 @@ export async function promptTemplate() {
             '<Tools>',
             '{{tools}}',
             '</Tools>',
+            '',
+            '<ToolsUsageInCode>',
+            '  If you need to use tools in the code, use `default_api` class.',
+            '  The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+            '</ToolsUsageInCode>',
         ]);
 
     } else {
@@ -703,17 +718,68 @@ export async function loadConfiguration() {
     return config_;
 }
 export async function getToolCode(toolName) {
-    try {
-        const toolCodeFilePath = getCodePath(`tool_code/${toolName}.js`);
-        const toolCode = await fs.promises.readFile(toolCodeFilePath, 'utf8');
-        return toolCode;
-    } catch {
+    // `                saveData = loaded`,
+    // `                randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.txt'`,
+    // `                os.makedirs('/tmpmem/', exist_ok=True)`,
+    // `                with open('/tmpmem/'+randomAlphabetFileName, 'w') as f:`,
+    // `                    if isinstance(saveData, str):`,
+    // `                        f.write(saveData)`,
+    // `                    elif isinstance(saveData, dict):`,
+    // `                        f.write(json.dumps(saveData))`,
+    // `                    elif isinstance(saveData, list):`,
+    // `                        f.write(json.dumps(saveData))`,
+    // `                    else:`,
+    // `                        f.write(str(saveData))`,
+    // `                print('📄 The return value of ${toolName} is saved in file /tmpmem/'+randomAlphabetFileName)`,    
+    let code = await (async () => {
         try {
-            const data = await getCustomToolList(toolName);
-            return data[`${toolName}.js`];
-        } catch { }
-    }
-    return '';
+            const toolCodeFilePath = getCodePath(`tool_code/${toolName}.js`);
+            const toolCode = await fs.promises.readFile(toolCodeFilePath, 'utf8');
+            return toolCode;
+        } catch {
+            try {
+                const data = await getCustomToolList(toolName);
+                return data[`${toolName}.js`];
+            } catch { }
+        }
+        return '';
+    })();
+    if (!code) return code;
+    // let tmpmemPath = '/tmpmem/';
+    // let randomAlphabetFileName = `${Math.random().toString(36).substring(2, 7)}.txt`;
+    let code__ = `
+        (async (params)=>{
+            try {
+                const fs = require('fs');
+                let tmpmemPath = '/tmpmem/';
+                if(!fs.existsSync(tmpmemPath)) fs.mkdirSync(tmpmemPath, { recursive: true });
+                let saveData = await (${code})(params);
+                console.log('')
+                let returnData = saveData;
+                saveData = saveData === undefined ? '' : saveData;
+                saveData = saveData === null ? '' : saveData;
+                if (saveData.constructor === String) {
+                    let randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.txt';
+                    fs.writeFileSync(tmpmemPath + randomAlphabetFileName, saveData);
+                    console.log('- The return value of ${toolName} is saved in file /tmpmem/'+randomAlphabetFileName);
+                } else if (saveData.constructor === Object || saveData.constructor === Array) {
+                    let randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.json';
+                    fs.writeFileSync(tmpmemPath + randomAlphabetFileName, JSON.stringify(saveData));
+                    console.log('- The return value of ${toolName} is saved in file /tmpmem/'+randomAlphabetFileName);
+                } else {
+                    let randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.json';
+                    fs.writeFileSync(tmpmemPath + randomAlphabetFileName, saveData+'');
+                    console.log('- The return value of ${toolName} is saved in file /tmpmem/'+randomAlphabetFileName);
+                }
+                return returnData;
+            } catch (error) {
+                console.log(error)
+                return '';
+            }
+        })
+    `;
+    // console.log(code__);
+    return code__;
 }
 //----------------------
 export async function cloneCustomTool() {
@@ -770,6 +836,8 @@ export async function getCustomToolList(toolName) {
             let markdownDocument = [
                 `### ${name}`,
                 `- ${parsed.description}`,
+                parsed.return_description ? indention(1, '#### RETURN VALUE', 3) : '',
+                parsed.return_description ? indention(1, '- ' + `${parsed.return_description}`, 3) : '',
                 parsed.instructions.length > 0 ? indention(1, '#### INSTRUCTION', 3) : '',
                 indention(1, parsed.instructions.map(instruction => `- ${instruction}`).join('\n'), 3),
             ].filter(line => line.trim()).join('\n');
@@ -808,13 +876,16 @@ export async function getToolData(toolName) {
         const spec = data[`${toolName}.toolspec.json`];
         const activate = !!spec.activate;//.includes(llm);
         const npm_package_list = spec.npm_package_list;
+        const return_description = spec.return_description;
         delete spec.activate;
         delete spec.npm_package_list;
+        delete spec.return_description;
         if (!activate) return null;
         return {
             prompt: data[`${toolName}.md`],
             spec,
-            npm_package_list
+            npm_package_list,
+            return_description
         };
     } else {
         const toolSpec = await fs.promises.readFile(toolSpecPath, 'utf8');
@@ -822,13 +893,16 @@ export async function getToolData(toolName) {
         const spec = JSON.parse(toolSpec);
         const activate = !!spec.activate;//.includes(llm);
         const npm_package_list = spec.npm_package_list;
+        const return_description = spec.return_description;
         delete spec.activate;
         delete spec.npm_package_list;
+        delete spec.return_description;
         if (!activate) return null;
         return {
             prompt,
             spec,
-            npm_package_list
+            npm_package_list,
+            return_description
         };
     }
 }

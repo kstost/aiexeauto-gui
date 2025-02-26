@@ -9,5 +9,6 @@
             "command": "command to check, e.g, ffmpeg"
         }
     ],
-    "activate": true
+    "activate": true,
+    "return_description": ""
 }

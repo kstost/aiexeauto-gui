@@ -9,6 +9,11 @@ async function rename_file_or_directory(input) {
         console.log('✅ File or directory successfully renamed');
     } else {
         console.error('❌ File or directory failed to rename: ' + old_path + '');
-        process.exit(1);
+        // process.exit(1);
     }
+    /*
+    One line explanation of the return data:
+    Boolean value indicating whether the file or directory was successfully renamed.
+    */
+    return result;
 }

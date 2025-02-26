@@ -8,5 +8,9 @@ async function which_command(input) {
     const notFound = '(❌ ' + command + ' Command is not available)';
     if (result.status === 0) console.log(outputExists ? backtick + command + backtick + ' Command is available.' + String.fromCharCode(10) + 'Path: ' + output + String.fromCharCode(10).repeat(2) + 'You can use this with subprocess in python' : notFound);
     if (result.status !== 0) console.error(notFound);
-    process.exit(result.status);
+    /*
+    One line explanation of the return data:
+    Boolean value indicating whether the command is available.
+    */
+    return outputExists;
 }

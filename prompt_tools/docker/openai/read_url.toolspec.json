@@ -9,5 +9,6 @@
             "url": "url to read, e.g, https://cokac.com/robots.txt"
         }
     ],
-    "activate": true
+    "activate": true,
+    "return_description": ""
 }

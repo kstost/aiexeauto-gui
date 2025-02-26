@@ -13,5 +13,6 @@
             "pip_package_list": "array of pip package names used in the code"
         }
     ],
-    "activate": true
+    "activate": true,
+    "return_description": ""
 }

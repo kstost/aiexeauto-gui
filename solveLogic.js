@@ -7,7 +7,7 @@ import ora from 'ora';
 import boxen from 'boxen';
 import axios from 'axios';
 import { importData, exportData } from './dataHandler.js';
-import { chatCompletion, getModel, isOllamaRunning, exceedCatcher, trimProcessTransactions, areBothSame } from './aiFeatures.js';
+import { chatCompletion, getModel, isOllamaRunning, exceedCatcher, trimProcessTransactions, areBothSame, cleanDescription, stripTags } from './aiFeatures.js';
 import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
 import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler.js';
 import { isNodeInitialized, initNodeProject, restoreWorkspace, waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
@@ -343,7 +343,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             caption('whatDidWeDo')
                         );
                     }, () => areBothSame(processTransactions, ++reduceLevel));
-                    if (whatdidwedo) whatdidwedo = whatdidwedo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                    // if (whatdidwedo) whatdidwedo = whatdidwedo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                    whatdidwedo = cleanDescription(whatdidwedo);
                     if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
                     processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
                 }
@@ -375,7 +376,15 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             caption('whatToDo')
                         );
                     }, () => areBothSame(processTransactions, ++reduceLevel));
-                    if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                    // if (whattodo) {
+                    //     whattodo = `${whattodo}`;
+                    //     whattodo = `${stripTags(whattodo) || ''}`;
+                    //     whattodo = whattodo.trim();
+                    //     while (whattodo.startsWith('//')) whattodo = whattodo.slice(1);
+                    //     whattodo = whattodo.trim();
+                    //     whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                    // }
+                    whattodo = cleanDescription(whattodo);
                     if (await getConfiguration('planEditable')) {
                         let confirmed = await await_prompt({ mode: 'whattodo_confirm', actname: 'whattodo_confirm', containerId, dockerWorkDir, whattodo });
                         if (singleton.missionAborting) throw new Error(caption('missionAborted'));
@@ -592,7 +601,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     );
                 }, () => areBothSame(processTransactions, ++reduceLevel));
 
-                const { evaluation, reason } = actData.input;
+                let { evaluation, reason } = actData.input;
+                evaluation = evaluation || '';
+                reason = reason || '';
                 if ((evaluation.replace(/[^A-Z]/g, '') || '').toUpperCase().trim() === 'ENDOFMISSION') {
                     // if (spinners.iter) {
                     //     spinners.iter.succeed(`작업완료.`);

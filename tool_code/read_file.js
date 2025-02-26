@@ -11,4 +11,9 @@ async function read_file(input) {
     }
     console.log('📄 Contents of ' + file_path + '');
     console.log(result);
+    /*
+    One line explanation of the return data:
+    String of the contents of the file.
+    */
+    return result;
 }

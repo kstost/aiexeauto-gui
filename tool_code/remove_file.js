@@ -7,9 +7,14 @@ async function remove_file(input) {
     const result = fs.existsSync(file_path);
     if (result) {
         console.error('❌ File still exists: ' + file_path + '');
-        process.exit(1);
+        // process.exit(1);
     } else {
         console.log('✅ File successfully deleted');
         console.log('Deleted file: ' + file_path + '');
     }
+    /*
+    One line explanation of the return data:
+    Boolean value indicating whether the file was successfully deleted.
+    */
+    return !result;
 }

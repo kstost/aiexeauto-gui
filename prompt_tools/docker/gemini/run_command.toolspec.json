@@ -9,5 +9,6 @@
             "command": "shell command to run, e.g, ls -al"
         }
     ],
-    "activate": true
+    "activate": true,
+    "return_description": ""
 }

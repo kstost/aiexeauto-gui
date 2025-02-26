@@ -4,6 +4,7 @@
         "float number is allowed.",
         "Negative numbers are not allowed"
     ],
+    "return_description": "Number of sum",
     "input": [
         {
             "number1": 0,
