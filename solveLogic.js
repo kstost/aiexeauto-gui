@@ -295,8 +295,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         if (keepMode) {
             nextPrompt = `${multiLineMission}`;
             // nextPrompt = `<THE-MAIN-KEY-MISSION>${multiLineMission}</THE-MAIN-KEY-MISSION>`;
-            mainKeyMission = multiLineMission;
-            multiLineMission = 'Solve the THE-MAIN-KEY-MISSION';
+            mainKeyMission = multiLineMission + '. Do until it achieves the mission.';
+            multiLineMission = 'Solve the THE-MAIN-KEY-MISSION until it achieves the mission.';
         }
         let nextCodeForValidation;
         let evaluationText = '';
