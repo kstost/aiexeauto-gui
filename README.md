@@ -2,6 +2,10 @@
 
 **aiexeauto-gui** is an autonomous AI agent that thinks and acts on its own. This innovative application understands natural language input and performs computer tasks in the optimal way, automatically handling even complex tasks.
 
+## Watch Our Demo
+Watch our demo video on YouTube to get a quick overview of what aiexe can do for you! Click [here](https://www.youtube.com/watch?v=WObRj5-PqmM) to watch the video.  
+[![Video Label](http://img.youtube.com/vi/WObRj5-PqmM/0.jpg)](https://youtu.be/WObRj5-PqmM)  
+
 ## Key Features
 
 - **Safe Execution**: Operates securely based on Docker.
