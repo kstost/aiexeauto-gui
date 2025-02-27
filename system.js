@@ -295,6 +295,8 @@ export async function promptTemplate() {
         '```',
         '</OutputFormat>',
         ``,
+        `**Refer closely to the previous output, as it contains key clues for determining success or failure**.`,
+        ``,
         `Determine mission completion and decide next steps.`,
     ]);
     templateBase.evaluator.systemPrompt = arrayAsText([
@@ -390,8 +392,10 @@ export async function promptTemplate() {
         '</Tools>',
         '',
         '<ToolsUsageInCode>',
-        '  If you need to use tools in the code, use `default_api` class.',
-        '  The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+        '  - If you need to use tools in the code, use `default_api` class.',
+        '  - The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+        '  - Make `default_api` methods work seamlessly with other code.',
+        '  - Mind the **return types** when using `default_api` methods.',
         '</ToolsUsageInCode>',
     ]);
     if ((!envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
@@ -465,8 +469,10 @@ export async function promptTemplate() {
             '</Tools>',
             '',
             '<ToolsUsageInCode>',
-            '  If you need to use tools in the code, use `default_api` class.',
-            '  The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+            '  - If you need to use tools in the code, use `default_api` class.',
+            '  - The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+            '  - Make `default_api` methods work seamlessly with other code.',
+            '  - Mind the **return types** when using `default_api` methods.',
             '</ToolsUsageInCode>',
             '',
             '<Reminder>',
@@ -512,8 +518,10 @@ export async function promptTemplate() {
             '</Tools>',
             '',
             '<ToolsUsageInCode>',
-            '  If you need to use tools in the code, use `default_api` class.',
-            '  The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+            '  - If you need to use tools in the code, use `default_api` class.',
+            '  - The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.',
+            '  - Make `default_api` methods work seamlessly with other code.',
+            '  - Mind the **return types** when using `default_api` methods.',
             '</ToolsUsageInCode>',
         ]);
 
@@ -936,7 +944,7 @@ export async function getToolData(toolName) {
     delete spec.return_type;
     delete spec.only_use_in_code;
     delete spec.instructions;
-if (!activate) return null;
+    if (!activate) return null;
     return {
         prompt: await makeMdWithSpec(toolName),
         spec,
