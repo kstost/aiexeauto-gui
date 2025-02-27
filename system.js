@@ -848,7 +848,7 @@ export async function getCustomToolList(toolName) {
 }
 export async function makeMdWithSpec(name) {
     const parsed = await getToolSpec(name);
-    console.log('DDDDDDDDDDDDDD', parsed);
+    // console.log('DDDDDDDDDDDDDD', parsed);
     if (!parsed) return '';
     let rule = Object.keys(parsed.input_schema[0]).map(key => {
         let type = parsed.input_schema[0][key].constructor.name
@@ -919,6 +919,8 @@ export async function getToolData(toolName) {
         const activate = !!spec.activate;//.includes(llm);
         const npm_package_list = spec.npm_package_list;
         const return_description = spec.return_description;
+        const return_type = spec.return_type;
+        const only_use_in_code = spec.only_use_in_code;
         delete spec.activate;
         delete spec.npm_package_list;
         delete spec.return_description;
@@ -930,7 +932,9 @@ export async function getToolData(toolName) {
             prompt,
             spec,
             npm_package_list,
-            return_description
+            return_description,
+            return_type,
+            only_use_in_code
         };
     }
     let data = await getCustomToolList(toolName);
@@ -938,6 +942,8 @@ export async function getToolData(toolName) {
     const activate = !!spec.activate;//.includes(llm);
     const npm_package_list = spec.npm_package_list;
     const return_description = spec.return_description;
+    const return_type = spec.return_type;
+    const only_use_in_code = spec.only_use_in_code;
     delete spec.activate;
     delete spec.npm_package_list;
     delete spec.return_description;
@@ -949,7 +955,9 @@ export async function getToolData(toolName) {
         prompt: await makeMdWithSpec(toolName),
         spec,
         npm_package_list,
-        return_description
+        return_description,
+        return_type,
+        only_use_in_code
     };
 }
 export function getCodePath(itemPath) {

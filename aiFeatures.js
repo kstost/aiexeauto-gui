@@ -621,7 +621,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 for (let tool of toolList) {
                     const toolData = await getToolData(tool);
                     if (!toolData) continue;
-                    if (toolData.spec.only_use_in_code) continue;
+                    if (toolData.only_use_in_code) continue;
                     toolData.spec.input_schema = convertJsonToResponseFormat(...toolData.spec.input_schema).json_schema.schema;
                     toolPrompts.push(toolData.spec);
                 }
