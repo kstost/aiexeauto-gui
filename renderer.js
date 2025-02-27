@@ -811,7 +811,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         planEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
         planEditCheckbox.innerHTML = `
                 <input type="checkbox" id="planEditableCheckbox" style="cursor: pointer;">
-                <label for="planEditableCheckbox" style="cursor: pointer;">계획수정</label>
+                <label for="planEditableCheckbox" style="cursor: pointer;">${caption('planEditable')}</label>
             `;
         const checkboxForPlanEdit = planEditCheckbox.querySelector('#planEditableCheckbox');
         checkboxForPlanEdit.checked = await getConfig('planEditable');;//currentConfig['planEditable'];
@@ -831,7 +831,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         codeEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
         codeEditCheckbox.innerHTML = `
                 <input type="checkbox" id="autoCodeExecutionCheckbox" style="cursor: pointer;">
-                <label for="autoCodeExecutionCheckbox" style="cursor: pointer;">코드자동실행</label>
+                <label for="autoCodeExecutionCheckbox" style="cursor: pointer;">${caption('autoCodeExecution')}</label>
             `;
         const checkboxForCodeEdit = codeEditCheckbox.querySelector('#autoCodeExecutionCheckbox');
         checkboxForCodeEdit.checked = await getConfig('autoCodeExecution');
@@ -855,7 +855,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         modifyMissionButton.style.fontSize = '13px';
         modifyMissionButton.innerHTML = `
                 <span class="material-icons" style="font-size: 20px;">refresh</span>
-                <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">미션조정</span>
+                <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('modifyMission')}</span>
             `;
         modifyMissionButton.addEventListener('click', async () => {
             window.electronAPI.send('onewayreq', { mode: 'modify_mission', arg: {} });
@@ -874,14 +874,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                 // 데이터 확인중
                 dataCheckButton.innerHTML = `
                     <span class="material-icons" style="font-size: 20px;">sync</span>
-                    <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">데이터확인중</span>
+                    <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('dataChecking')}</span>
                     `;
                 dataCheckButton.style.opacity = '0.5';
             } else {
                 // 보통 상태
                 dataCheckButton.innerHTML = `
                     <span class="material-icons" style="font-size: 20px;">folder_open</span>
-                    <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">데이터확인</span>
+                    <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('dataCheck')}</span>
                     `;
                 dataCheckButton.style.opacity = '1';
             }

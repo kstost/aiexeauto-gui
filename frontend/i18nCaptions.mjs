@@ -1,5 +1,8 @@
 export const i18nCaptions = {
     "ko": {
+        "modifyMission": "미션조정",
+        "dataCheck": "데이터확인",
+        "dataChecking": "데이터확인중",
         "parseResult": "결과를 파싱중...",
         "preparingDocker": "도커 준비중...",
         "codeGeneratorRulesTitle": "코드 생성 규칙",
@@ -109,6 +112,9 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "modifyMission": "Modify Mission",
+        "dataCheck": "Data Check",
+        "dataChecking": "Data Checking",
         "parseResult": "Parsing result...",
         "preparingDocker": "Preparing Docker...",
         "codeGeneratorRulesTitle": "Code Generator Rules",
@@ -218,6 +224,9 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "modifyMission": "ミッション調整",
+        "dataCheck": "データ確認",
+        "dataChecking": "データ確認中",
         "parseResult": "結果を解析中...",
         "preparingDocker": "Dockerを準備中...",
         "codeGeneratorRulesTitle": "コード生成ルール",
@@ -327,6 +336,9 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "modifyMission": "Điều chỉnh Nhiệm vụ",
+        "dataCheck": "Kiểm tra Dữ liệu",
+        "dataChecking": "Đang kiểm tra dữ liệu...",
         "parseResult": "Đang phân tích kết quả...",
         "preparingDocker": "Chuẩn bị Docker...",
         "codeGeneratorRulesTitle": "Quy tắc tạo mã",
@@ -436,6 +448,9 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "modifyMission": "任务调整",
+        "dataCheck": "数据检查",
+        "dataChecking": "数据检查中",
         "parseResult": "正在解析结果...",
         "preparingDocker": "准备Docker...",
         "codeGeneratorRulesTitle": "代码生成规则",
