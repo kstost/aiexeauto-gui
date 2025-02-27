@@ -145,6 +145,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     // const pid1 = await out_state(caption('solvingLogic'));
     if (!reduceLevel) reduceLevel = 0;
     let keepMode = processTransactions.length > 0;
+    keepMode = false;
     processTransactions.forEach(transaction => {
         transaction.notcurrentmission = true;
         delete transaction.mainkeymission;
