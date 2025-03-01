@@ -213,7 +213,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     'generate_python_code',
                     'run_command',
                 ].includes(actname)) {
-                    save = true;
+                    save = !(mode !== 'run_command' && actname === 'run_command');
                 }
 
                 const executionId = randomId();
