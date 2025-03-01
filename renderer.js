@@ -207,6 +207,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const toolActList = {};
                 toolList.forEach(tool => toolActList[tool] = true);
                 if (toolActList[actname]) save = false;
+                if (!save && [
+                    'generate_nodejs_code',
+                    'generate_nodejs_code_for_puppeteer',
+                    'generate_python_code',
+                    'run_command',
+                ].includes(actname)) {
+                    save = true;
+                }
 
                 const executionId = randomId();
                 terminalStreamBoxes[executionId] = new TerminalStreamBox();
