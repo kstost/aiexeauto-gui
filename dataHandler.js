@@ -6,6 +6,7 @@ import ora from 'ora';
 import { runDockerContainer, getDockerInfo, importToDocker, exportFromDocker } from './docker.js';
 import { getAppPath, getHomePath, getOSPathSeparator } from './system.js';
 import os from 'os';
+import { pathSanitizing } from './system.js';
 
 export async function getDetailDirectoryStructure(directoryPath, basePath = directoryPath) {
     let fsPromise = fs.promises;
@@ -55,6 +56,7 @@ export async function getOutputPath(taskId) {
 }
 
 export function ensureAppsHomePath(path) {
+    path = pathSanitizing(path);
     const check1 = linuxStyleRemoveDblSlashes(path).startsWith(linuxStyleRemoveDblSlashes(os.homedir() + '/.aiexeauto/'));
     const check2 = path.startsWith(getHomePath('.aiexeauto'));
     const check3 = !dotdotIn(path);
@@ -71,6 +73,7 @@ export function linuxStyleRemoveDblSlashes(path) {
     while (path.split('//').length > 1) {
         path = path.split('//').join('/');
     }
+    path = pathSanitizing(path);
     return path;
 }
 

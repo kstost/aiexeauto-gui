@@ -9,8 +9,8 @@ import { promises as fsPromises } from 'fs';
 import os from 'os';
 import { spawn, exec } from 'child_process';
 import pyModuleTable from './pyModuleTable.js';
-import { getCodePath, findAvailablePort, getAbsolutePath, validatePath, prepareOutputDir, getAppPath, getConfiguration, setConfiguration, flushFolder } from './system.js';
-import { writeEnsuredFile } from './dataHandler.js';
+import { getCodePath, findAvailablePort, getAbsolutePath, validatePath, prepareOutputDir, getAppPath, getConfiguration, setConfiguration, flushFolder, pathSanitizing } from './system.js';
+import { ensureAppsHomePath, writeEnsuredFile } from './dataHandler.js';
 import { getNPMPath, getDockerPath, getNodePath, getPythonPath } from './executableFinder.js'
 import { executeCommand } from './docker.js';
 import envConst from './envConst.js';
@@ -103,8 +103,10 @@ export async function runNodeCodeInRealWorld(code, streamGetter = null) {
     if ((await getConfiguration('useDocker'))) return;
     if (!(await prepareNodeRunningSpace())) return;
     let workdir = getAppPath('coderun');
-    let fileName = 'testcode.js';
-    await fs.promises.writeFile(getAppPath('coderun/' + fileName), code);
+    let fileName = `testcode_${Math.random()}.js`;
+    const absPath = pathSanitizing(getAppPath('coderun/' + fileName));
+    code = [`{const fs = require('fs');fs.unlinkSync('${absPath}');}`, code].join('\n');
+    if (ensureAppsHomePath(absPath)) await fs.promises.writeFile(absPath, code);
     const nodePath = await getConfiguration('nodePath');
     if (nodePath) {
         let result = await executeCommand(`'${nodePath}' ${fileName}`, streamGetter, workdir);
@@ -115,8 +117,14 @@ export async function runPythonCodeInRealWorld(code, streamGetter = null) {
     if ((await getConfiguration('useDocker'))) return;
     await preparePythonRunningSpace();
     let workdir = getAppPath('coderun');
-    let fileName = 'testcode.py';
-    await fs.promises.writeFile(getAppPath('coderun/' + fileName), code);
+    let fileName = `testcode_${Math.random()}.py`;
+    const absPath = pathSanitizing(getAppPath('coderun/' + fileName));
+    code = [
+        `import os`,
+        `os.path.exists('${absPath}') and os.remove('${absPath}')`,
+        code
+    ].join('\n');
+    if (ensureAppsHomePath(absPath)) await fs.promises.writeFile(absPath, code);
     const pythonPath = await virtualPython();
     if (pythonPath) return await executeCommand(`'${pythonPath}' ${fileName}`, streamGetter, workdir);
 }

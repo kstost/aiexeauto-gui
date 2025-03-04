@@ -31,10 +31,11 @@ export function caption(key) {
     return i18nCaptions[lang]?.[key] || i18nCaptions['en']?.[key] || '';
 }
 export function getHomeDir() {
-    return os.homedir();
+    return pathSanitizing(os.homedir());
 }
 export function getHomePath(itemPath) {
-    return path.join(getHomeDir(), itemPath);
+    let pt = path.join(getHomeDir(), itemPath);
+    return pathSanitizing(pt);
 }
 export function getConfigFilePath() {
     const folder = getHomePath('.aiexeauto');

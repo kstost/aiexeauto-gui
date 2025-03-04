@@ -483,6 +483,9 @@ export async function checkSyntax(containerId, code) {
         validated.py = isValid(await executeCommand(`'${await virtualPython()}' -m py_compile ${filename}`, null, workdir));
         validated.js = isValid(await executeCommand(`'${await getConfiguration('nodePath')}' --check ${filename}`, null, workdir));
         validated.bash = false;
+        if (ensureAppsHomePath(workdirFile)) {
+            await fs.promises.unlink(workdirFile);
+        }
         return validated;
     }
     //----------------------
