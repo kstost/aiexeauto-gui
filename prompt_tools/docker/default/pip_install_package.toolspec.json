@@ -1,0 +1,19 @@
+{
+    "name": "pip_install_package",
+    "description": "Install a python package using pip.",
+    "instructions": [
+        "Provide the name of the python package to install"
+    ],
+    "input_schema": [
+        {
+            "package_name": ""
+        },
+        {
+            "package_name": "python package name to install, e.g, pillow"
+        }
+    ],
+    "activate": true,
+    "return_description": "",
+    "tooling_in_realworld": true,
+    "return_type": ""
+}

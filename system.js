@@ -13,7 +13,7 @@ import { i18nCaptions } from './frontend/i18nCaptions.mjs';
 import { app } from 'electron';
 import envConst from './envConst.js';
 import { indention } from './makeCodePrompt.js';
-import { is_file, is_dir } from './codeExecution.js';
+import { virtualPython, is_file, is_dir } from './codeExecution.js';
 import { getDockerPath } from './executableFinder.js';
 import { getNodePath, getNPMPath, getPythonPath } from './executableFinder.js';
 export function getSystemLangCode() {
@@ -723,6 +723,16 @@ export async function loadConfiguration(getDefault = false) {
 
     return config_;
 }
+export function pathSanitizing(path) {
+    if (!path) return '';
+    path = path.split('\\').join('/');
+    while (true) {
+        if (path.indexOf('//') === -1) break;
+        path = path.split('//').join('/');
+    }
+    return path;
+};
+
 export async function getToolCode(toolName) {
     // `                saveData = loaded`,
     // `                randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.txt'`,
@@ -752,11 +762,22 @@ export async function getToolCode(toolName) {
     })();
     if (!code) return code;
     // let tmpmemPath = '/tmpmem/';
+    let useDocker;
+    let npmPath;
+    let nodePath;
+    let virtualPythonPath;
+    useDocker = await getConfiguration('useDocker');
+    if (!useDocker) npmPath = pathSanitizing(await getConfiguration('npmPath'));
+    if (!useDocker) nodePath = pathSanitizing(await getConfiguration('nodePath'));
+    if (!useDocker) virtualPythonPath = pathSanitizing(await virtualPython());
     // let randomAlphabetFileName = `${Math.random().toString(36).substring(2, 7)}.txt`;
     let tmpmem = !(await getConfiguration('useDocker')) ? getAppPath('/tmpmem/') : '/tmpmem/';
     tmpmem = tmpmem.split('\\').join('/');
     let code__ = `
         (async (params)=>{
+            if(params){
+                params = {...params,useDocker: ${useDocker ? 'true' : 'false'}, isWindows: ${isWindows() ? 'true' : 'false'}, npmPath: '${npmPath}', virtualPythonPath: '${virtualPythonPath}', nodePath: '${nodePath}'};
+            }
             try {
                 const savingAvailable = false;
                 const fs = require('fs');
