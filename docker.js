@@ -6,10 +6,12 @@ import { getToolCode, getToolData, getToolList, getAbsolutePath, getAppPath, isW
 import chalk from 'chalk';
 import { setHandler, removeHandler } from './sigintManager.js';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
-import { is_file, is_dir } from './codeExecution.js';
+import { virtualPython, preparePythonRunningSpace, is_file, is_dir } from './codeExecution.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import singleton from './singleton.js';
+import { runPythonCodeInRealWorld, runNodeCodeInRealWorld, prepareNodeRunningSpace, isInstalledNodeModuleInRealWorld, isInstalledPythonModuleInRealWorld, installNodeModulesInRealWorld, installPythonModulesInRealWorld } from './codeExecution.js';
 import open from 'open';
+import { getNodePath } from './executableFinder.js';
 export async function executeInContainer(containerId, command, streamGetter = null) {
     if (command.includes('"')) {
         return {
@@ -103,7 +105,7 @@ export function executeCommandSync(command, args = []) {
 }
 let commandPowershell;
 let commandDocker;
-export async function executeCommand(command, streamGetter = null) {
+export async function executeCommand(command, streamGetter = null, workingDirectory = undefined) {
     const khongLog = true;
     return new Promise(async (resolve, reject) => {
         let result;
@@ -114,7 +116,8 @@ export async function executeCommand(command, streamGetter = null) {
         }
         const child = spawn(result.command, result.args, {
             stdio: ['pipe', 'pipe', 'pipe'],
-            shell: false
+            shell: false,
+            cwd: workingDirectory
         });
         let stdout = '';
         let stderr = '';
@@ -182,6 +185,7 @@ export async function executeCommand(command, streamGetter = null) {
 }
 
 export async function importToDocker(containerId, workDir, inputDir) {
+    if (!(await getConfiguration('useDocker'))) return;
     let result = await executeInContainer(containerId, 'mkdir -p ' + workDir);
     if (result.code !== 0) throw new Error('작업 디렉토리 생성 실패');
 
@@ -189,6 +193,7 @@ export async function importToDocker(containerId, workDir, inputDir) {
     if (result.code !== 0) throw new Error('input 폴더 복사 실패');
 }
 export async function backupWorkspace(containerId, workDir) {
+    if (!(await getConfiguration('useDocker'))) return;
     const removeList = ['node_modules', 'package.json'];
     const commandList = [];
     commandList.push(`rm -rf /backupWorkspace/`);
@@ -197,6 +202,7 @@ export async function backupWorkspace(containerId, workDir) {
     await executeInContainer(containerId, commandList.join(' && '));
 }
 export async function restoreWorkspace(containerId, workDir) {
+    if (!(await getConfiguration('useDocker'))) return;
     const removeList = ['node_modules', 'package.json'];
     const commandList = [];
     commandList.push(`rm -rf ${workDir}`);
@@ -208,6 +214,7 @@ export async function restoreWorkspace(containerId, workDir) {
     return stdout.trim().split('\n').filter(item => removeList.includes(item.trim())).length === removeList.length;
 }
 export async function isNodeInitialized(containerId, workDir) {
+    if (!(await getConfiguration('useDocker'))) return;
     const removeList = ['node_modules', 'package.json'];
     const commandList = [];
     commandList.push(`ls -1 ${workDir}`);
@@ -216,6 +223,7 @@ export async function isNodeInitialized(containerId, workDir) {
     return stdout.trim().split('\n').filter(item => removeList.includes(item.trim())).length === removeList.length;
 }
 export async function exportFromDocker(containerId, workDir, outputDir, directoryStructureBeforeOperation) {
+    if (!(await getConfiguration('useDocker'))) return;
     {
         await backupWorkspace(containerId, workDir);
     }
@@ -301,6 +309,7 @@ export async function exportFromDocker(containerId, workDir, outputDir, director
     return false;
 }
 export async function waitingForDataCheck(out_state) {
+    if (!(await getConfiguration('useDocker'))) return;
     if (!singleton.beingDataCheck || singleton.missionAborting) return;
     const pid11 = await out_state(`Waiting for data exporting...`);
     try {
@@ -312,6 +321,7 @@ export async function waitingForDataCheck(out_state) {
     }
 }
 export async function exportFromDockerForDataCheck(containerId, dataOutputPath) {
+    if (!(await getConfiguration('useDocker'))) return;
     singleton.beingDataCheck = true;
     try {
         async function _exportFromDockerForDataCheck(containerId, workDir, outputDir) {
@@ -345,7 +355,18 @@ export async function exportFromDockerForDataCheck(containerId, dataOutputPath) 
     return null;
 }
 
+/**
+ * RealWorld Compatible
+ * 
+ * @param {*} containerId 
+ * @param {*} workDir 
+ * @returns 
+ */
 export async function initNodeProject(containerId, workDir) {
+    const useDocker = await getConfiguration('useDocker');
+    if (!useDocker) {
+        return await prepareNodeRunningSpace();
+    }
     if (await isNodeInitialized(containerId, workDir)) return;
     const commandList = [];
     commandList.push(`rm -rf ${workDir}`);
@@ -356,29 +377,77 @@ export async function initNodeProject(containerId, workDir) {
     return result.code === 0;
 }
 
+/**
+ * RealWorld Compatible
+ * 
+ * @param {*} containerId 
+ * @param {*} workDir 
+ * @param {*} moduleName 
+ * @returns 
+ */
 export async function isInstalledNodeModule(containerId, workDir, moduleName) {
+    const useDocker = await getConfiguration('useDocker');
+    if (!useDocker) {
+        return await isInstalledNodeModuleInRealWorld(moduleName);
+    }
     let result = await executeInContainer(containerId, 'cd ' + workDir + ' && npm list --json');
     const json = JSON.parse(result.stdout);
     const installed = json.dependencies?.[moduleName];
     return !!installed;
 }
+/**
+ * RealWorld Compatible
+ * 
+ * @param {*} containerId 
+ * @param {*} workDir 
+ * @param {*} moduleName 
+ * @returns 
+ */
 export async function installNodeModules(containerId, workDir, moduleName) {
     moduleName = moduleName.trim();
     if (!moduleName) return;
+    const useDocker = await getConfiguration('useDocker');
     if (await isInstalledNodeModule(containerId, workDir, moduleName)) return;
+    if (!useDocker) {
+        let result = await installNodeModulesInRealWorld(moduleName);
+        return result.code === 0;
+    }
     await initNodeProject(containerId, workDir);
-    // if (!(await isInstalledNodeModule(containerId, workDir, moduleName))) {
     let result = await executeInContainer(containerId, 'cd ' + workDir + ' && npm install ' + moduleName + '');
-    // if (result.code === 0) singleton.installedPackages[moduleName.toLowerCase()] = true;
     return result.code === 0;
-    // }
 }
+
+/**
+ * RealWorld Compatible
+ * 
+ * @param {*} containerId 
+ * @param {*} workDir 
+ * @param {*} moduleName 
+ * @returns 
+ */
 export async function isInstalledPythonModule(containerId, workDir, moduleName) {
+    const useDocker = await getConfiguration('useDocker');
+    if (!useDocker) {
+        return await isInstalledPythonModuleInRealWorld(moduleName);
+    }
     let result = await executeInContainer(containerId, 'cd ' + workDir + ' && pip list --format=json');
     const json = JSON.parse(result.stdout);
     return !!(json.filter(info => info.name === moduleName).length);
 }
+
+/**
+ * RealWorld Compatible
+ * 
+ * @param {*} containerId 
+ * @param {*} workDir 
+ * @param {*} moduleName 
+ */
 export async function installPythonModules(containerId, workDir, moduleName) {
+    const useDocker = await getConfiguration('useDocker');
+    if (!useDocker) {
+        let result = await installPythonModulesInRealWorld(moduleName);
+        return result.code === 0;
+    }
     moduleName = moduleName.trim();
     if (!moduleName) return;
     if (await isInstalledPythonModule(containerId, workDir, moduleName)) return true;
@@ -388,12 +457,35 @@ export async function installPythonModules(containerId, workDir, moduleName) {
         return result.code === 0;
     }
 }
-
+/**
+ * RealWorld Compatible
+ * 
+ * @param {*} containerId 
+ * @param {*} code 
+ * @returns 
+ */
 export async function checkSyntax(containerId, code) {
     const isValid = (result) => { return result.code === 0; }
-    const tmpPyFile = getAppPath('.code_' + Math.random() + ('.code'));
+    const filename = '.code_' + Math.random() + ('.code');
+    const tmpPyFile = getAppPath(filename);
     const pyFileName = 'AIEXE-data-handling-operation' + ('.code');
     await writeEnsuredFile(tmpPyFile, code);
+    const useDocker = await getConfiguration('useDocker');
+    if (!useDocker) {
+        let validated = { json: false, py: false, js: false, bash: false, }
+        let isJson = false;
+        try { JSON.parse(code); isJson = true; } catch { }
+        if (isJson) { validated.json = true; return validated; }
+        await preparePythonRunningSpace();
+        let workdir = getAppPath('coderun');
+        let workdirFile = getAppPath('coderun/' + filename);
+        await writeEnsuredFile(workdirFile, code);
+        validated.py = isValid(await executeCommand(`'${await virtualPython()}' -m py_compile ${filename}`, null, workdir));
+        validated.js = isValid(await executeCommand(`'${await getConfiguration('nodePath')}' --check ${filename}`, null, workdir));
+        validated.bash = false;
+        return validated;
+    }
+    //----------------------
     {
         await executeInContainer(containerId, 'mkdir -p /chksyntax');
         let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpPyFile + '" "' + containerId + ':/chksyntax/' + pyFileName + '"');
@@ -423,6 +515,15 @@ export async function checkSyntax(containerId, code) {
     validated.bash = isValid(await executeInContainer(containerId, 'cd /chksyntax && bash -n ' + pyFileName));
     return validated;
 }
+
+/**
+ * RealWorld Compatible
+ * 
+ * @param {*} containerId 
+ * @param {*} workDir 
+ * @param {*} code 
+ * @param {*} requiredPackageNames 
+ */
 export async function runPythonCode(containerId, workDir, code, requiredPackageNames = [], streamGetter = null) {
     for (const packageName of requiredPackageNames) await installPythonModules(containerId, workDir, packageName);
     const tmpPyFile = getAppPath('.code_' + Math.random() + '.py');
@@ -557,9 +658,10 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     //     // process.exit(0);
     // }
     // console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA22222A')
+    const useDocker = await getConfiguration('useDocker');
     code = [
         `import os`,
-        `os.remove('${pyFileName}')`,
+        useDocker ? `os.remove('${pyFileName}')` : ``,
         `# ${'-'.repeat(80)}`,
         `# Please understand that the code is quite long. AI often omits necessary modules when executing code. To address this, I have prepared code at the top that imports commonly used module packages. The main logic of the code created by the AI can be found at the bottom of this code.`,
         `# ${'-'.repeat(80)}`,
@@ -601,6 +703,12 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
         code
     ].join('\n');
 
+    if (!(await getConfiguration('useDocker'))) {
+        let result = await runPythonCodeInRealWorld(code, streamGetter);
+        result.output = `${result.stderr}\n\n${result.stdout}`;
+        return result;
+    }
+
     await writeEnsuredFile(tmpPyFile, code);
     // console.log(code);
 
@@ -623,8 +731,25 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     return result;
 
 }
+/**
+ * RealWorld Compatible
+ * 
+ * @param {*} containerId 
+ * @param {*} workDir 
+ * @param {*} code 
+ * @param {*} requiredPackageNames 
+ * @param {*} streamGetter 
+ * @returns 
+ */
 export async function runNodeJSCode(containerId, workDir, code, requiredPackageNames = [], streamGetter = null) {
     for (const packageName of requiredPackageNames) await installNodeModules(containerId, workDir, packageName);
+
+    if (!(await getConfiguration('useDocker'))) {
+        let result = await runNodeCodeInRealWorld(code, streamGetter);
+        result.output = `${result.stderr}\n\n${result.stdout}`;
+        return result;
+    }
+
     const tmpJsFile = getAppPath('.code_' + Math.random() + '.js');
     const jsFileName = 'AIEXE-data-handling-operation.js';
 
@@ -658,25 +783,30 @@ export async function runNodeJSCode(containerId, workDir, code, requiredPackageN
     return result;
 }
 export async function killDockerContainer(containerId) {
+    if (!(await getConfiguration('useDocker'))) return;
     await executeCommand(`'${await getDockerCommand()}' kill "${containerId}"`);
 }
 export async function runDockerContainerDemon(dockerImage) {
+    if (!(await getConfiguration('useDocker'))) return;
     let result = await executeCommand(`'${await getDockerCommand()}' run -d --rm --platform linux/x86_64 "${dockerImage}" tail -f /dev/null`);
     if (result.code !== 0) throw new Error('컨테이너 시작 실패');
     return result.stdout.trim();
 }
 export async function isDockerContainerRunning(containerId) {
+    if (!(await getConfiguration('useDocker'))) return;
     let result = await executeCommand(`'${await getDockerCommand()}' ps -q --filter "id=${containerId}"`);
     return result.code === 0 && result.stdout.trim().length > 0;
 }
 
 export async function cleanContainer(containerId) {
+    if (!(await getConfiguration('useDocker'))) return;
     const dockerWorkDir = await getConfiguration('dockerWorkDir');
     const workDir = dockerWorkDir;
     await executeInContainer(containerId, 'rm -rf ' + workDir + ' ', null);
     await executeInContainer(containerId, 'rm -rf /nodework/ ', null);
 }
 export async function runDockerContainer(dockerImage, inputDir, outputDir) {
+    if (!(await getConfiguration('useDocker'))) return;
     const containerId = await runDockerContainerDemon(dockerImage);
     const dockerWorkDir = await getConfiguration('dockerWorkDir');
     const workDir = dockerWorkDir;
@@ -694,6 +824,7 @@ export async function runDockerContainer(dockerImage, inputDir, outputDir) {
 
 
 export async function doesDockerImageExist(imageName) {
+    if (!(await getConfiguration('useDocker'))) return;
     if (isWindows()) {
         try {
             const execAsync = promisify(exec);
@@ -824,6 +955,7 @@ async function runCommandWithTimeout(command, timeoutMs = 10000) {
 
 
 export async function getDockerInfo() {
+    if (!(await getConfiguration('useDocker'))) return;
     try {
         const execAsync = promisify(exec);
         let command = `${await getDockerCommand()}` + " info --format '{{json .}}' 2>/dev/null";

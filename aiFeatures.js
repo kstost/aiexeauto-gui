@@ -2,7 +2,7 @@ import singleton from './singleton.js';
 import { getAppPath, convertJsonToResponseFormat, getConfiguration, getToolList, getToolData } from './system.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import fs from 'fs';
-import { useTools, getLanguageFullName } from './solveLogic.js';
+import { getLanguageFullName } from './solveLogic.js';
 import { caption, replaceAll } from './system.js';
 import { checkSyntax } from './docker.js';
 import { supportLanguage, toolSupport, promptTemplate, templateBinding } from './system.js';
@@ -494,6 +494,7 @@ async function langParser(text, callMode) {
             code = text;
         }
         let validation = await checkSyntax(singleton.currentWorkingContainerId, code);
+        console.log('validation', validation);
         let toolCall = {
             name: null,
             args: null
@@ -616,12 +617,16 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 },
             ],
             generateCode: (await (async () => {
+                const useDocker = await getConfiguration('useDocker');
                 const toolList = await getToolList();
                 let toolPrompts = [];
                 for (let tool of toolList) {
                     const toolData = await getToolData(tool);
+                    // console.log('tool', tool, toolData);
                     if (!toolData) continue;
                     if (toolData.only_use_in_code) continue;
+                    if (!useDocker) if (!toolData.tooling_in_realworld) continue;
+                    // continue;
                     toolData.spec.input_schema = convertJsonToResponseFormat(...toolData.spec.input_schema).json_schema.schema;
                     toolPrompts.push(toolData.spec);
                 }

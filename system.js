@@ -14,6 +14,8 @@ import { app } from 'electron';
 import envConst from './envConst.js';
 import { indention } from './makeCodePrompt.js';
 import { is_file, is_dir } from './codeExecution.js';
+import { getDockerPath } from './executableFinder.js';
+import { getNodePath, getNPMPath, getPythonPath } from './executableFinder.js';
 export function getSystemLangCode() {
     try {
         return app.getLocale().split('-')[0] || 'en'
@@ -40,9 +42,13 @@ export function getConfigFilePath() {
     return path.join(folder, '.aiexeauto.cokac.config.json');
 }
 
-export async function setConfiguration(key, value) {
+export async function setConfiguration(key, value, readByMethod = true) {
     const configPath = getConfigFilePath();
-    const config = await loadConfiguration();
+    let config
+    if (readByMethod) config = await loadConfiguration();
+    if (!readByMethod) {
+        config = JSON.parse(await fs.promises.readFile(configPath, 'utf8'));
+    }
     try {
         value = JSON.parse(value);
     } catch { }
@@ -627,6 +633,9 @@ export async function loadConfiguration() {
         captionLanguage: getSystemLangCode(), // 캡션 언어 (ko: 한국어, en: 영어)
         customRulesForCodeGenerator: '', // 사용자 정의 규칙
         customRulesForEvaluator: '', // 사용자 정의 규칙
+        nodePath: '', // Node.js 경로
+        npmPath: '', // npm 경로
+        pythonPath: '', // Python 경로
     }
     let dataType = {
         claudeApiKey: "string",
@@ -656,6 +665,9 @@ export async function loadConfiguration() {
         captionLanguage: "string", // 캡션 언어 (ko: 한국어, en: 영어)
         customRulesForCodeGenerator: "string", // 사용자 정의 규칙
         customRulesForEvaluator: "string", // 사용자 정의 규칙
+        nodePath: "string", // Node.js 경로
+        npmPath: "string", // npm 경로
+        pythonPath: "string", // Python 경로
     }
     let config_ = {};
     try {
@@ -669,46 +681,20 @@ export async function loadConfiguration() {
     }
     {
         if (!config_.dockerPath) {
-            let pathCandidate = [];
-            if (isWindows()) {
-                pathCandidate = [
-                    'C:\\Program Files\\Docker\\Docker\\docker.exe',
-                    'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe',
-                    'C:\\Program Files\\Docker\\Docker\\resources\\docker.exe',
-                    'C:\\Program Files (x86)\\Docker\\Docker\\docker.exe',
-                    'C:\\Program Files\\Docker\\docker.exe',
-                    'C:\\Docker\\Docker\\docker.exe',
-                    'C:\\Program Files\\Docker\\Docker\\cli\\docker.exe',
-                    'C:\\Program Files\\Docker\\docker\\resources\\bin\\docker.exe',
-                    'C:\\Program Files (x86)\\Docker\\docker.exe',
-                ];
-            } else {
-                pathCandidate = [
-                    '/usr/bin/docker',
-                    '/opt/homebrew/bin/docker',
-                    '/opt/local/bin/docker',
-                    '/usr/local/bin/docker',
-                    '/usr/local/sbin/docker',
-                    '/usr/sbin/docker',
-                    '/usr/local/docker/bin/docker',
-                    '/usr/local/share/docker/docker',
-                    '/Applications/Docker.app/Contents/Resources/bin/docker',
-                    '/var/lib/docker/bin/docker',
-                    '/usr/local/lib/docker/bin/docker',
-                    '/usr/local/docker/docker',
-                    '/usr/local/opt/docker/bin/docker',
-                    '/opt/bin/docker',
-                    '/usr/local/etc/docker/bin/docker',
-                ]
-            }
-            for (const path of pathCandidate) {
-                try {
-                    if (fs.existsSync(path)) {
-                        config_.dockerPath = path;
-                        break;
-                    }
-                } catch (error) { }
-            }
+            config_.dockerPath = await getDockerPath();
+            await setConfiguration('dockerPath', config_.dockerPath, false);
+        }
+        if (!config_.nodePath) {
+            config_.nodePath = await getNodePath();
+            await setConfiguration('nodePath', config_.nodePath, false);
+        }
+        if (!config_.npmPath) {
+            config_.npmPath = await getNPMPath();
+            await setConfiguration('npmPath', config_.npmPath, false);
+        }
+        if (!config_.pythonPath) {
+            config_.pythonPath = await getPythonPath();
+            await setConfiguration('pythonPath', config_.pythonPath, false);
         }
     }
     for (let key in config_) {
@@ -755,12 +741,14 @@ export async function getToolCode(toolName) {
     if (!code) return code;
     // let tmpmemPath = '/tmpmem/';
     // let randomAlphabetFileName = `${Math.random().toString(36).substring(2, 7)}.txt`;
+    let tmpmem = !(await getConfiguration('useDocker')) ? getAppPath('/tmpmem/') : '/tmpmem/';
+    tmpmem = tmpmem.split('\\').join('/');
     let code__ = `
         (async (params)=>{
             try {
                 const savingAvailable = false;
                 const fs = require('fs');
-                let tmpmemPath = '/tmpmem/';
+                let tmpmemPath = '${tmpmem}';
                 if(savingAvailable) if(!fs.existsSync(tmpmemPath)) fs.mkdirSync(tmpmemPath, { recursive: true });
                 let saveData = await (${code})(params);
                 let returnData = saveData;
@@ -870,8 +858,8 @@ export async function makeMdWithSpec(name) {
 //------------------------------------------------
 export async function getPromptToolPath() {
     const llm = await getConfiguration('llm');
-    const useDocker = await getConfiguration('useDocker');
-    const container = useDocker ? 'docker' : 'localenv';
+    // const useDocker = await getConfiguration('useDocker');
+    const container = true ? 'docker' : 'localenv';
     let candidate1 = getCodePath(`prompt_tools/${container}/default`);
     let candidate2 = getCodePath(`prompt_tools/${container}/${llm}`);
     let list = [];
@@ -890,7 +878,20 @@ export async function getToolList() {
     Object.keys(await getCustomToolList()).forEach(tool => {
         rlist.push(tool);
     });
-    return [...new Set(rlist)];
+
+    const useDocker = await getConfiguration('useDocker');
+    const list_ = [...new Set(rlist)];
+    if (useDocker) {
+        return list_;
+    } else {
+        let nlist = [];
+        for (const tool of list_) {
+            const spec = await getToolSpec(tool);
+            if (!spec.tooling_in_realworld) continue;
+            nlist.push(tool);
+        }
+        return nlist;
+    }
 }
 export async function getToolSpec(toolName) {
     const pathList = await getPromptToolPath();
@@ -921,12 +922,14 @@ export async function getToolData(toolName) {
         const return_description = spec.return_description;
         const return_type = spec.return_type;
         const only_use_in_code = spec.only_use_in_code;
+        const tooling_in_realworld = spec.tooling_in_realworld;
         delete spec.activate;
         delete spec.npm_package_list;
         delete spec.return_description;
         delete spec.return_type;
         delete spec.only_use_in_code;
         delete spec.instructions;
+        delete spec.tooling_in_realworld;
         if (!activate) return null;
         return {
             prompt,
@@ -934,7 +937,8 @@ export async function getToolData(toolName) {
             npm_package_list,
             return_description,
             return_type,
-            only_use_in_code
+            only_use_in_code,
+            tooling_in_realworld
         };
     }
     let data = await getCustomToolList(toolName);
@@ -944,12 +948,14 @@ export async function getToolData(toolName) {
     const return_description = spec.return_description;
     const return_type = spec.return_type;
     const only_use_in_code = spec.only_use_in_code;
+    const tooling_in_realworld = spec.tooling_in_realworld;
     delete spec.activate;
     delete spec.npm_package_list;
     delete spec.return_description;
     delete spec.return_type;
     delete spec.only_use_in_code;
     delete spec.instructions;
+    delete spec.tooling_in_realworld;
     if (!activate) return null;
     return {
         prompt: await makeMdWithSpec(toolName),
@@ -957,7 +963,8 @@ export async function getToolData(toolName) {
         npm_package_list,
         return_description,
         return_type,
-        only_use_in_code
+        only_use_in_code,
+        tooling_in_realworld
     };
 }
 export function getCodePath(itemPath) {

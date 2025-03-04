@@ -14,5 +14,6 @@
     ],
     "activate": true,
     "return_description": "String of the content of the URL.",
-    "return_type": "String"
+    "return_type": "String",
+    "tooling_in_realworld": true
 }
