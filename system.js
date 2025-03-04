@@ -632,7 +632,7 @@ export async function loadConfiguration(getDefault = false) {
         llm: "claude",
         maxIterations: 0,
         dockerImage: 'my-node-ubuntu',
-        useDocker: true, // Docker 사용 여부 (false: 도커 아닌 웹컨테이너 사용, true: 도커 사용함)
+        useDocker: false, // Docker 사용 여부 (false: 도커 아닌 웹컨테이너 사용, true: 도커 사용함)
         keepDockerContainer: true,
         dockerPath: '', // 도커 경로
         dockerWorkDir: '/home/ubuntu/work',

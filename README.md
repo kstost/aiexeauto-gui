@@ -41,9 +41,17 @@ For general users, AIEXEAUTO-GUI can be installed easily by following the steps 
    sudo chown -R 501:20 ~/.npm 2>/dev/null; command -v npm >/dev/null 2>&1 && { timestamp=$(date +%Y%m%d%H%M%S) && cd ~/Downloads && mkdir "_aiexeauto-gui_project_$timestamp" && cd "_aiexeauto-gui_project_$timestamp" && git clone https://github.com/kstost/aiexeauto-gui && cd aiexeauto-gui && npm i && npm run build && open dist/aiexeauto-*.dmg; } || { echo "npm is not installed. Please download and install it from https://nodejs.org."; }
    ```
 
-### 3. Install Docker
+### 3. Install Docker (Optional)
 
-Besides installing AIEXEAUTO-GUI, Docker installation is required. Follow the steps below for installation.
+Docker is optional. Using Docker allows you to perform tasks in a safer and isolated environment. If you want to use Docker, please follow these steps.
+
+⚠️ **Important Warning for Non-Docker Users**: 
+When running AIEXEAUTO-GUI without Docker, the application will execute tasks directly on your system. This means:
+- All operations will affect your actual system files and settings
+- There is no isolation between the application and your system
+- We strongly recommend against using automatic code execution mode without Docker
+- Always review generated code carefully before execution
+- Consider backing up important data before running any tasks
 
 1. **Install Docker**
    - Download and install the latest version of [Docker Desktop](https://www.docker.com/).
