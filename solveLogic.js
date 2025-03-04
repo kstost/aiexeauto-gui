@@ -556,7 +556,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             } catch (error) {
                 errorList.codeexecutionerror = { error };
             }
-            if (useDocker) {
+            if (true) {
                 let pid = await out_state(``);
                 if (errorList.codeexecutionerror) {
                     await pid.fail(caption('codeExecutionAborted'));
