@@ -21,7 +21,7 @@ Watch our demo video on YouTube to get a quick overview of what aiexe can do for
 
 ## Installation Guide
 
-### 1. Install NodeJS
+### 1. Install NodeJS and Python
 
 1. Download and install Node.js from [nodejs.org](https://nodejs.org).
 
