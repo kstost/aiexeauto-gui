@@ -25,6 +25,8 @@ Watch our demo video on YouTube to get a quick overview of what aiexe can do for
 
 1. Download and install Node.js from [nodejs.org](https://nodejs.org).
 
+2. Download and install Python from [python.org](https://www.python.org/).
+
 ### 2. Install AIEXEAUTO-GUI
 
 For general users, AIEXEAUTO-GUI can be installed easily by following the steps below.
