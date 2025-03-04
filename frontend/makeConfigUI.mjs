@@ -1,7 +1,5 @@
 import singleton from './singleton.mjs';
 import { getConfig, setConfig, caption } from './system.mjs';
-import { showAlert } from './CustumAlert.mjs';
-import { showConfirm } from './CustomConfirm.mjs';
 export async function makeConfigUI(configurationContainer) {
     const { reqAPI } = singleton;
     // configWrapper: 전체 설정 UI를 감싸는 컨테이너 (CSS 클래스 적용)
@@ -285,54 +283,15 @@ export async function makeConfigUI(configurationContainer) {
     // Docker 설정 부분을 수정
     // Docker 사용 여부 설정
     const { row: useDockerRow, inputContainer: useDockerContainer } = createConfigRow(caption('useDocker'));
-    useDockerContainer.style.display = 'flex';
-    useDockerContainer.style.alignItems = 'center';
-    useDockerContainer.style.gap = '12px';
-
     const useDockerCheckbox = document.createElement('input');
     useDockerCheckbox.type = 'checkbox';
     useDockerCheckbox.style.width = '20px';
     useDockerCheckbox.style.height = '20px';
     useDockerCheckbox.style.cursor = 'pointer';
     useDockerCheckbox.style.accentColor = '#2196F3';
-    useDockerCheckbox.style.flexShrink = '0';
+    useDockerCheckbox.setAttribute('disabled', 'disabled');
     useDockerContainer.appendChild(useDockerCheckbox);
-
-    // 설명 추가
-    const useDockerDescription = document.createElement('div');
-    useDockerDescription.style.fontSize = '14px';
-    useDockerDescription.style.color = 'rgba(255, 255, 255, 0.5)';
-    useDockerDescription.textContent = caption('useDockerDescription');
-    useDockerDescription.style.flex = '1';
-    useDockerContainer.appendChild(useDockerDescription);
-
     configWrapper.appendChild(useDockerRow);
-
-    // 로컬 실행 파일 경로 설정 추가
-    const { row: nodePathRow, inputContainer: nodePathContainer } = createConfigRow(caption('nodePath'));
-    const nodePathInput = document.createElement('input');
-    nodePathInput.type = 'text';
-    nodePathInput.placeholder = caption('nodePathPlaceholder');// 'Enter Node.js binary path (e.g., /usr/local/bin/node)'
-    applyDarkModeInput(nodePathInput);
-    nodePathContainer.appendChild(nodePathInput);
-    configWrapper.appendChild(nodePathRow);
-
-    const { row: npmPathRow, inputContainer: npmPathContainer } = createConfigRow(caption('npmPath'));
-    const npmPathInput = document.createElement('input');
-    npmPathInput.type = 'text';
-    npmPathInput.placeholder = caption('npmPathPlaceholder');// 'Enter npm binary path (e.g., /usr/local/bin/npm)'
-    applyDarkModeInput(npmPathInput);
-    npmPathContainer.appendChild(npmPathInput);
-    configWrapper.appendChild(npmPathRow);
-
-    const { row: pythonPathRow, inputContainer: pythonPathContainer } = createConfigRow(caption('pythonPath'));
-    const pythonPathInput = document.createElement('input');
-    pythonPathInput.type = 'text';
-    pythonPathInput.placeholder = caption('pythonPathPlaceholder');// 'Enter Python binary path (e.g., /usr/local/bin/python3)'
-    applyDarkModeInput(pythonPathInput);
-    pythonPathContainer.appendChild(pythonPathInput);
-    configWrapper.appendChild(pythonPathRow);
-
 
     // Docker Path 설정 추가
     const { row: dockerPathRow, inputContainer: dockerPathContainer } = createConfigRow(caption('dockerPath'));
@@ -381,29 +340,12 @@ export async function makeConfigUI(configurationContainer) {
     useDockerCheckbox.addEventListener('change', async () => {
         dockerRow.style.display = useDockerCheckbox.checked ? 'flex' : 'none';
         dockerPathRow.style.display = useDockerCheckbox.checked ? 'flex' : 'none';
-        keepDockerRow.style.display = useDockerCheckbox.checked ? 'flex' : 'none';
-        nodePathRow.style.display = useDockerCheckbox.checked ? 'none' : 'flex';
-        npmPathRow.style.display = useDockerCheckbox.checked ? 'none' : 'flex';
-        pythonPathRow.style.display = useDockerCheckbox.checked ? 'none' : 'flex';
         await setConfig('useDocker', useDockerCheckbox.checked);
     });
 
     // Docker Path 입력 이벤트 리스너 추가
     dockerPathInput.addEventListener('input', async () => {
         await setConfig('dockerPath', dockerPathInput.value);
-    });
-
-    // 로컬 실행 파일 경로 입력 이벤트 리스너 추가
-    nodePathInput.addEventListener('input', async () => {
-        await setConfig('nodePath', nodePathInput.value);
-    });
-
-    npmPathInput.addEventListener('input', async () => {
-        await setConfig('npmPath', npmPathInput.value);
-    });
-
-    pythonPathInput.addEventListener('input', async () => {
-        await setConfig('pythonPath', pythonPathInput.value);
     });
 
     // Docker Image 설정 다음에 추가
@@ -516,34 +458,16 @@ export async function makeConfigUI(configurationContainer) {
             useDockerCheckbox.checked = useDocker;
             dockerRow.style.display = useDocker ? 'flex' : 'none';
             dockerPathRow.style.display = useDocker ? 'flex' : 'none';
-            keepDockerRow.style.display = useDocker ? 'flex' : 'none';
-            nodePathRow.style.display = useDocker ? 'none' : 'flex';
-            npmPathRow.style.display = useDocker ? 'none' : 'flex';
-            pythonPathRow.style.display = useDocker ? 'none' : 'flex';
         } else {
             useDockerCheckbox.checked = true;
             dockerRow.style.display = 'flex';
             dockerPathRow.style.display = 'flex';
-            keepDockerRow.style.display = 'flex';
-            nodePathRow.style.display = 'none';
-            npmPathRow.style.display = 'none';
-            pythonPathRow.style.display = 'none';
             await setConfig('useDocker', true);
         }
 
         // Docker Image 설정 로드
         const dockerImage = await getConfig('dockerImage');
         if (dockerImage) dockerImageInput.value = dockerImage;
-
-        // 로컬 실행 파일 경로 설정 로드
-        const nodePath = await getConfig('nodePath');
-        if (nodePath) nodePathInput.value = nodePath;
-
-        const npmPath = await getConfig('npmPath');
-        if (npmPath) npmPathInput.value = npmPath;
-
-        const pythonPath = await getConfig('pythonPath');
-        if (pythonPath) pythonPathInput.value = pythonPath;
 
         // 자동 코드 실행 설정 로드
         const autoCodeExecution = await getConfig('autoCodeExecution');
@@ -691,7 +615,7 @@ export async function makeConfigUI(configurationContainer) {
 
     // 클릭 효과
     clearDataButton.addEventListener('click', async () => {
-        if (await showConfirm(caption('clearDataButtonConfirm'))) {
+        if (confirm(caption('clearDataButtonConfirm'))) {
             let task = reqAPI('clear_output_data', {});
             let taskId = task.taskId;
             await task.promise;
@@ -702,7 +626,7 @@ export async function makeConfigUI(configurationContainer) {
         let task = reqAPI('open_output_folder', {});
         let taskId = task.taskId;
         if (!await task.promise) {
-            showAlert(caption('outputFolderNotFound'), 'warning');
+            alert(caption('outputFolderNotFound'));
         }
     });
 

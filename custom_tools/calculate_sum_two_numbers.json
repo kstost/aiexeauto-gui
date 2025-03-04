@@ -20,6 +20,5 @@
     "npm_package_list": [
         "mathjs"
     ],
-    "activate": false,
-    "tooling_in_realworld": true
+    "activate": false
 }

@@ -14,6 +14,5 @@
     ],
     "activate": true,
     "return_description": "",
-    "return_type": "",
-    "tooling_in_realworld": false
+    "return_type": ""
 }

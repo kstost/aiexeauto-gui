@@ -34,6 +34,17 @@ export function getSpinners() {
     return spinners;
 }
 
+export const useTools = {
+    apt_install: false,
+    remove_directory_recursively: false,
+    rename_file_or_directory: false,
+    remove_file: false,
+    which_command: true,
+    run_command: true,
+    read_url: false,
+    read_file: true,
+    list_directory: true,
+}
 
 
 export function makeTag(tagName, data, condition = true) {
@@ -189,7 +200,6 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     let exported = false;
     let llm = await getConfiguration('llm');
     let isGemini = llm === 'gemini';
-    let ifUseDocker = await getUseDocker();
     try {
         if (await getConfiguration('llm') === 'ollama') {
             let ollamaModel = await getConfiguration('ollamaModel');
@@ -198,19 +208,19 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         }
         {
             let prompt = multiLineMission;
-            if (ifUseDocker) validatePath(dataSourcePath, '데이터 소스 경로');
-            if (ifUseDocker) validatePath(dataOutputPath, '데이터 출력 경로');
-            if (ifUseDocker) if (odrPath) validatePath(odrPath, '데이터 출력 경로');
+            validatePath(dataSourcePath, '데이터 소스 경로');
+            validatePath(dataOutputPath, '데이터 출력 경로');
+            if (odrPath) validatePath(odrPath, '데이터 출력 경로');
             const dockerWorkDir = await getConfiguration('dockerWorkDir');
             if (await getConfiguration('useDocker')) validatePath(dockerWorkDir, 'Docker 작업 경로');
             if (fs.existsSync(getAbsolutePath(prompt))) {
                 prompt = fs.readFileSync(getAbsolutePath(prompt), 'utf8');
                 prompt = prompt.split('\n').filter(line => line.trim() !== '').join(' ');
             }
-            if (ifUseDocker) await validateAndCreatePaths(dataSourcePath);
-            if (ifUseDocker) await validateAndCreatePaths(dataOutputPath);
+            await validateAndCreatePaths(dataSourcePath);
+            await validateAndCreatePaths(dataOutputPath);
         }
-        if (ifUseDocker) {
+        {
             const nodeFiles = ['package.json', 'package-lock.json', 'node_modules'];
             for (const file of nodeFiles) {
                 if (fs.existsSync(path.join(dataSourcePath, file))) {
@@ -219,7 +229,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
 
         }
-        const pid32 = ifUseDocker ? await out_state(caption('preparingDocker')) : null;
+        const pid32 = await out_state(caption('preparingDocker'));
         if (await getUseDocker()) {
             let dockerImage = await getConfiguration('dockerImage');
             dockerImage = dockerImage.trim();
@@ -245,7 +255,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
             await cleanContainer(containerId);
         }
-        if (ifUseDocker) singleton.currentWorkingContainerId = containerId;
+        singleton.currentWorkingContainerId = containerId;
 
         // let browser, page;
 
@@ -257,7 +267,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         const maxIterations = await getConfiguration('maxIterations');
         const useDocker = await getConfiguration('useDocker');
 
-        if (ifUseDocker) if (!(await restoreWorkspace(containerId, dockerWorkDir))) {
+        if (!(await restoreWorkspace(containerId, dockerWorkDir))) {
             await initNodeProject(containerId, dockerWorkDir);
         }
         // {
@@ -268,8 +278,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
         // 데이터 임포트 스피너
         // spinners.import = createSpinner('데이터를 가져오는 중...');
-        await pid32?.dismiss();
-        const pid63 = useDocker ? await out_state(caption('importingData')) : null;
+        await pid32.dismiss();
+        const pid3 = await out_state(caption('importingData'));
 
         if (useDocker) {
             directoryStructureBeforeOperation = await getDetailDirectoryStructure(dataSourcePath);
@@ -277,7 +287,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         } else {
             // Local Environment
         }
-        await pid63?.dismiss();
+        await pid3.dismiss();
 
 
         if (12313 < Math.random()) if (!keepMode) multiLineMission = await reviewMission(multiLineMission, interfaces);
@@ -411,6 +421,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     }, () => areBothSame(processTransactions, ++reduceLevel));
                     // console.log('actData', actData);
                     let actDataResult = await actDataParser({ actData });
+                    // console.log('actDataResult', actDataResult);
                     javascriptCode = actDataResult.javascriptCode || '';
                     requiredPackageNames = actDataResult.requiredPackageNames || [];
                     pythonCode = actDataResult.pythonCode || '';
@@ -441,8 +452,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             //     // const pid9 = await out_state('코드를 실행하는 중...');
             // }
             // if (useDocker) await out_print({ data: '코드를 실행합니다', mode: 'runCode' });
-            // console.log(pythonCode);
-            // console.log(javascriptCode);
+
 
             //------------------------------------------
 
@@ -486,7 +496,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let errorList = {};
             let executionId;
             const streamGetter = async (str) => {
-                // if (!useDocker) return;
+                if (!useDocker) return;
                 process.stdout.write(str);
                 if (executionId) {
                     await out_stream({ executionId, stream: str, state: 'stdout' });
@@ -517,7 +527,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
                 if (!pythonCode && javascriptCode) {
                     let javascriptCodeToRun = javascriptCodeBack ? javascriptCodeBack : javascriptCode;
-                    if (true) {
+                    if (useDocker) {
                         if (!confirmedd) {
                             let confirmed = await await_prompt({ mode: 'run_nodejs_code', actname: actData.name, containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames });
                             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
@@ -539,7 +549,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         // result = await runCode(page, javascriptCodeToRun, requiredPackageNames);
                     }
                 } else if (!javascriptCode && pythonCode) {
-                    if (true) {
+                    if (useDocker) {
                         if (!confirmedd) {
                             let confirmed = await await_prompt({ mode: 'run_python_code', actname: actData.name, containerId, dockerWorkDir, pythonCode, requiredPackageNames });
                             if (singleton.missionAborting) throw new Error(caption('missionAborted'));

@@ -243,13 +243,6 @@ function ignorePackages(packageList, isJs) {
     ];
     return packageList.filter(packageName => !ignorePackages.includes(packageName));
 }
-/**
- * RealWorld Compatible
- * 
- * @param {*} requiredPackageNames 
- * @param {*} pythonCode 
- * @param {*} javascriptCode 
- */
 export async function installPackages(requiredPackageNames, pythonCode, javascriptCode, useDocker, containerId, dockerWorkDir, spinners, out_state, createSpinner, await_prompt) {
     if (!requiredPackageNames) requiredPackageNames = [];
     if (requiredPackageNames && requiredPackageNames.constructor === Array) {
@@ -261,14 +254,14 @@ export async function installPackages(requiredPackageNames, pythonCode, javascri
             if (!pythonCode && javascriptCode) {
                 console.log('JavaScript 패키지 설치 흐름 진입');
                 const pid8 = await out_state(`${packageName} 패키지 확인 중...`);
-                let installed = true ? await isInstalledNodeModule(containerId, dockerWorkDir, packageName) : isInstalledNpmPackage(packageName);
+                let installed = useDocker ? await isInstalledNodeModule(containerId, dockerWorkDir, packageName) : isInstalledNpmPackage(packageName);
                 console.log('패키지 설치 여부:', installed, 'Docker 사용:', useDocker);
                 await pid8.dismiss();
                 if (!installed) {
                     // spinners.iter = createSpinner(`${packageName} 설치중.....`);
                     const pid7 = await out_state(`${packageName} 설치중.....`);
 
-                    if (true) {
+                    if (await getUseDocker()) {
                         console.log('Docker 환경에서 Node 모듈 설치 시작');
                         // let confirmed = await await_prompt({ mode: 'install_node_modules', containerId, dockerWorkDir, packageName });
                         // console.log('Docker Node 설치 확인:', confirmed);
@@ -298,7 +291,7 @@ export async function installPackages(requiredPackageNames, pythonCode, javascri
                     // spinners.iter = createSpinner(`${packageName} 설치중...`);
                     const pid8 = await out_state(`${packageName} 설치중...`);
 
-                    if (true) {
+                    if (await getUseDocker()) {
                         console.log('Docker 환경에서 Python 모듈 설치 시작');
                         // let confirmed = await await_prompt({ mode: 'install_python_module', containerId, dockerWorkDir, packageName });
                         // console.log('Docker Python 설치 확인:', confirmed);

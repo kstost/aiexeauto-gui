@@ -1,15 +1,6 @@
 async function list_directory(input) {
-    const pathSanitizer = (path) => {
-        path = path.split('\\').join('/');
-        while (true) {
-            if (path.indexOf('//') === -1) break;
-            path = path.split('//').join('/');
-        }
-        return path;
-    };
-    let { directory_path } = input;
+    const { directory_path } = input;
     const fs = require('fs');
-    directory_path = pathSanitizer(directory_path);
     let returnData = [];
     const exists = fs.existsSync(directory_path);
     if (!exists) { console.error('❌ Directory does not exist to list: ' + directory_path + ''); process.exit(1); }

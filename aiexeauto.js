@@ -55,8 +55,6 @@ if (prompt === 'version') {
                 getAppPath('.tempwork'),
                 getAppPath('logs_txt'),
                 getAppPath('retrival'),
-                getAppPath('coderun'),
-                getAppPath('list'),
             ];
             for (let i = 0; i < list.length; i++) {
                 let outputPath = list[i];
@@ -72,8 +70,7 @@ if (prompt === 'version') {
             }
         },
         async open_output_folder(body) {
-            const useDocker = await getConfiguration('useDocker');
-            let outputPath = useDocker ? getAppPath('outputs') : getAppPath('coderun');
+            let outputPath = getAppPath('outputs');
             if (fs.existsSync(outputPath)) {
                 await open(outputPath);
                 return true;
