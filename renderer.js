@@ -132,7 +132,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             workData.history.push({ class: 'out_stream', id, str, type });
             str.split('\n').forEach(line => {
                 if (line.trim() === '') return;
-                if (line.indexOf('NotOpenSSLWarning') !== -1) return;
+                if (type === 'stderr' && line.indexOf('NotOpenSSLWarning') !== -1) return;
+                if (type === 'stderr' && line.indexOf('warnings.warn') !== -1) return;
                 terminalStreamBoxes[id].addStream(line, type);
             });
             scrollBodyToBottomSmoothly(false);
