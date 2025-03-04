@@ -14,5 +14,6 @@
     ],
     "activate": true,
     "return_description": "String of the contents of the file.",
-    "return_type": "String"
+    "return_type": "String",
+    "tooling_in_realworld": true
 }

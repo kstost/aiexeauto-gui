@@ -15,5 +15,6 @@
     "activate": true,
     "only_use_in_code": true,
     "return_description": "Boolean value indicating whether the directory was successfully deleted.",
-    "return_type": "Boolean"
+    "return_type": "Boolean",
+    "tooling_in_realworld": false
 }

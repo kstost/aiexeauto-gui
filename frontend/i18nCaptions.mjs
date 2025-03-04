@@ -1,5 +1,12 @@
 export const i18nCaptions = {
     "ko": {
+        "nodePath": "Node.js 경로",
+        "npmPath": "npm 경로",
+        "pythonPath": "Python 경로",
+        "nodePathPlaceholder": "Node.js 경로 입력",
+        "npmPathPlaceholder": "npm 경로 입력",
+        "pythonPathPlaceholder": "Python 경로 입력",
+        "useDockerDescription": "도커를 사용하지 않으면 실제 컴퓨터에서 코드를 실행합니다.",
         "modifyMission": "미션조정",
         "dataCheck": "데이터확인",
         "dataChecking": "데이터확인중",
@@ -112,6 +119,13 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "nodePath": "Node.js Path",
+        "npmPath": "npm Path",
+        "pythonPath": "Python Path",
+        "nodePathPlaceholder": "Enter Node.js Path",
+        "npmPathPlaceholder": "Enter npm Path",
+        "pythonPathPlaceholder": "Enter Python Path",
+        "useDockerDescription": "If you don't use Docker, the code will be executed on the actual computer.",
         "modifyMission": "Modify Mission",
         "dataCheck": "Data Check",
         "dataChecking": "Data Checking",
@@ -224,6 +238,13 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "nodePath": "Node.js パス",
+        "npmPath": "npm パス",
+        "pythonPath": "Python パス",
+        "nodePathPlaceholder": "Node.js パスを入力",
+        "npmPathPlaceholder": "npm パスを入力",
+        "pythonPathPlaceholder": "Python パスを入力",
+        "useDockerDescription": "Dockerを使用しない場合、コードは実際のコンピュータで実行されます。",
         "modifyMission": "ミッション調整",
         "dataCheck": "データ確認",
         "dataChecking": "データ確認中",
@@ -336,6 +357,13 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "nodePath": "Đường dẫn Node.js",
+        "npmPath": "Đường dẫn npm",
+        "pythonPath": "Đường dẫn Python",
+        "nodePathPlaceholder": "Nhập đường dẫn Node.js",
+        "npmPathPlaceholder": "Nhập đường dẫn npm",
+        "pythonPathPlaceholder": "Nhập đường dẫn Python",
+        "useDockerDescription": "Nếu không sử dụng Docker, mã sẽ được thực thi trên máy tính thực.",
         "modifyMission": "Điều chỉnh Nhiệm vụ",
         "dataCheck": "Kiểm tra Dữ liệu",
         "dataChecking": "Đang kiểm tra dữ liệu...",
@@ -448,6 +476,13 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "nodePath": "Node.js路径",
+        "npmPath": "npm路径",
+        "pythonPath": "Python路径",
+        "nodePathPlaceholder": "输入Node.js路径",
+        "npmPathPlaceholder": "输入npm路径",
+        "pythonPathPlaceholder": "输入Python路径",
+        "useDockerDescription": "如果不使用Docker，代码将在实际计算机上执行。",
         "modifyMission": "任务调整",
         "dataCheck": "数据检查",
         "dataChecking": "数据检查中",

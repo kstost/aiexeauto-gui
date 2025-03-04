@@ -22,7 +22,7 @@ export class DisplayState {
         // 텍스트 컨테이너
         this.textContainer = document.createElement('span');
         this.textContainer.style.fontWeight = '400';
-        this.textContainer.style.fontFamily = 'Noto Sans KR, serif';
+        this.textContainer.style.fontFamily = 'Noto Sans KR';
         this.textContainer.style.marginTop = '-3px';
 
         this.state.appendChild(this.iconContainer);

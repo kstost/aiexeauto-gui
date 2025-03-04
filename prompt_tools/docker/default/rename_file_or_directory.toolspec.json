@@ -17,5 +17,6 @@
     "activate": true,
     "only_use_in_code": true,
     "return_description": "Boolean value indicating whether the file or directory was successfully renamed.",
+    "tooling_in_realworld": false,
     "return_type": "Boolean"
 }

@@ -30,7 +30,7 @@ export class TerminalStreamBox {
         this.stopButton.style.fontSize = '12px';
         this.stopButton.innerHTML = `
                 <span class="material-icons" style="font-size: 20px;">stop</span>
-                <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('stopButton')}</span>
+                <span style="margin-top:-3px; font-family: 'Noto Sans KR';">${caption('stopButton')}</span>
             `;
         this.container.appendChild(this.stopButton);
         this.stopButton.addEventListener('click', async () => {

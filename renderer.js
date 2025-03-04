@@ -10,7 +10,7 @@ import singleton from './frontend/singleton.mjs';
 import { getConfig, setConfig, caption } from './frontend/system.mjs';
 import { makeCodeBox } from './frontend/makeCodeBox.mjs';
 import envConst from './envConst.js';
-
+import { showAlert } from './frontend/CustumAlert.mjs';
 function fixWorkData(workData) {
     if (!workData.processTransactions) workData.processTransactions = [];
     if (workData.processTransactions[workData.processTransactions.length - 1]?.class !== 'output') {
@@ -204,6 +204,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 return codeRequiredConfirm.includes(actname);
             }
             function handleCodeConfirmation(editor, destroy = false, save = true) {
+                console.log('handleCodeConfirmation', actname);
                 const toolActList = {};
                 toolList.forEach(tool => toolActList[tool] = true);
                 if (toolActList[actname]) save = false;
@@ -415,14 +416,14 @@ window.addEventListener('DOMContentLoaded', async () => {
             } else {
                 if (menuItem.mode === 'configuration') {
                     if (operationDoing) {
-                        alert(caption('configChangeNotAllowed'));
+                        showAlert(caption('configChangeNotAllowed'), 'warning');
                         return;
                     }
                     await singleton.loadConfigurations();
-                    turnWindow(menuItem.mode);
+                    await turnWindow(menuItem.mode);
                 } else if (menuItem.mode === 'customtool') {
                     if (operationDoing) {
-                        alert(caption('missionDoing'));
+                        showAlert(caption('missionDoing'), 'warning');
                         return;
                     }
                     //..
@@ -436,10 +437,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
                 } else if (menuItem.mode === 'customrules') {
                     if (operationDoing) {
-                        alert(caption('configChangeNotAllowed'));
+                        showAlert(caption('configChangeNotAllowed'), 'warning');
                         return;
                     }
-                    turnWindow(menuItem.mode);
+                    await turnWindow(menuItem.mode);
 
                     const data1 = `${await getConfig('customRulesForCodeGenerator')}`;
                     customRulesSet.customRulesForCodeGenerator.setValue(data1);
@@ -449,10 +450,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
                 } else {
                     if (operationDoing) {
-                        alert(caption('missionDoing'));
+                        showAlert(caption('missionDoing'), 'warning');
                         return;
                     }
-                    turnWindow(menuItem.mode);
+                    await turnWindow(menuItem.mode);
                 }
             }
         });
@@ -554,7 +555,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     customrulesContainer[Symbol.for('mode')] = 'customrules';
     document.body.appendChild(customrulesContainer);
 
-    function turnWindow(mode) {
+    async function turnWindow(mode) {
         missionSolvingContainer.style.display = 'none';
         configurationContainer.style.display = 'none';
         customrulesContainer.style.display = 'none';
@@ -565,6 +566,17 @@ window.addEventListener('DOMContentLoaded', async () => {
             promptInput.setFocus();
             setFolderPath('', pathDisplay);
             resetWorkData();
+            currentConfig['npmPath'] = await getConfig('npmPath');
+            currentConfig['nodePath'] = await getConfig('nodePath');
+            currentConfig['pythonPath'] = await getConfig('pythonPath');
+            currentConfig['useDocker'] = await getConfig('useDocker');
+            if (!currentConfig['useDocker']) {
+                // invisible inputFolder
+                folderSelectContainer.style.display = 'none';
+            } else {
+                // visible inputFolder
+                folderSelectContainer.style.display = 'flex';
+            }
 
         } else if (mode === 'configuration') {
             configurationContainer.style.display = 'block';
@@ -655,7 +667,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     selectFolderButton.style.color = 'rgba(255,255,255,0.7)';
     selectFolderButton.innerHTML = `
         <span class="material-icons mdc-button__icon">folder</span>
-        <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('inputFolder')}</span>
+        <span style="margin-top:-3px; font-family: 'Noto Sans KR';">${caption('inputFolder')}</span>
     `;
     selectFolderButton.style.flexShrink = '0'; // 버튼 크기 고정
 
@@ -816,7 +828,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         planEditCheckbox.style.gap = '4px';
         planEditCheckbox.style.color = '#ffffff';
         planEditCheckbox.style.fontSize = '13px';
-        planEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
+        planEditCheckbox.style.fontFamily = 'Noto Sans KR';
         planEditCheckbox.innerHTML = `
                 <input type="checkbox" id="planEditableCheckbox" style="cursor: pointer;">
                 <label for="planEditableCheckbox" style="cursor: pointer;">${caption('planEditable')}</label>
@@ -836,7 +848,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         codeEditCheckbox.style.gap = '4px';
         codeEditCheckbox.style.color = '#ffffff';
         codeEditCheckbox.style.fontSize = '13px';
-        codeEditCheckbox.style.fontFamily = 'Noto Sans KR, serif';
+        codeEditCheckbox.style.fontFamily = 'Noto Sans KR';
         codeEditCheckbox.innerHTML = `
                 <input type="checkbox" id="autoCodeExecutionCheckbox" style="cursor: pointer;">
                 <label for="autoCodeExecutionCheckbox" style="cursor: pointer;">${caption('autoCodeExecution')}</label>
@@ -863,7 +875,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         modifyMissionButton.style.fontSize = '13px';
         modifyMissionButton.innerHTML = `
                 <span class="material-icons" style="font-size: 20px;">refresh</span>
-                <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('modifyMission')}</span>
+                <span style="margin-top:-3px; font-family: 'Noto Sans KR';">${caption('modifyMission')}</span>
             `;
         modifyMissionButton.addEventListener('click', async () => {
             window.electronAPI.send('onewayreq', { mode: 'modify_mission', arg: {} });
@@ -882,14 +894,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                 // 데이터 확인중
                 dataCheckButton.innerHTML = `
                     <span class="material-icons" style="font-size: 20px;">sync</span>
-                    <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('dataChecking')}</span>
+                    <span style="margin-top:-3px; font-family: 'Noto Sans KR';">${caption('dataChecking')}</span>
                     `;
                 dataCheckButton.style.opacity = '0.5';
             } else {
                 // 보통 상태
                 dataCheckButton.innerHTML = `
                     <span class="material-icons" style="font-size: 20px;">folder_open</span>
-                    <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('dataCheck')}</span>
+                    <span style="margin-top:-3px; font-family: 'Noto Sans KR';">${caption('dataCheck')}</span>
                     `;
                 dataCheckButton.style.opacity = '1';
             }
@@ -910,6 +922,12 @@ window.addEventListener('DOMContentLoaded', async () => {
             dataCheckButton[Symbol.for('changeMethod')](true);
             window.electronAPI.send('onewayreq', { mode: 'data_check', arg: {} });
         });
+        if (!currentConfig['useDocker']) {
+            dataCheckButton.style.display = 'none';
+        } else {
+            dataCheckButton.style.display = 'flex';
+        }
+        // config
 
         // 미션중지 버튼 생성
         const abortButton = document.createElement('button');
@@ -926,7 +944,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         abortButton.style.zIndex = '9999';
         abortButton.innerHTML = `
                 <span class="material-icons" style="font-size: 20px;">stop</span>
-                <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('abortMission')}</span>
+                <span style="margin-top:-3px; font-family: 'Noto Sans KR';">${caption('abortMission')}</span>
             `;
 
         buttonContainer.appendChild(planEditCheckbox);
@@ -954,6 +972,11 @@ window.addEventListener('DOMContentLoaded', async () => {
             [...document.querySelectorAll('.run-button')].forEach(button => {
                 button.click();
             });
+            // console.log(Object.keys(terminalStreamBoxes));
+            Object.keys(terminalStreamBoxes).forEach(key => {
+                if (!terminalStreamBoxes[key].placeholder) return;
+                terminalStreamBoxes[key].destroy();
+            });
 
         });
         //-----------------------------------------------------------------------------------------
@@ -977,7 +1000,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         workData.talktitle = talktitle;
         workData.reduceLevel = reduceLevel;
         Object.keys(dockerContainers).forEach(key => delete dockerContainers[key]);
-        dockerContainers[containerId] = true;
+        if (containerId) dockerContainers[containerId] = true;
         // console.log(containerId);
         enableUIElements();
         promptInput.setFocus();
@@ -1226,7 +1249,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             let loading = false;
             listItem.addEventListener('click', async () => {
                 if (operationDoing) {
-                    alert(caption('missionDoing'));
+                    showAlert(caption('missionDoing'), 'warning');
                     return;
                 }
 

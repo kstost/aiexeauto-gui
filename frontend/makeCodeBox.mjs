@@ -96,7 +96,7 @@ export function makeCodeBox(code, mode = 'javascript', lineNumbers = true) {
     runButton.style.color = '#ffffff'; // 흰색 텍스트
     runButton.innerHTML = `
         <span class="material-icons mdc-button__icon" style="font-size:20px;">play_arrow</span>
-        <span style="margin-top:-3px; font-family: 'Noto Sans KR', serif;">${caption('run')}</span>
+        <span style="margin-top:-3px; font-family: 'Noto Sans KR';">${caption('run')}</span>
     `;
     buttonContainer.appendChild(runButton);
     // new mdc.ripple.MDCRipple(runButton);

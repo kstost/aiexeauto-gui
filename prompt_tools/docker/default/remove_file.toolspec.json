@@ -15,5 +15,6 @@
     "activate": true,
     "only_use_in_code": true,
     "return_description": "Boolean value indicating whether the file was successfully deleted.",
+    "tooling_in_realworld": false,
     "return_type": "Boolean"
 }

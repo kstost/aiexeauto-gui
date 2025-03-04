@@ -14,5 +14,6 @@
     ],
     "activate": true,
     "return_description": "Boolean value indicating whether the command is available.",
+    "tooling_in_realworld": false,
     "return_type": "Boolean"
 }

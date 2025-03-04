@@ -19,5 +19,6 @@
     "npm_package_list": [
         "openai"
     ],
-    "activate": false
+    "activate": false,
+    "tooling_in_realworld": true
 }
