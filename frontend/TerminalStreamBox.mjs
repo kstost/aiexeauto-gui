@@ -68,6 +68,11 @@ export class TerminalStreamBox {
         }
     }
     addStream(stream, state = 'stdout') {
+        if (stream.trim() === '') return;
+        if (state === 'stderr' && stream.indexOf('NotOpenSSLWarning') !== -1) return;
+        if (state === 'stderr' && stream.indexOf('warnings.warn') !== -1) return;
+        // if (type === 'stderr' && line.indexOf('NotOpenSSLWarning') !== -1) return;
+        // if (type === 'stderr' && line.indexOf('warnings.warn') !== -1) return;
         // placeholder가 있으면 제거
         if (this.placeholder && this.container.contains(this.placeholder)) {
             this.container.removeChild(this.placeholder);

@@ -126,7 +126,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         },
         async out_stream(body) {
-
             const { str, type } = JSON.parse(body.stream);
             const id = body.executionId;
             workData.history.push({ class: 'out_stream', id, str, type });
