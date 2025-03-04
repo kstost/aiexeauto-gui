@@ -45,8 +45,9 @@ export function getConfigFilePath() {
 export async function setConfiguration(key, value, readByMethod = true) {
     const configPath = getConfigFilePath();
     let config
-    if (readByMethod) config = await loadConfiguration();
-    if (!readByMethod) {
+    if (readByMethod) { config = await loadConfiguration(); }
+    else if (!(await is_file(configPath))) { config = await loadConfiguration(true); }
+    else {
         config = JSON.parse(await fs.promises.readFile(configPath, 'utf8'));
     }
     try {
@@ -604,7 +605,7 @@ export async function toolSupport() {
         gemini: false,
     })[llm] || false;
 }
-export async function loadConfiguration() {
+export async function loadConfiguration(justReturnDefault = false) {
     let config = {
         claudeApiKey: "",
         groqApiKey: "",
@@ -637,6 +638,7 @@ export async function loadConfiguration() {
         npmPath: '', // npm 경로
         pythonPath: '', // Python 경로
     }
+    if (justReturnDefault) return config;
     let dataType = {
         claudeApiKey: "string",
         groqApiKey: "string",
