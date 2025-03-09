@@ -876,12 +876,14 @@ export async function makeMdWithSpec(name) {
         let type = parsed.input_schema[0][key].constructor.name
         return `${key}:${type}`;
     }).join(', ');
+    const toolCodeFilePath = getCodePath(`tool_code/${name}.js`);
+    const isFile = await is_file(toolCodeFilePath);
     let markdownDocument = [
         `## \`${name}\` function tool`,
         indention(1, `* Use: ${parsed.description}`, 3), // `${parsed.description}`
-        parsed.return_description && parsed.return_type ? indention(1, '* Spec: ' + `result:${parsed.return_type} = default_api.${name}(${rule})`, 3) : '',
+        isFile && parsed.return_description && parsed.return_type ? indention(1, '* Spec: ' + `result:${parsed.return_type} = default_api.${name}(${rule})`, 3) : '',
         // parsed.return_description && parsed.return_type ? indention(1, '  - ' + `result:${parsed.return_type} = default_api.${name}(${rule})`, 3) : '',
-        parsed.return_description && parsed.return_type ? indention(1, `* Return: \`${parsed.return_type}\` type, ${parsed.return_description}`, 3) : '',
+        isFile && parsed.return_description && parsed.return_type ? indention(1, `* Return: \`${parsed.return_type}\` type, ${parsed.return_description}`, 3) : '',
         // parsed.return_description && parsed.return_type ? indention(1, '  - ' + `${parsed.return_description}`, 3) : '',
         parsed.instructions && parsed.instructions.length > 0 ? indention(1, '* Instructions:', 3) : '',
         parsed.instructions && indention(1, parsed.instructions.map(instruction => `  - ${instruction}`).join('\n'), 3),
