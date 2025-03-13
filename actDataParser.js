@@ -128,18 +128,25 @@ export async function actDataParser({ actData }) {
             if (is_none_data(actData?.input?.question)) throw null;
             const url = actData.input.url;
             const question = actData.input.question;
-            const result = await axios.get(url);
-            let data;// = result.data;
-            if (typeof result.data !== 'string') {
+            let result;
+            let data;
+            try {
+                result = await axios.get(url);
+            } catch (e) {
+                if (e.response.status === 404) {
+                    data = 'PAGE NOT FOUND';
+                }
+            }
+            if (!data && typeof result.data !== 'string') {
                 data = JSON.stringify(result.data);
-            } else {
+            } else if (!data) {
                 const browser = await puppeteer.launch({ headless: 'new' });
                 const page = await browser.newPage();
                 await page.goto(url, { waitUntil: 'networkidle0' });
+                await new Promise(resolve => setTimeout(resolve, 3000));
                 data = await page.evaluate(() => document.documentElement.innerText);
                 await browser.close();
             }
-
             let ob = { data, question, url };
             const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');
             javascriptCode = formatToolCode(actData);
