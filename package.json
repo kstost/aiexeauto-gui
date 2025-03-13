@@ -1,6 +1,6 @@
 {
   "name": "aiexeauto",
-  "version": "1.0.114",
+  "version": "1.0.115",
   "main": "aiexeauto.js",
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
   },
   "keywords": [],
   "author": {
-    "name": "Kim seungtae",
+    "name": "Kim Seungtae",
     "email": "monogatree@gmail.com",
     "url": "https://www.youtube.com/@%EC%BD%94%EB%93%9C%EA%B9%8E%EB%8A%94%EB%85%B8%EC%9D%B8"
   },
@@ -30,7 +30,10 @@
     "ora": "^8.1.1",
     "puppeteer": "^23.8.0",
     "open": "^10.1.0",
-    "tar": "^7.4.3"
+    "tar": "^7.4.3",
+    "@langchain/core": "0.3.42",
+    "@langchain/openai": "^0.4.2",
+    "langchain": "0.3.19"
   },
   "devDependencies": {
     "@electron/notarize": "^2.3.2",
@@ -73,6 +76,11 @@
     "linux": {
       "target": "AppImage",
       "icon": "./assets/icon.png"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/@langchain/core",
+      "node_modules/@langchain/openai",
+      "node_modules/langchain"
+    ]
   }
 }

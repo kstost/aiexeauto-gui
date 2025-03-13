@@ -1,4 +1,4 @@
-async function read_file(input) {
+async function retrieve_from_file(input) {
     const pathSanitizer = (path) => {
         path = path.split('\\').join('/');
         while (true) {
@@ -8,7 +8,7 @@ async function read_file(input) {
         return path;
     };
 
-    let { file_path } = input;
+    let { file_path, question } = input;
     const fs = require('fs');
     file_path = pathSanitizer(file_path);
     const exists = fs.existsSync(file_path);
@@ -19,11 +19,15 @@ async function read_file(input) {
         console.log('⚠️ ' + file_path + ' is empty (0 bytes)');
         process.exit(0);
     }
-    console.log('📄 Contents of ' + file_path + '');
-    console.log(result);
+    // console.log('📄 Contents of ' + file_path + '');
+    console.log(JSON.stringify({ file_path, result, question }));
+
     /*
     One line explanation of the return data:
     String of the contents of the file.
     */
-    return result;
+    // return {
+    //     data: result,
+    //     question: question,
+    // };
 }

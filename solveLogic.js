@@ -28,13 +28,36 @@ import { reviewMission } from './aiFeatures.js';
 import open from 'open';
 import { ensureAppsHomePath } from './dataHandler.js';
 import { checkSyntax } from './docker.js';
+import { Retriver } from "./retriver.js";
+import crypto from 'crypto';
 let spinners = {};
 
 export function getSpinners() {
     return spinners;
 }
-
-
+export async function getRetriver() {
+    const retriver = new Retriver({
+        dbPath: getAppPath('retrival'),
+        APIKey: await getConfiguration('openaiApiKey'),
+        modelName: "gpt-4o-mini",
+        embeddingModelName: "text-embedding-3-small",
+        temperature: 0,
+    });
+    return retriver;
+}
+export async function retriving(data, question) {
+    const retriver = await getRetriver();
+    if (!question) question = `Extract the essential parts from this document and compile them into a comprehensive detailed report format.`;
+    const md5Hash = crypto.createHash('md5').update(data).digest('hex');
+    try {
+        const rId = `task_${md5Hash}`;
+        await retriver.addContent(rId, 'data', data);
+        const answer = await retriver.retrieve(rId, question);
+        return answer;
+    } catch (e) {
+    }
+    return '';
+}
 
 export function makeTag(tagName, data, condition = true) {
     if (!condition) return;
@@ -60,11 +83,19 @@ const prompts = {
             tools: tools,
         });
     },
-    systemEvaluationPrompt: async (mission, forGemini = false) => {
+    systemEvaluationPrompt: async (mission, check_list, forGemini = false) => {
         const customRulesForEvaluator = (await getConfiguration('customRulesForEvaluator') || '').trim();
+        check_list = (JSON.parse(JSON.stringify(check_list || []))).map(item => `- ${item}`).join('\n').trim();
         return templateBinding((await promptTemplate()).evaluator.systemPrompt, {
+            check_list: makeTag('MissionCheckList', check_list, !!check_list),
             mission: indention(1, mission),
             customRulesForEvaluator: makeTag('EvaluatorRules', customRulesForEvaluator, !!customRulesForEvaluator),
+            languageFullName: await getLanguageFullName(),
+        });
+    },
+    systemEvalpreparePrompt: async (mission, forGemini = false) => {
+        return templateBinding((await promptTemplate()).evalpreparer.systemPrompt, {
+            mission: indention(1, mission),
             languageFullName: await getLanguageFullName(),
         });
     },
@@ -144,8 +175,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     });
     if (processTransactions.at(-1)) delete processTransactions.at(-1).notcurrentmission;// = false;
 
-    // const taskId = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
-    // let uniqueSumNumber = 0;
+    const taskId_ = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
+    let uniqueSumNumber = 0;
     let containerId = containerIdToUse;
 
     // const pid54 = await out_state(`미션 착수 준비중...`);
@@ -154,28 +185,30 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     //     delete singleton.installedPackages[key];
     // });
 
-    const openaiApiKey = await getConfiguration('openaiApiKey');
-    const retrivalFolder = getAppPath('retrival');
-    if (false) await out_print({ mode: 'retrivalFolder', data: retrivalFolder });
-    if (!fs.existsSync(retrivalFolder)) fs.mkdirSync(retrivalFolder);
+    // const openaiApiKey = await getConfiguration('openaiApiKey');
+    // const retrivalFolder = getAppPath('retrival');
+    // if (false) await out_print({ mode: 'retrivalFolder', data: retrivalFolder });
+
+
 
 
     // const processTransactions = [];
-    const pushProcessTransactions = (data) => {
+    const pushProcessTransactions = async (data) => {
         processTransactions.push(data);
         // if (!retriver) return;
-        // uniqueSumNumber++;
-        // const indention = (n) => ' '.repeat(n);
-        // const addContent = [
-        //     `<transaction>`,
-        //     `${indention(3)}<order>${uniqueSumNumber}</order>`,
-        //     `${indention(3)}<type>${data.class}</type>`,
-        //     `${indention(3)}<code>`,
-        //     `${indention(0)}${!data.data ? '' : data.data.split('\n').map(line => `${indention(6)}${line}`).join('\n')}`,
-        //     `${indention(3)}</code>`,
-        //     `</transaction>`,
-        // ].join('\n');
-        // await retriver.addContent(taskId, `transaction_${uniqueSumNumber}`, addContent);
+        uniqueSumNumber++;
+        const indention = (n) => ' '.repeat(n);
+        const addContent = [
+            `<transaction>`,
+            `${indention(3)}<order>${uniqueSumNumber}</order>`,
+            `${indention(3)}<type>${data.class}</type>`,
+            `${indention(3)}<code>`,
+            `${indention(0)}${!data.data ? '' : data.data.split('\n').map(line => `${indention(6)}${line}`).join('\n')}`,
+            `${indention(3)}</code>`,
+            `</transaction>`,
+        ].join('\n');
+        const retriver = await getRetriver();
+        await retriver.addContent(taskId_, `transaction_${uniqueSumNumber}`, addContent);
     };
 
     // await pid54.dismiss();
@@ -321,7 +354,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 javascriptCodeBack = actDataResult.javascriptCodeBack || '';
             }
             if (!validationMode) {
-                processTransactions.length === 0 && pushProcessTransactions({ class: 'output', data: null });
+                processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1 && !nextPrompt) {
                     const prompt = templateBinding((await promptTemplate()).recollection.systemPrompt, {});
                     await exceedCatcher(async () => {
@@ -485,7 +518,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let runCodeFactor = false;
             let errorList = {};
             let executionId;
-            const streamGetter = async (str) => {
+            const streamGetter = async (str, force = false) => {
+                if (actData.name === 'retrieve_from_file' && !force) return;
+                if (actData.name === 'retrieve_from_url' && !force) return;
                 // if (!useDocker) return;
                 process.stdout.write(str);
                 if (executionId) {
@@ -556,7 +591,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             } catch (error) {
                 errorList.codeexecutionerror = { error };
             }
-            if (true) {
+            if (actData.name !== 'retrieve_from_file' && actData.name !== 'retrieve_from_url') {
                 let pid = await out_state(``);
                 if (errorList.codeexecutionerror) {
                     await pid.fail(caption('codeExecutionAborted'));
@@ -568,9 +603,40 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
             const data = javascriptCode || pythonCode;
             const weatherToPush = (!errorList.codeexecutionerror && data);
+            let summarized;
+            if (actData.name === 'retrieve_from_file' && codeExecutionResult?.output) {
+                try {
+                    const parsed = JSON.parse(codeExecutionResult?.output);
+                    let answered = await retriving(parsed.result, parsed.question);
+                    summarized = [
+                        `📄 file_path: ${parsed.file_path}`,
+                        `💬 question: ${parsed.question}`,
+                        `💡 answer: ${answered}`,
+                    ].join('\n');
+                    streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
+                } catch {
+                }
+            }
+            if (actData.name === 'retrieve_from_url' && codeExecutionResult?.output) {
+                try {
+                    let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
+                    const parsed = JSON.parse(decoded);
+                    let answered = await retriving(parsed.data, parsed.question);
+                    summarized = [
+                        `🌏 url: ${parsed.url}`,
+                        `💬 question: ${parsed.question}`,
+                        `💡 answer: ${answered}`,
+                    ].join('\n');
+                    streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
+                } catch {
+
+                }
+            }
             const codeExecutionResultOutput = codeExecutionResult?.output?.replace(/\x1b\[[0-9;]*m/g, '') || '';
-            if (weatherToPush) pushProcessTransactions({ class: 'code', data });
-            if (weatherToPush) pushProcessTransactions({ class: 'output', data: codeExecutionResultOutput });
+
+            //whattodo
+            if (weatherToPush) await pushProcessTransactions({ class: 'code', data });
+            if (weatherToPush) await pushProcessTransactions({ class: 'output', data: codeExecutionResultOutput, summarized });
             if (runCodeFactor && !(codeExecutionResultOutput.trim().length)) {
                 await out_print({ data: caption('noResult'), mode: 'outputPreview' });
             }
@@ -582,15 +648,32 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             // }
             if (true) {
                 // spinners.iter = createSpinner('작업 검증중입니다.');
+                let actDataEvalPrepare;
+                await exceedCatcher(async () => {
+                    const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
+                    actDataEvalPrepare = await chatCompletion(
+                        {
+                            systemPrompt: await prompts.systemEvalpreparePrompt(multiLineMission, dataSourcePath),
+                            systemPromptForGemini: await prompts.systemEvalpreparePrompt(multiLineMission, dataSourcePath, true),
+                        },
+                        await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'evalpreparation', mainKeyMission }),
+                        'evalprepareCode',
+                        interfaces,
+                        caption('evaluation')
+                    );
+                }, () => areBothSame(processTransactions, ++reduceLevel));
+
+                let { check_list } = actDataEvalPrepare.input;
+                check_list = check_list || [];
                 let actData;
                 await exceedCatcher(async () => {
                     const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
                     actData = await chatCompletion(
                         {
-                            systemPrompt: await prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath),
-                            systemPromptForGemini: await prompts.systemEvaluationPrompt(multiLineMission, dataSourcePath, true),
+                            systemPrompt: await prompts.systemEvaluationPrompt(multiLineMission, check_list, dataSourcePath),
+                            systemPromptForGemini: await prompts.systemEvaluationPrompt(multiLineMission, check_list, dataSourcePath, true),
                         },
-                        await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'evaluation', mainKeyMission }),
+                        await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'evaluation', mainKeyMission, check_list }),
                         'evaluateCode',
                         interfaces,
                         caption('evaluation')

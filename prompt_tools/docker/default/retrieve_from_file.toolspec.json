@@ -1,0 +1,22 @@
+{
+    "name": "retrieve_from_file",
+    "description": "Read the contents of a specified file and provide an answer to the given question based on the file's data.",
+    "instructions": [
+        "Provide the file path and the question to be answered based on the file's contents."
+    ],
+    "input_schema": [
+        {
+            "file_path": "",
+            "question": ""
+        },
+        {
+            "file_path": "file path to read, e.g., ./program/package.json",
+            "question": "question to answer, e.g., What is the name of the project? or Extract the essential parts from this document and compile them into a comprehensive detailed report format."
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": false,
+    "return_description": "",
+    "return_type": "",
+    "tooling_in_realworld": true
+}

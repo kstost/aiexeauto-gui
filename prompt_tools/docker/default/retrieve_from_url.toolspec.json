@@ -1,0 +1,22 @@
+{
+    "name": "retrieve_from_url",
+    "description": "Fetch and read the contents of a URL document and provide an answer to the specified question based on the retrieved data.",
+    "instructions": [
+        "Provide the URL of the document and the question to be answered based on its contents."
+    ],
+    "input_schema": [
+        {
+            "url": "",
+            "question": ""
+        },
+        {
+            "url": "url to read, e.g, https://cokac.com/robots.txt",
+            "question": "question to answer, e.g., What is the main topic of this page? or Extract the essential parts from this document and compile them into a comprehensive detailed report format."
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": false,
+    "return_description": "",
+    "return_type": "",
+    "tooling_in_realworld": true
+}

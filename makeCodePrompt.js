@@ -9,9 +9,13 @@ export function indention(num = 1, string = null, indentation = 2) {
         return ' '.repeat(num * indentation);
     }
 }
-export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission) {
+export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission, check_list) {
     let output = processTransactions.at(-1).data;
-    if (output) {
+    let summarized = processTransactions.at(-1).summarized;
+    if (summarized) {
+        output = summarized;
+    }
+    else if (output) {
         output = omitMiddlePart(output);
     }
     const lastMessage = processTransactions.at(-1).data !== null ? makeTag('CodeExecutionOutput', output || '(no output)') : '';
@@ -30,10 +34,22 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
             }),
         };
     } else if (type === 'evaluation') {
+        check_list = (JSON.parse(JSON.stringify(check_list || []))).map(item => `- ${item}`).join('\n').trim();
         return {
             role: "user",
             content: templateBinding((await promptTemplate()).evaluator.userPrompt, {
+                check_list: makeTag('MissionCheckList', check_list, !!check_list),
                 last: lastMessage,
+                mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
+                languageFullName: await getLanguageFullName(),
+            }),
+        };
+    } else if (type === 'evalpreparation') {
+        return {
+            role: "user",
+            content: templateBinding((await promptTemplate()).evalpreparer.userPrompt, {
+                last: lastMessage,
+                mission: indention(1, mission),
                 mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
                 languageFullName: await getLanguageFullName(),
             }),

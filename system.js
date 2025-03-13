@@ -200,6 +200,7 @@ export async function promptTemplate() {
         `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
         '</Instructions>',
         '',
+        "If you are currently facing a problem, exercise maximum flexibility!",
         'Tell me what task to perform next right away!',
     ]);
     templateBase.planning.systemPrompt = arrayAsText([
@@ -285,7 +286,44 @@ export async function promptTemplate() {
         ]);
 
     }
+    //==
+    templateBase.evalpreparer = {};
+    templateBase.evalpreparer.userPrompt = arrayAsText([
+        '{{last}}',
+        '',
+        '{{mainKeyMission}}',
+        '',
+        '<Mission>',
+        '{{mission}}',
+        '</Mission>',
+        '',
+        '<OutputFormat>',
+        '```json',
+        '{ "check_list": ["", "", ...] }',
+        '```',
+        '</OutputFormat>',
+        ``,
+        `Make the check list for evalution whether the mission has been completed based on the work performed so far.`,
+        `Think Deeply Please.`,
+    ]);
+    templateBase.evalpreparer.systemPrompt = arrayAsText([
+        'As an artificial intelligence agent, your role is to make a question list to check whether the mission has been completed based on the work performed so far.',
+        'Create a question list of 3~4 items to be checked.',
+        'Focus on the core content of the mission.',
+        '',
+        '<Mission>',
+        '{{mission}}',
+        '</Mission>',
+        '',
+        '<OutputFormat>',
+        '```json',
+        '{ "check_list": ["", "", ...] }',
+        '```',
+        '</OutputFormat>',
+        '',
+    ]);
 
+    //==
 
     templateBase.evaluator = {};
     templateBase.evaluator.userPrompt = arrayAsText([
@@ -301,6 +339,8 @@ export async function promptTemplate() {
         `      Judge what to do to complete the mission by the Output of the Execution and the history we did so far.`,
         `   </ActionDetermination>`,
         `</MissionEvaluation>`,
+        ``,
+        '{{check_list}}',
         ``,
         '<OutputFormat>',
         '```json',

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import puppeteer from 'puppeteer';
 import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
 export async function actDataParser({ actData }) {
     const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
@@ -104,8 +105,9 @@ export async function actDataParser({ actData }) {
                 actData.input.command,
             ].join('\n');
             javascriptCodeBack = shellCommander(actData.input.command);
-        } else if (actData.name === 'read_file') {
+        } else if (actData.name === 'retrieve_from_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
+            if (is_none_data(actData?.input?.question)) throw null;
             javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
         } else if (actData.name === 'remove_file') {
@@ -121,17 +123,28 @@ export async function actDataParser({ actData }) {
             if (is_none_data(actData?.input?.new_path)) throw null;
             javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
-        } else if (actData.name === 'read_url') {
+        } else if (actData.name === 'retrieve_from_url') {
             if (is_none_data(actData?.input?.url)) throw null;
+            if (is_none_data(actData?.input?.question)) throw null;
             const url = actData.input.url;
+            const question = actData.input.question;
             const result = await axios.get(url);
-            let data = result.data;
-            if (typeof data !== 'string') data = JSON.stringify(data);
-            let ob = { data };
+            let data;// = result.data;
+            if (typeof result.data !== 'string') {
+                data = JSON.stringify(result.data);
+            } else {
+                const browser = await puppeteer.launch({ headless: 'new' });
+                const page = await browser.newPage();
+                await page.goto(url, { waitUntil: 'networkidle0' });
+                data = await page.evaluate(() => document.documentElement.innerText);
+                await browser.close();
+            }
+
+            let ob = { data, question, url };
+            const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');
             javascriptCode = formatToolCode(actData);
             javascriptCodeBack = [
-                `console.log('🌏 Contents of ${url}');`,
-                `console.log((${JSON.stringify(ob)}).data);`,
+                `console.log('${base64}');`,
             ].join('\n');
         } else if (actData.name === 'cdnjs_finder') {
             if (is_none_data(actData?.input?.package_name)) throw null;

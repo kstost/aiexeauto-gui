@@ -422,6 +422,12 @@ async function plainParser(text, callMode, interfaces) {
                     reason: plain.args.reason || ''
                 }
             }
+        } else if (callMode === 'evalprepareCode') {
+            return {
+                type: 'tool_use',
+                name: 'evaluation_check_list_maker',
+                input: { check_list: plain.args.check_list || [] }
+            }
         }
     }
 }
@@ -530,6 +536,15 @@ async function langParser(text, callMode) {
                 evaluation: parsed.evaluation || '',
                 reason: parsed.reason || ''
             }
+        } else if (callMode === 'evalprepareCode') {
+            let parsed = {};
+            try {
+                parsed = JSON.parse(code);
+            } catch { }
+            toolCall.name = 'evaluation_check_list_maker';
+            toolCall.args = {
+                check_list: parsed.check_list || []
+            }
         }
         return toolCall;
     } catch (ee) {
@@ -591,11 +606,13 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
         if (llm === 'ollama' && !ollamaApiKey && false) throw new Error(caption('ollamaApiKeyNotSet'));
         if (llm === 'groq' && !groqApiKey) throw new Error(caption('groqApiKeyNotSet'));
         if (llm === 'gemini' && !geminiApiKey) throw new Error(caption('geminiApiKeyNotSet'));
+        if (!openaiApiKey) throw new Error(caption('openaiIsMustSet'));
         if (useDocker && !dockerPath) throw new Error(caption('dockerPathNotSet'));
 
         let tool_choice_list = {
             getRequiredPackageNames: { type: "tool", name: "npm_package_names" },
             evaluateCode: { type: "tool", name: "completion_verdict" },
+            evalprepareCode: { type: "tool", name: "evaluation_check_list_maker" },
             generateCode: { type: "any" }
         };
         let toolsList = {
@@ -613,6 +630,16 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     "input_schema": convertJsonToResponseFormat(
                         { evaluation: "", reason: "" },
                         { evaluation: "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED" + (llm !== 'gemini' ? " or GIVEUPTHEMISSION" : ""), reason: `Explain the reason for the verdict in ${await getLanguageFullName()} of short length` }
+                    ).json_schema.schema
+                },
+            ],
+            evalprepareCode: [
+                {
+                    "name": "evaluation_check_list_maker",
+                    "description": "make a question list for the evaluation.",
+                    "input_schema": convertJsonToResponseFormat(
+                        { check_list: [""] },
+                        { check_list: "Question list of what to check for the evaluation. it contains items as a list of strings" }
                     ).json_schema.schema
                 },
             ],
