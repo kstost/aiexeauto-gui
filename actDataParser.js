@@ -123,7 +123,7 @@ export async function actDataParser({ actData }) {
             if (is_none_data(actData?.input?.new_path)) throw null;
             javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
-        } else if (actData.name === 'retrieve_from_url') {
+        } else if (actData.name === 'retrieve_from_webpage') {
             if (is_none_data(actData?.input?.url)) throw null;
             if (is_none_data(actData?.input?.question)) throw null;
             const url = actData.input.url;

@@ -570,6 +570,8 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
                 return path;
             };
             let nodePath = await getConfiguration('nodePath');
+            const useDocker = await getConfiguration('useDocker');
+            if (useDocker) nodePath = '/usr/bin/node';
             nodePath = pathSanitizer(nodePath);
             const code = [
                 `#---`,
@@ -685,6 +687,10 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     let npmPath = await getConfiguration('npmPath');
     nodePath = pathSanitizer(nodePath);
     npmPath = pathSanitizer(npmPath);
+    if (useDocker) {
+        nodePath = '/usr/bin/node';
+        npmPath = '/usr/bin/npm';
+    }
     code = [
         `import os`,
         useDocker ? `os.remove('${pyFileName}')` : ``,

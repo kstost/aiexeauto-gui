@@ -520,7 +520,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let executionId;
             const streamGetter = async (str, force = false) => {
                 if (actData.name === 'retrieve_from_file' && !force) return;
-                if (actData.name === 'retrieve_from_url' && !force) return;
+                if (actData.name === 'retrieve_from_webpage' && !force) return;
                 // if (!useDocker) return;
                 process.stdout.write(str);
                 if (executionId) {
@@ -591,7 +591,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             } catch (error) {
                 errorList.codeexecutionerror = { error };
             }
-            if (actData.name !== 'retrieve_from_file' && actData.name !== 'retrieve_from_url') {
+            if (actData.name !== 'retrieve_from_file' && actData.name !== 'retrieve_from_webpage') {
                 let pid = await out_state(``);
                 if (errorList.codeexecutionerror) {
                     await pid.fail(caption('codeExecutionAborted'));
@@ -617,7 +617,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 } catch {
                 }
             }
-            if (actData.name === 'retrieve_from_url' && codeExecutionResult?.output) {
+            if (actData.name === 'retrieve_from_webpage' && codeExecutionResult?.output) {
                 try {
                     let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
                     const parsed = JSON.parse(decoded);

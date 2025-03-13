@@ -1,8 +1,8 @@
 {
-    "name": "retrieve_from_url",
+    "name": "retrieve_from_webpage",
     "description": "Fetch and read the contents of a URL document and provide an answer to the specified question based on the retrieved data.",
     "instructions": [
-        "Provide the URL of the document and the question to be answered based on its contents."
+        "Provide the URL of the webpage document and the question to be answered based on its contents."
     ],
     "input_schema": [
         {

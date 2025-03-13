@@ -1,0 +1,22 @@
+{
+    "name": "download_resource_from_url",
+    "description": "Download a resource from a specified URL and save it to a file.",
+    "instructions": [
+        "Provide the URL of the resource to download and the path to save the resource."
+    ],
+    "input_schema": [
+        {
+            "url": "",
+            "file_path": ""
+        },
+        {
+            "url": "url to download, e.g., https://cokac.com/robots.txt",
+            "file_path": "file path to save, e.g., ./program/robots.txt"
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": true,
+    "return_description": "Boolean value indicating whether the resource was downloaded successfully.",
+    "return_type": "boolean",
+    "tooling_in_realworld": true
+}
