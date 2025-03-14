@@ -239,8 +239,12 @@ export async function promptTemplate() {
         '',
         'The Must Achieve Mission is the most important mission. Please think deeply about it.',
         '',
+        '**You must specify tool name to use for next task.**',
+        'Use direct and clear expressions.',
+        'If previous task was web_search, then next step must be `retrieve_from_webpage`.',
         'TELL ME THE ONLY ONE THING TO DO RIGHT NEXT. NOT MULTIPLE TASKS BUT THE ONLY ONE!!!! IF YOU RESPOND WITH MULTIPLE THINGS THEN I WILL FACE HUGE FAIL. PLEASE THE ONLY ONE THING TODO!!!',
-        // 'Tell me THE ONLY ONE THING to do right next. Not multiple tasks BUT THE ONLY ONE!!!! If you response multiple things then I will face huge fail. Please THE ONLY ONE THING todo',
+        // '**You must specify tool name to use for next task.**',
+        // 'TELL ME THE ONLY ONE THING TO DO RIGHT NEXT. NOT MULTIPLE TASKS BUT THE ONLY ONE!!!! IF YOU RESPOND WITH MULTIPLE THINGS THEN I WILL FACE HUGE FAIL. PLEASE THE ONLY ONE THING TODO!!!',
     ]);
     templateBase.planning.systemPrompt = arrayAsText([
         "You are a Code Interpreter Agent.",
@@ -282,7 +286,10 @@ export async function promptTemplate() {
             '',
             'Please be smart and think deeply and broadly.',
             '',
-            'Tell me THE ONLY ONE THING to do right next. Not multiple tasks BUT THE ONLY ONE!!!! If you response multiple things then I will face huge fail. Please THE ONLY ONE THING todo',
+            '**You must specify tool name to use for next task.**',
+            'Use direct and clear expressions.',
+            'If previous task was web_search, then next step must be `retrieve_from_webpage`.',
+            'TELL ME THE ONLY ONE THING TO DO RIGHT NEXT. NOT MULTIPLE TASKS BUT THE ONLY ONE!!!! IF YOU RESPOND WITH MULTIPLE THINGS THEN I WILL FACE HUGE FAIL. PLEASE THE ONLY ONE THING TODO!!!',
         ]);
         templateBase.planning.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
@@ -322,7 +329,10 @@ export async function promptTemplate() {
             '',
             'Please be smart and think deeply and broadly.',
             '',
-            'Tell me THE ONLY ONE THING to do right next. Not multiple tasks BUT THE ONLY ONE!!!! If you response multiple things then I will face huge fail. Please THE ONLY ONE THING todo',
+            '**You must specify tool name to use for next task.**',
+            'Use direct and clear expressions.',
+            'If previous task was web_search, then next step must be `retrieve_from_webpage`.',
+            'TELL ME THE ONLY ONE THING TO DO RIGHT NEXT. NOT MULTIPLE TASKS BUT THE ONLY ONE!!!! IF YOU RESPOND WITH MULTIPLE THINGS THEN I WILL FACE HUGE FAIL. PLEASE THE ONLY ONE THING TODO!!!',
         ]);
         templateBase.planning.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
@@ -475,6 +485,8 @@ export async function promptTemplate() {
         '',
         "If this mission isn’t carried out properly, my entire future could collapse. Please, I beg you, assist me with utmost care and without any mistakes. If this fails, I will lose everyone I hold dear, fall into economic ruin, and end up in the depths of despair, abandoned on the streets.",
         '',
+        '{{whattodo}}',
+        '',
         'Make the code.',
     ]);
     templateBase.codeGenerator.systemPrompt = arrayAsText([
@@ -559,6 +571,8 @@ export async function promptTemplate() {
             '',
             "If this mission isn’t carried out properly, my entire future could collapse. Please, I beg you, assist me with utmost care and without any mistakes. If this fails, I will lose everyone I hold dear, fall into economic ruin, and end up in the depths of despair, abandoned on the streets.",
             '',
+            '{{whattodo}}',
+            '',
             'Make the Python code.',
         ]);
     } else if ((envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
@@ -609,6 +623,8 @@ export async function promptTemplate() {
             '{{mainKeyMission}}',
             '',
             "If this mission isn’t carried out properly, my entire future could collapse. Please, I beg you, assist me with utmost care and without any mistakes. If this fails, I will lose everyone I hold dear, fall into economic ruin, and end up in the depths of despair, abandoned on the streets.",
+            '',
+            '{{whattodo}}',
             '',
             'Make the Python code.',
         ]);

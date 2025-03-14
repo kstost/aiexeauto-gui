@@ -68,7 +68,7 @@ export class Retriver {
     // }) 
 
     setPromptTemplate(prompt = {
-        instruction: "Answer the question using only the provided context.",
+        instruction: "Answer detailed and specific the question using only the provided context.",
         context: "{context}",
         question: "{input}",
         answer_format: "Provide a clear and concise answer.",

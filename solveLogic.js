@@ -722,6 +722,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
             if (actData.name === 'web_search' && codeExecutionResult?.output) {
                 summarized = codeExecutionResult?.output;
+                summarized = `${summarized}\n\nNext Step: You can access the URL with the question by \`retrieve_from_webpage(url, question)\``
             }
 
             const codeExecutionResultOutput = codeExecutionResult?.output?.replace(/\x1b\[[0-9;]*m/g, '') || '';
