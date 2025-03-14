@@ -1,9 +1,11 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
+import { caption } from './system.js';
 // import marked from 'marked';
 import TurndownService from 'turndown';
 import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
-export async function actDataParser({ actData, processTransactions }) {
+export async function actDataParser({ actData, processTransactions, out_state }) {
+    console.log('actDataParser!!!!!!!!!!!!!!!!!!!!!!', actData);
     const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
     let toolingFailed = false;
     function shellCommander(shellCommand) {
@@ -146,56 +148,62 @@ export async function actDataParser({ actData, processTransactions }) {
             const base64 = Buffer.from(data).toString('base64');
             javascriptCodeBack = [`console.log('${base64}');`].join('\n');
         } else if (actData.name === 'retrieve_from_webpage') {
+            const p12 = await out_state(caption('retrievingFromWebpage'));
+            console.log('retrieve_from_webpage!!!!!!!!!!!!!!......................!!!!!!!!');
             if (is_none_data(actData?.input?.url)) throw null;
-            if (is_none_data(actData?.input?.question)) throw null;
+            if (is_none_data(actData?.input?.question)) {
+                actData.input.question = 'Summary of the webpage';
+            }
             const url = actData.input.url;
             const question = actData.input.question;
             let result;
             let data;
-            try {
-                result = await axios.get(url);
-            } catch (e) {
-                if (e.response.status === 404) {
-                    data = 'PAGE NOT FOUND';
-                }
-            }
-            if (!data && typeof result.data !== 'string') {
+            let fail = false;
+            if (false && !fail && !data && typeof result.data !== 'string') {
                 data = JSON.stringify(result.data);
-            } else if (!data) {
+            } else if (!fail && !data) {
+                let htmldata = '';
                 const browser = await puppeteer.launch({ headless: 'new' });
-                const page = await browser.newPage();
-                await page.goto(url, { waitUntil: 'networkidle0' });
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                const htmldata = await page.evaluate(() => {
-                    //remove all style sheet
-                    {
-                        const elements = document.querySelectorAll('style, script, link');
-                        elements.forEach(element => {
-                            element.remove();
-                        });
-                    }
-                    {
-                        const elements = document.querySelectorAll('*');
-                        elements.forEach(element => {
-                            element.removeAttribute('style');
-                            element.removeAttribute('class');
-                            element.removeAttribute('id');
-                            element.removeAttribute('name');
-                        });
-                    }
-                    return document.documentElement.innerHTML;
-                });
+                try {
+                    // null.dd;
+                    console.log('puppeteer launch');
+                    const page = await browser.newPage();
+                    await page.goto(url, { waitUntil: 'networkidle0' });
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    htmldata = await page.evaluate(() => {
+                        {
+                            const elements = document.querySelectorAll('style, script, link');
+                            elements.forEach(element => {
+                                element.remove();
+                            });
+                        }
+                        {
+                            const elements = document.querySelectorAll('*');
+                            elements.forEach(element => {
+                                element.removeAttribute('style');
+                                element.removeAttribute('class');
+                                element.removeAttribute('id');
+                                element.removeAttribute('name');
+                            });
+                        }
+                        return document.documentElement.innerHTML;
+                    });
+                } catch {
+                    fail = true;
+                }
+                await browser.close();
                 // htmldata = htmldata.replace(/<style>.*?<\/style>/g, '');
                 data = new TurndownService().turndown(htmldata);
                 // ignore style sheet with turndown ability
-                await browser.close();
             }
             let ob = { data, question, url };
             const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');
             javascriptCode = formatToolCode(actData);
             javascriptCodeBack = [
-                `console.log('${base64}');`,
+                `console.log('${!fail ? base64 : `["${url}"]`}');`,
             ].join('\n');
+            await p12.dismiss();
+            // console.log('javascriptCodeBack!!!!!!!!!!!!!!!!!!!!!!', javascriptCodeBack);
         } else if (actData.name === 'cdnjs_finder') {
             if (is_none_data(actData?.input?.package_name)) throw null;
             const packageName = actData.input.package_name;
@@ -221,9 +229,19 @@ export async function actDataParser({ actData, processTransactions }) {
             const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
             const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
             if (structure1 === structure2) {
+                // let pp3 = null;
+                // console.log('actData.name!!!!!!!!!!!!!!!!!!!!!!!!!!!', name, caption('webSearch'));
+                // if (name === 'web_search') {
+                // pp3 = await out_state(caption('webSearch'));
+                // console.log('pp3!!!!!!!!!!!!!!!!!!!!!!!!!!!', pp3);
+                // }
                 javascriptCode = formatToolCode(actData);
                 javascriptCodeBack = await loadToolCode(actData);
                 if (npm_package_list) requiredPackageNames = npm_package_list;
+                // if (pp3) {
+                // await pp3.dismiss();
+                // console.log('pp3 dismissed!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+                // }
             }
         }
         /*

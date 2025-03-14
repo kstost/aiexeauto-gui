@@ -1,5 +1,8 @@
 export const i18nCaptions = {
     "ko": {
+        "retrievingFromFile": "파일을 확인 중...",
+        "retrievingFromWebpage": "웹페이지를 확인 중...",
+        "webSearch": "웹페이지 검색",
         "nodePath": "Node.js 경로",
         "npmPath": "npm 경로",
         "pythonPath": "Python 경로",
@@ -120,6 +123,9 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "retrievingFromFile": "Checking file...",
+        "retrievingFromWebpage": "Checking webpage...",
+        "webSearch": "Web Search",
         "nodePath": "Node.js Path",
         "npmPath": "npm Path",
         "pythonPath": "Python Path",
@@ -240,6 +246,9 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "retrievingFromFile": "ファイルを確認中...",
+        "retrievingFromWebpage": "ウェブページを確認中...",
+        "webSearch": "ウェブ検索",
         "nodePath": "Node.js パス",
         "npmPath": "npm パス",
         "pythonPath": "Python パス",
@@ -360,6 +369,9 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "retrievingFromFile": "Kiểm tra tệp...",
+        "retrievingFromWebpage": "Kiểm tra trang web...",
+        "webSearch": "Tìm kiếm trang web",
         "nodePath": "Đường dẫn Node.js",
         "npmPath": "Đường dẫn npm",
         "pythonPath": "Đường dẫn Python",
@@ -480,6 +492,9 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "retrievingFromFile": "检查文件...",
+        "retrievingFromWebpage": "检查网页...",
+        "webSearch": "网页搜索",
         "nodePath": "Node.js路径",
         "npmPath": "npm路径",
         "pythonPath": "Python路径",

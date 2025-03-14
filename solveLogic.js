@@ -364,35 +364,24 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         let nextCodeForValidation;
         let evaluationText = '';
 
-        if (1) {
-            const tools = `${await (async () => {
-                const toolList = await getToolList();
-                let toolPrompts = [];
-                for (let tool of toolList) {
-                    const toolData = await getToolData(tool);
-                    if (!toolData) continue;
-                    toolPrompts.push(toolData.prompt);
-                }
-                return toolPrompts.join('\n\t\n');
-            })()}`;
-
+        const toolsssss = `${await (async () => {
+            const toolList = await getToolList();
+            let toolPrompts = [];
+            for (let tool of toolList) {
+                const toolData = await getToolData(tool);
+                if (!toolData) continue;
+                toolPrompts.push(toolData.prompt);
+            }
+            return toolPrompts.join('\n\t\n');
+        })()}`;
+        if (true) {
             let actDataEvalPrepare;
-            const systemPrompt = templateBinding((await promptTemplate()).makeTodoList.systemPrompt, {
-                languageFullName: await getLanguageFullName(),
-                tools: tools,
-            });
-            const userPrompt = templateBinding((await promptTemplate()).makeTodoList.userPrompt, {
-                mission: multiLineMission,
-            });
+            const systemPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.systemPrompt, { languageFullName: await getLanguageFullName(), tools: toolsssss, });
+            const userPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.userPrompt, { mission: multiLineMission, });
             await exceedCatcher(async () => {
                 actDataEvalPrepare = await chatCompletion(
                     systemPrompt,
-                    [
-                        {
-                            role: 'user',
-                            content: userPrompt,
-                        }
-                    ],
+                    [{ role: 'user', content: userPrompt, }],
                     'evalprepareCode1',
                     interfaces,
                     caption('evaluation')
@@ -401,7 +390,23 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             actDataEvalPrepare = actDataEvalPrepare.replace(/\[\s*\]/g, '');
             console.log(actDataEvalPrepare);
             multiLineMission = `${multiLineMission}\n\n${actDataEvalPrepare}`;
-            // process.exit(0);
+        }
+        if (true) {
+            let actDataEvalPrepare;
+            const systemPrompt = templateBinding((await promptTemplate()).makeTodoList.systemPrompt, { languageFullName: await getLanguageFullName(), tools: toolsssss, });
+            const userPrompt = templateBinding((await promptTemplate()).makeTodoList.userPrompt, { mission: multiLineMission, });
+            await exceedCatcher(async () => {
+                actDataEvalPrepare = await chatCompletion(
+                    systemPrompt,
+                    [{ role: 'user', content: userPrompt, }],
+                    'evalprepareCode1',
+                    interfaces,
+                    caption('evaluation')
+                );
+            }, () => areBothSame(processTransactions, ++reduceLevel));
+            actDataEvalPrepare = actDataEvalPrepare.replace(/\[\s*\]/g, '');
+            console.log(actDataEvalPrepare);
+            multiLineMission = `${multiLineMission}\n\n${actDataEvalPrepare}`;
         }
         while (iterationCount < maxIterations || !maxIterations) {
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
@@ -522,7 +527,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         );
                     }, () => areBothSame(processTransactions, ++reduceLevel));
                     // console.log('actData', actData);
-                    let actDataResult = await actDataParser({ actData, processTransactions });
+                    let actDataResult = await actDataParser({ actData, processTransactions, out_state });
                     javascriptCode = actDataResult.javascriptCode || '';
                     requiredPackageNames = actDataResult.requiredPackageNames || [];
                     pythonCode = actDataResult.pythonCode || '';
@@ -617,7 +622,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     actData.input.command = confirmed.confirmedCode;
                     // confirmedd = true;
                     // console.log('confirmed', confirmed);
-                    let actDataResult = await actDataParser({ actData, processTransactions });
+                    let actDataResult = await actDataParser({ actData, processTransactions, out_state });
                     setCodeDefault(actDataResult);
                 }
             } catch (error) {
@@ -685,6 +690,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             const weatherToPush = (!errorList.codeexecutionerror && data);
             let summarized;
             if (actData.name === 'retrieve_from_file' && codeExecutionResult?.output) {
+                let pid6 = await out_state(caption('retrievingFromFile')); // `${stateLabel}를 ${model}가 처리중...`
                 try {
                     const parsed = JSON.parse(codeExecutionResult?.output);
                     let answered = await retriving(parsed.file_path, parsed.result, parsed.question);
@@ -696,6 +702,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
                 } catch {
                 }
+                await pid6.dismiss();
             }
             if (actData.name === 'show_output_range' && codeExecutionResult?.output) {
                 try {
@@ -706,19 +713,37 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 }
             }
             if (actData.name === 'retrieve_from_webpage' && codeExecutionResult?.output) {
+                let pid6 = await out_state(caption('retrievingFromWebpage')); // `${stateLabel}를 ${model}가 처리중...`
                 try {
-                    let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
-                    const parsed = JSON.parse(decoded);
-                    let answered = await retriving(parsed.url, parsed.data, parsed.question);
-                    summarized = [
-                        `🌏 url: ${parsed.url}`,
-                        `💬 question: ${parsed.question}`,
-                        `💡 answer: ${answered}`,
-                    ].join('\n');
-                    streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
+                    let output = codeExecutionResult?.output;
+                    console.log('output!!!!!!!!!!!!!!!!!!!!!!!', output);
+                    let fail = false;
+                    let failedUrl = '';
+                    try {
+                        let parsed = JSON.parse(output);
+                        if (parsed.constructor === Array) {
+                            failedUrl = parsed[0];
+                            fail = true;
+                            summarized = `❌ Page Not Found: ${failedUrl}`;
+                            streamGetter(JSON.stringify({ str: summarized, type: 'stderr' }), true);
+                        }
+                    } catch {
+                    }
+                    if (!fail) {
+                        let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
+                        const parsed = JSON.parse(decoded);
+                        let answered = await retriving(parsed.url, parsed.data, parsed.question);
+                        summarized = [
+                            `🌏 url: ${parsed.url}`,
+                            `💬 question: ${parsed.question}`,
+                            `💡 answer: ${answered}`,
+                        ].join('\n');
+                        streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
+                    }
                 } catch {
 
                 }
+                await pid6.dismiss();
             }
             if (actData.name === 'web_search' && codeExecutionResult?.output) {
                 summarized = codeExecutionResult?.output;

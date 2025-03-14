@@ -137,9 +137,20 @@ export async function promptTemplate() {
         `Let's think step by step.`,
     ]);
 
+    templateBase.measureKeyPointOfMission = {};
+    templateBase.measureKeyPointOfMission.systemPrompt = arrayAsText([
+        'You are an AI agent that processes data with Computer and Tools.',
+        'Clearfy the key point of the mission user requested.',
+        'You need to return the key point of the task in {{languageFullName}}.',
+        'Never include other than user\'s request.',
+    ]);
+    templateBase.measureKeyPointOfMission.userPrompt = arrayAsText([
+        '{{mission}}',
+    ]);
+
     templateBase.makeTodoList = {};
     templateBase.makeTodoList.systemPrompt = arrayAsText([
-        'You are an AI agent.',
+        'You are an AI agent that processes data with Computer and Tools.',
         'During the task process, you can use the provided Tools or create and execute Python Code, and all arrangements have been made so that you don\'t need to worry specifically about execution.',
         'Please create a markdown-formatted detailed to-do list to handle the following task.',
         '',
@@ -162,6 +173,8 @@ export async function promptTemplate() {
         `**Don't consider anything at all regarding the execution of the code file!**`,
         `**Never think about how to save and run the code file! Please!!**`,
         `**If you make code, the code must be PYTHON CODE!!**`,
+        'Never include other than user\'s request.',
+        "**ABSOLUTELY PROHIBIT INCLUDING ANY ACTIONS NOT DIRECTLY RELATED TO THE USER'S REQUEST!**",
         '',
     ]);
     templateBase.makeTodoList.userPrompt = arrayAsText([
