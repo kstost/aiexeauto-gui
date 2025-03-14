@@ -324,6 +324,34 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         }
         let nextCodeForValidation;
         let evaluationText = '';
+
+        if (false) {
+            let actDataEvalPrepare;
+            await exceedCatcher(async () => {
+                actDataEvalPrepare = await chatCompletion(
+                    [
+                        '작업을 위한 To-do List를 markdown으로 만들어라'
+                    ].join('\n'),
+                    [
+                        {
+                            role: 'user',
+                            content: [
+                                makeTag('Mission', multiLineMission),
+                                '---',
+                                '현재 작업을 위한 To-do List를 markdown으로 만들어라',
+                                '한국어로 만들어.'
+                            ].join('\n'),
+                        }
+                    ],
+                    'evalprepareCode1',
+                    interfaces,
+                    caption('evaluation')
+                );
+            }, () => areBothSame(processTransactions, ++reduceLevel));
+
+            console.log(actDataEvalPrepare);
+            process.exit(0);
+        }
         while (iterationCount < maxIterations || !maxIterations) {
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
             await waitingForDataCheck(out_state);

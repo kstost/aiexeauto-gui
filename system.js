@@ -201,11 +201,11 @@ export async function promptTemplate() {
         '</Instructions>',
         '',
         "If you are currently facing a problem, exercise maximum flexibility!",
-        'Tell me what task to perform next right away!',
+        'Tell me THE ONLY ONE THING to do right next. Not multiple tasks BUT THE ONLY ONE!!!! If you response multiple things then I will face huge fail. Please THE ONLY ONE THING todo',
     ]);
     templateBase.planning.systemPrompt = arrayAsText([
         "You are a Code Interpreter Agent.",
-        `You can solve the mission with Python code or Function calling Tools.`,
+        `You can solve the mission with Python code or Function calling Tools. You can make any tool with python code if Function calling Tools is not enough.`,
         `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
         `Exclude code or unnecessary content and respond with only one sentence in {{languageFullName}}. Omit optional tasks.`,
         '',
@@ -237,11 +237,11 @@ export async function promptTemplate() {
             `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
             '</Instructions>',
             '',
-            'Tell me what task to perform next right away!',
+            'Tell me THE ONLY ONE THING to do right next. Not multiple tasks BUT THE ONLY ONE!!!! If you response multiple things then I will face huge fail. Please THE ONLY ONE THING todo',
         ]);
         templateBase.planning.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
-            `You can solve the mission with Python code or Function calling Tools.`,
+            `You can solve the mission with Python code or Function calling Tools. You can make any tool with python code if Function calling Tools is not enough.`,
             `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
             `Exclude code or unnecessary content and respond with only one sentence in {{languageFullName}}. Omit optional tasks.`,
             '',
@@ -273,11 +273,11 @@ export async function promptTemplate() {
             `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
             '</Instructions>',
             '',
-            'Tell me what task to perform next right away!',
+            'Tell me THE ONLY ONE THING to do right next. Not multiple tasks BUT THE ONLY ONE!!!! If you response multiple things then I will face huge fail. Please THE ONLY ONE THING todo',
         ]);
         templateBase.planning.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
-            `You can solve the mission with Python code or Function calling Tools.`,
+            `You can solve the mission with Python code or Function calling Tools. You can make any tool with python code if Function calling Tools is not enough.`,
             `You are a secretary who establishes a plan for the next task to complete the mission, considering the progress so far and the results of previous tasks. `,
             `Exclude code or unnecessary content and respond with only one sentence in {{languageFullName}}. Omit optional tasks.`,
             '',
@@ -454,7 +454,7 @@ export async function promptTemplate() {
     if ((!envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
         templateBase.codeGenerator.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
-            `You can solve the mission with Python code or Function calling Tools.`,
+            `You can solve the mission with Python code or Function calling Tools. You can make any tool with python code if Function calling Tools is not enough.`,
             "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION. Write a Python code for execution.",
             '',
             '<MainMission>',
@@ -504,7 +504,7 @@ export async function promptTemplate() {
     } else if ((envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
         templateBase.codeGenerator.systemPrompt = arrayAsText([
             "You are a Code Interpreter Agent.",
-            `You can solve the mission with Python code or Function calling Tools.`,
+            `You can solve the mission with Python code or Function calling Tools. You can make any tool with python code if Function calling Tools is not enough.`,
             "As a computer task execution agent, it performs the necessary tasks to carry out the SUB MISSION in order to complete the MAIN MISSION.",
             '',
             '<MainMission>',
