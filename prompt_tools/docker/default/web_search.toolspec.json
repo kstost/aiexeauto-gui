@@ -1,0 +1,23 @@
+{
+    "name": "web_search",
+    "description": "Search the web for the specified query.",
+    "instructions": [
+        "Provide the query to search for."
+    ],
+    "input_schema": [
+        {
+            "query": ""
+        },
+        {
+            "query": "query to search for, e.g., 'What is the capital of France?'"
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": false,
+    "return_description": "Array value containing the search results. Each result is an object with the following properties: title, description, url.",
+    "return_type": "Array",
+    "tooling_in_realworld": true,
+    "npm_package_list": [
+        "duck-duck-scrape"
+    ]
+}

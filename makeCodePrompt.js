@@ -12,11 +12,18 @@ export function indention(num = 1, string = null, indentation = 2) {
 export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission, check_list) {
     let output = processTransactions.at(-1).data;
     let summarized = processTransactions.at(-1).summarized;
+    let outputDataId = processTransactions.at(-1).outputDataId;
     if (summarized) {
         output = summarized;
     }
     else if (output) {
-        output = omitMiddlePart(output);
+        const { text, omitted } = omitMiddlePart(output, 1024, outputDataId);
+        output = text;
+        if (omitted) {
+            // output = `${output}\n\n(The middle part of the output is omitted due to length. You can see the full output by clicking the button below.)`;
+            // outputDataId
+        }
+        //outputDataId
     }
     const lastMessage = processTransactions.at(-1).data !== null ? makeTag('CodeExecutionOutput', output || '(no output)') : '';
     if (type === 'coding') {

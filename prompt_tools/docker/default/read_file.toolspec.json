@@ -1,0 +1,20 @@
+{
+    "name": "read_file",
+    "description": "Read a file and return the content.",
+    "instructions": [
+        "Provide the file path to read."
+    ],
+    "input_schema": [
+        {
+            "file_path": ""
+        },
+        {
+            "file_path": "file path to save, e.g., ./program/robots.txt"
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": false,
+    "return_description": "String of the file content.",
+    "return_type": "string",
+    "tooling_in_realworld": true
+}

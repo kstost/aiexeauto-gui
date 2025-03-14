@@ -1,0 +1,22 @@
+{
+    "name": "write_file",
+    "description": "Write a file with the specified content.",
+    "instructions": [
+        "Provide the file path and the content to write."
+    ],
+    "input_schema": [
+        {
+            "file_path": "",
+            "content": ""
+        },
+        {
+            "file_path": "file path to save, e.g., ./program/robots.txt",
+            "content": "content to write, e.g., print('Hello, world!')"
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": true,
+    "return_description": "Boolean value indicating whether the file was written successfully.",
+    "return_type": "boolean",
+    "tooling_in_realworld": true
+}

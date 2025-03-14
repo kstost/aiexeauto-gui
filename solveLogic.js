@@ -153,11 +153,18 @@ export const createSpinner = (text, spinnerType = 'dots') => {
     // return spinner;
 };
 
-export function omitMiddlePart(text, length = 1024) {
+export function omitMiddlePart(text, length = 1024, outputDataId) {
     text = text.trim();
-    return (text.length > length
-        ? text.substring(0, length / 2) + '\n\n...(middle part omitted due to length)...\n\n' + text.substring(text.length - length / 2)
-        : text).trim();
+    let lineCount = text.split('\n').length;
+    let omitted = false;
+    if (text.length > length) {
+        text = text.substring(0, length / 2) + `\n\n...(middle part omitted due to length. Total line count: ${lineCount}. You can see the other part by call 'show_output_range' function with outputDataId "${outputDataId}", and start line number n, end line number m)...\n\n` + text.substring(text.length - length / 2)
+        text = text.trim();
+        omitted = true;
+    } else {
+        text = text.trim()
+    }
+    return { text, omitted };
 }
 
 export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle, reduceLevel }) {
@@ -471,7 +478,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         );
                     }, () => areBothSame(processTransactions, ++reduceLevel));
                     // console.log('actData', actData);
-                    let actDataResult = await actDataParser({ actData });
+                    let actDataResult = await actDataParser({ actData, processTransactions });
                     javascriptCode = actDataResult.javascriptCode || '';
                     requiredPackageNames = actDataResult.requiredPackageNames || [];
                     pythonCode = actDataResult.pythonCode || '';
@@ -549,6 +556,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             const streamGetter = async (str, force = false) => {
                 if (actData.name === 'retrieve_from_file' && !force) return;
                 if (actData.name === 'retrieve_from_webpage' && !force) return;
+                if (actData.name === 'show_output_range' && !force) return;
                 // if (!useDocker) return;
                 process.stdout.write(str);
                 if (executionId) {
@@ -565,7 +573,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     actData.input.command = confirmed.confirmedCode;
                     // confirmedd = true;
                     // console.log('confirmed', confirmed);
-                    let actDataResult = await actDataParser({ actData });
+                    let actDataResult = await actDataParser({ actData, processTransactions });
                     setCodeDefault(actDataResult);
                 }
             } catch (error) {
@@ -619,7 +627,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             } catch (error) {
                 errorList.codeexecutionerror = { error };
             }
-            if (actData.name !== 'retrieve_from_file' && actData.name !== 'retrieve_from_webpage') {
+            if (actData.name !== 'retrieve_from_file' && actData.name !== 'retrieve_from_webpage' && actData.name !== 'show_output_range') {
                 let pid = await out_state(``);
                 if (errorList.codeexecutionerror) {
                     await pid.fail(caption('codeExecutionAborted'));
@@ -645,6 +653,14 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 } catch {
                 }
             }
+            if (actData.name === 'show_output_range' && codeExecutionResult?.output) {
+                try {
+                    const decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
+                    summarized = decoded;
+                    streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
+                } catch {
+                }
+            }
             if (actData.name === 'retrieve_from_webpage' && codeExecutionResult?.output) {
                 try {
                     let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
@@ -660,11 +676,16 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
                 }
             }
+            if (actData.name === 'web_search' && codeExecutionResult?.output) {
+                summarized = codeExecutionResult?.output;
+            }
+
             const codeExecutionResultOutput = codeExecutionResult?.output?.replace(/\x1b\[[0-9;]*m/g, '') || '';
 
             //whattodo
+            const outputDataId = Math.random().toString(36).substring(2, 7).toUpperCase();
             if (weatherToPush) await pushProcessTransactions({ class: 'code', data });
-            if (weatherToPush) await pushProcessTransactions({ class: 'output', data: codeExecutionResultOutput, summarized });
+            if (weatherToPush) await pushProcessTransactions({ class: 'output', data: codeExecutionResultOutput, summarized, outputDataId });
             if (runCodeFactor && !(codeExecutionResultOutput.trim().length)) {
                 await out_print({ data: caption('noResult'), mode: 'outputPreview' });
             }

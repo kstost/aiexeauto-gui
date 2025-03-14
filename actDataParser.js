@@ -1,7 +1,7 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
 import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
-export async function actDataParser({ actData }) {
+export async function actDataParser({ actData, processTransactions }) {
     const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
     let toolingFailed = false;
     function shellCommander(shellCommand) {
@@ -123,6 +123,26 @@ export async function actDataParser({ actData }) {
             if (is_none_data(actData?.input?.new_path)) throw null;
             javascriptCode = formatToolCode(actData);
             javascriptCodeBack = await loadToolCode(actData);
+        } else if (actData.name === 'show_output_range') {
+            if (is_none_data(actData?.input?.outputDataId)) throw null;
+            if (is_none_data(actData?.input?.startLineNumber)) throw null;
+            if (is_none_data(actData?.input?.endLineNumber)) throw null;
+            actData = JSON.parse(JSON.stringify(actData));
+            actData.input.startLineNumber = Number(actData.input.startLineNumber);
+            actData.input.endLineNumber = Number(actData.input.endLineNumber);
+            const theLine = processTransactions.filter(transaction => {
+                const data1 = transaction?.outputDataId?.toUpperCase();
+                const data2 = actData?.input?.outputDataId?.toUpperCase();
+                if (!data2 || !data1) return false;
+                return data1 === data2;
+            })[0];
+            let data = theLine ? theLine.data.split('\n').slice(actData.input.startLineNumber, actData.input.endLineNumber).join('\n') : '';
+            javascriptCode = formatToolCode(actData);
+            // console.log('emoji 🔎');
+            data = `🔎 Part of the output from the outputDataId: ${actData.input.outputDataId} (Range: ${actData.input.startLineNumber} - ${actData.input.endLineNumber})\n---\n${data}`;
+            // console.log(data);
+            const base64 = Buffer.from(data).toString('base64');
+            javascriptCodeBack = [`console.log('${base64}');`].join('\n');
         } else if (actData.name === 'retrieve_from_webpage') {
             if (is_none_data(actData?.input?.url)) throw null;
             if (is_none_data(actData?.input?.question)) throw null;

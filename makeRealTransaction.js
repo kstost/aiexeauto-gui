@@ -12,10 +12,22 @@ export async function makeRealTransaction({ processTransactions, multiLineMissio
         let whatdidwedo = processTransactions[i].whatdidwedo;
         let mainkeymission = processTransactions[i].mainkeymission;
         let notcurrentmission = processTransactions[i].notcurrentmission;
+        let outputDataId = processTransactions[i].class === 'output' ? processTransactions[i].outputDataId : null;
         mainkeymission = mainKeyMission;
         if (output) {
-            output = summarized ? summarized : omitMiddlePart(output);
-            output = output.trim();
+            if (summarized) {
+                output = summarized;
+                output = output.trim();
+            } else {
+                const { text, omitted } = omitMiddlePart(output, 1024, outputDataId);
+                output = text;
+                output = output.trim();
+                if (omitted) {
+
+                }
+            }
+            // output = output.trim();
+            // output = summarized ? summarized : text;
         }
 
         const printWhatToDo = whattodo && mainkeymission !== whattodo;

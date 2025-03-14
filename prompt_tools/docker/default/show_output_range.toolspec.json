@@ -1,0 +1,24 @@
+{
+    "name": "show_output_range",
+    "description": "View a slice of the output with the specified outputDataId, start line number n, end line number m.",
+    "instructions": [
+        "Provide the outputDataId, start line number n, end line number m."
+    ],
+    "input_schema": [
+        {
+            "outputDataId": "outputDataId",
+            "startLineNumber": 0,
+            "endLineNumber": 0
+        },
+        {
+            "outputDataId": "outputDataId string",
+            "startLineNumber": "start line number",
+            "endLineNumber": "end line number"
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": false,
+    "return_description": "The slice of the output.",
+    "return_type": "string",
+    "tooling_in_realworld": true
+}
