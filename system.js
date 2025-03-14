@@ -237,6 +237,10 @@ export async function promptTemplate() {
             `  <Rule>Respond in one sentence in {{languageFullName}}.</Rule>`,
             '</Instructions>',
             '',
+            "The decisions you make will have a tremendous impact. Please think deeply and broadly with utmost care before acting. If this decision fails, it could lead to immense misfortune.",
+            '',
+            'Please be smart and think deeply and broadly.',
+            '',
             'Tell me THE ONLY ONE THING to do right next. Not multiple tasks BUT THE ONLY ONE!!!! If you response multiple things then I will face huge fail. Please THE ONLY ONE THING todo',
         ]);
         templateBase.planning.systemPrompt = arrayAsText([
@@ -304,6 +308,7 @@ export async function promptTemplate() {
         '</OutputFormat>',
         ``,
         `Make the check list for evalution whether the mission has been completed based on the work performed so far.`,
+        "If this request isn’t handled properly, my entire future could collapse. Please, I beg you, assist me with utmost care and without any mistakes. If this fails, I will lose everyone I hold dear, fall into economic ruin, and end up in the depths of despair, abandoned on the streets.",
         `Think Deeply Please.`,
     ]);
     templateBase.evalpreparer.systemPrompt = arrayAsText([
@@ -349,6 +354,8 @@ export async function promptTemplate() {
         '</OutputFormat>',
         ``,
         `**Refer closely to the previous output, as it contains key clues for determining success or failure**.`,
+        ``,
+        "If this evaluation fails, my life is over. I beg you, use utmost care—no mistakes. The MissionEvaluation Report cost me everything I own; please rely on it. Failure means losing all I love and utter ruin.",
         ``,
         `Determine mission completion and decide next steps.`,
     ]);
@@ -416,6 +423,8 @@ export async function promptTemplate() {
         '{{whattodo}}',
         '',
         '{{mainKeyMission}}',
+        '',
+        "If this mission isn’t carried out properly, my entire future could collapse. Please, I beg you, assist me with utmost care and without any mistakes. If this fails, I will lose everyone I hold dear, fall into economic ruin, and end up in the depths of despair, abandoned on the streets.",
         '',
         'Make the code.',
     ]);
@@ -499,6 +508,8 @@ export async function promptTemplate() {
             '',
             '{{mainKeyMission}}',
             '',
+            "If this mission isn’t carried out properly, my entire future could collapse. Please, I beg you, assist me with utmost care and without any mistakes. If this fails, I will lose everyone I hold dear, fall into economic ruin, and end up in the depths of despair, abandoned on the streets.",
+            '',
             'Make the Python code.',
         ]);
     } else if ((envConst.whether_to_tool_use_in_gemini && llm === 'gemini')) {
@@ -547,6 +558,8 @@ export async function promptTemplate() {
             '{{whattodo}}',
             '',
             '{{mainKeyMission}}',
+            '',
+            "If this mission isn’t carried out properly, my entire future could collapse. Please, I beg you, assist me with utmost care and without any mistakes. If this fails, I will lose everyone I hold dear, fall into economic ruin, and end up in the depths of despair, abandoned on the streets.",
             '',
             'Make the Python code.',
         ]);
