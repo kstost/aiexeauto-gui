@@ -47,6 +47,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
             content: templateBinding((await promptTemplate()).evaluator.userPrompt, {
                 check_list: makeTag('MissionCheckList', check_list, !!check_list),
                 last: lastMessage,
+                mission: makeTag('MustAchieveMission', mission, !!mission),
                 mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
                 languageFullName: await getLanguageFullName(),
             }),
@@ -66,7 +67,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
             role: "user",
             content: templateBinding((await promptTemplate()).recollection.userPrompt, {
                 last: lastMessage,
-                mission: makeTag('OurGoal', mission, !!mission),
+                mission: makeTag('MustAchieveMission', mission, !!mission),
                 mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
                 languageFullName: await getLanguageFullName(),
             }),
@@ -77,7 +78,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
             role: "user",
             content: templateBinding((await promptTemplate()).planning.userPrompt, {
                 last: lastMessage,
-                mission: makeTag('OurGoal', mission, !!mission),
+                mission: makeTag('MustAchieveMission', mission, !!mission),
                 mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
                 deepThinkingPlan: deepThinkingPlan ? makeTag('Plan', deepThinkingPlan, !!deepThinkingPlan) : '',
                 languageFullName: await getLanguageFullName(),
@@ -88,7 +89,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
             role: "user",
             content: templateBinding((await promptTemplate()).deepThinkingPlan.userPrompt, {
                 last: lastMessage,
-                mission: makeTag('OurGoal', mission, !!mission),
+                mission: makeTag('MustAchieveMission', mission, !!mission),
                 languageFullName: await getLanguageFullName(),
             }),
         };

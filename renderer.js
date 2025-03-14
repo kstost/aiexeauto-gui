@@ -1238,7 +1238,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             listItem.style.backgroundColor = '#1c1c1c';
             listItem.style.borderRadius = '4px';
-            listItem.textContent = item.talktitle.title;
+            listItem.textContent = item.talktitle.title || '(untitled)';
+            if (!item.talktitle.title) {
+                listItem.style.opacity = '0.5';
+            }
 
             listItem.addEventListener('mouseenter', () => {
                 listItem.style.backgroundColor = '#333333';

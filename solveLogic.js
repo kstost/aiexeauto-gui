@@ -31,7 +31,26 @@ import { checkSyntax } from './docker.js';
 import { Retriver } from "./retriver.js";
 import crypto from 'crypto';
 let spinners = {};
+async function getNewFileName() {
+    const path = getAppPath('list');
+    if (!fs.existsSync(path)) {
+        await fs.promises.mkdir(path, { recursive: true });
+    }
+    let resultPath;
+    while (true) {
+        let randomName = Math.random().toString();
+        resultPath = randomName + '.json';
+        if (!fs.existsSync(path + '/' + resultPath)) {
+            break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 10)); // 약간의 딜레이
+    }
+    if (ensureAppsHomePath(path + '/' + resultPath)) {
+        await fs.promises.writeFile(path + '/' + resultPath, '{}');
+        return resultPath;
+    }
 
+}
 export function getSpinners() {
     return spinners;
 }
@@ -45,13 +64,20 @@ export async function getRetriver() {
     });
     return retriver;
 }
-export async function retriving(data, question) {
+export async function retriving(key, data, question) {
     const retriver = await getRetriver();
     if (!question) question = `Extract the essential parts from this document and compile them into a comprehensive detailed report format.`;
-    const md5Hash = crypto.createHash('md5').update(data).digest('hex');
+    const md5Hash = crypto.createHash('md5').update(key).digest('hex');
     try {
         const rId = `task_${md5Hash}`;
-        await retriver.addContent(rId, 'data', data);
+        let exist = false;
+        try {
+            await retriver.getContent(rId, 'data');
+            exist = true;
+        } catch {
+            exist = false;
+        }
+        if (!exist) await retriver.addContent(rId, 'data', data);
         const answer = await retriver.retrieve(rId, question);
         return answer;
     } catch (e) {
@@ -170,6 +196,12 @@ export function omitMiddlePart(text, length = 1024, outputDataId) {
 export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle, reduceLevel }) {
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
     // const pid1 = await out_state(caption('solvingLogic'));
+    // 채ㅜ내
+    if (!talktitle) talktitle = {
+        filename: await getNewFileName(),
+        title: '',
+    };
+    console.log('talktitle!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!', talktitle);
     if (!reduceLevel) reduceLevel = 0;
     let keepMode = processTransactions.length > 0;
     keepMode = false;
@@ -332,22 +364,33 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         let nextCodeForValidation;
         let evaluationText = '';
 
-        if (false) {
+        if (1) {
+            const tools = `${await (async () => {
+                const toolList = await getToolList();
+                let toolPrompts = [];
+                for (let tool of toolList) {
+                    const toolData = await getToolData(tool);
+                    if (!toolData) continue;
+                    toolPrompts.push(toolData.prompt);
+                }
+                return toolPrompts.join('\n\t\n');
+            })()}`;
+
             let actDataEvalPrepare;
+            const systemPrompt = templateBinding((await promptTemplate()).makeTodoList.systemPrompt, {
+                languageFullName: await getLanguageFullName(),
+                tools: tools,
+            });
+            const userPrompt = templateBinding((await promptTemplate()).makeTodoList.userPrompt, {
+                mission: multiLineMission,
+            });
             await exceedCatcher(async () => {
                 actDataEvalPrepare = await chatCompletion(
-                    [
-                        '작업을 위한 To-do List를 markdown으로 만들어라'
-                    ].join('\n'),
+                    systemPrompt,
                     [
                         {
                             role: 'user',
-                            content: [
-                                makeTag('Mission', multiLineMission),
-                                '---',
-                                '현재 작업을 위한 To-do List를 markdown으로 만들어라',
-                                '한국어로 만들어.'
-                            ].join('\n'),
+                            content: userPrompt,
                         }
                     ],
                     'evalprepareCode1',
@@ -355,9 +398,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     caption('evaluation')
                 );
             }, () => areBothSame(processTransactions, ++reduceLevel));
-
+            actDataEvalPrepare = actDataEvalPrepare.replace(/\[\s*\]/g, '');
             console.log(actDataEvalPrepare);
-            process.exit(0);
+            multiLineMission = `${multiLineMission}\n\n${actDataEvalPrepare}`;
+            // process.exit(0);
         }
         while (iterationCount < maxIterations || !maxIterations) {
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
@@ -643,7 +687,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             if (actData.name === 'retrieve_from_file' && codeExecutionResult?.output) {
                 try {
                     const parsed = JSON.parse(codeExecutionResult?.output);
-                    let answered = await retriving(parsed.result, parsed.question);
+                    let answered = await retriving(parsed.file_path, parsed.result, parsed.question);
                     summarized = [
                         `📄 file_path: ${parsed.file_path}`,
                         `💬 question: ${parsed.question}`,
@@ -665,7 +709,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 try {
                     let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
                     const parsed = JSON.parse(decoded);
-                    let answered = await retriving(parsed.data, parsed.question);
+                    let answered = await retriving(parsed.url, parsed.data, parsed.question);
                     summarized = [
                         `🌏 url: ${parsed.url}`,
                         `💬 question: ${parsed.question}`,
@@ -804,31 +848,8 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             const pid4 = await out_state('');
             await pid4.fail(`${finishedByError}`);
         } else {
-            if (!talktitle) {
-                async function getNewFileName() {
-                    const path = getAppPath('list');
-                    if (!fs.existsSync(path)) {
-                        await fs.promises.mkdir(path, { recursive: true });
-                    }
-                    let resultPath;
-                    while (true) {
-                        let randomName = Math.random().toString();
-                        resultPath = randomName + '.json';
-                        if (!fs.existsSync(path + '/' + resultPath)) {
-                            break;
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 10)); // 약간의 딜레이
-                    }
-                    if (ensureAppsHomePath(path + '/' + resultPath)) {
-                        await fs.promises.writeFile(path + '/' + resultPath, '{}');
-                        return resultPath;
-                    }
+            if (!(talktitle?.title)) {
 
-                }
-                talktitle = {
-                    filename: await getNewFileName(),
-                    title: '',
-                };
 
                 try {
                     const prompt = templateBinding((await promptTemplate()).missionNaming.systemPrompt, {

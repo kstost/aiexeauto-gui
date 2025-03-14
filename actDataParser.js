@@ -1,5 +1,7 @@
 import axios from 'axios';
 import puppeteer from 'puppeteer';
+// import marked from 'marked';
+import TurndownService from 'turndown';
 import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
 export async function actDataParser({ actData, processTransactions }) {
     const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
@@ -164,7 +166,28 @@ export async function actDataParser({ actData, processTransactions }) {
                 const page = await browser.newPage();
                 await page.goto(url, { waitUntil: 'networkidle0' });
                 await new Promise(resolve => setTimeout(resolve, 3000));
-                data = await page.evaluate(() => document.documentElement.innerText);
+                const htmldata = await page.evaluate(() => {
+                    //remove all style sheet
+                    {
+                        const elements = document.querySelectorAll('style, script, link');
+                        elements.forEach(element => {
+                            element.remove();
+                        });
+                    }
+                    {
+                        const elements = document.querySelectorAll('*');
+                        elements.forEach(element => {
+                            element.removeAttribute('style');
+                            element.removeAttribute('class');
+                            element.removeAttribute('id');
+                            element.removeAttribute('name');
+                        });
+                    }
+                    return document.documentElement.innerHTML;
+                });
+                // htmldata = htmldata.replace(/<style>.*?<\/style>/g, '');
+                data = new TurndownService().turndown(htmldata);
+                // ignore style sheet with turndown ability
                 await browser.close();
             }
             let ob = { data, question, url };
