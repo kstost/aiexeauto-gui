@@ -1,5 +1,6 @@
 async function web_search(input) {
     let results = [];
+    let searchLimit = 5;
     const DDG = require('duck-duck-scrape');
     while (true) {
         try {
@@ -15,13 +16,14 @@ async function web_search(input) {
                 description: result.description,
                 url: result.url
             }));
-            console.log(`🔍 "${input.query}" search results: ${results.length} found.`);
+            console.log(`🔍 "${input.query}" \`web_search\` results: ${results.length} found.`);
             for (const result of results) {
                 if (result.url.indexOf('google.') !== -1) continue;
                 if (result.url.indexOf('youtube.') !== -1) continue;
                 if (result.url.indexOf('youtu.be') !== -1) continue;
                 if (result.url.indexOf('gmail') !== -1) continue;
                 if (result.url.indexOf('facebook') !== -1) continue;
+                if (result.url.endsWith('.pdf')) continue;
                 // if (result.url.indexOf('skyscanner') !== -1) continue;
                 // if (result.url.indexOf('airbnb') !== -1) continue;
                 // if (result.url.indexOf('booking') !== -1) continue;
