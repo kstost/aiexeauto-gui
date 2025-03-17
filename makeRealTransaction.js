@@ -103,7 +103,10 @@ export async function makeRealTransaction({ processTransactions, processTransact
         };
         realTransactions.push(data);
     }
-    if (realTransactions.length === 0) throw new Error('No transactions found');
+    if (realTransactions.length === 0) {
+        if (lastMessage) return lastMessage;
+        throw new Error('No transactions found');
+    }
     if (realTransactions[realTransactions.length - 1].role !== 'user') throw new Error('Last transaction is not user');
     if (realTransactions.length > 1) {
         if (type === 'coding') {
@@ -162,5 +165,7 @@ export async function makeRealTransaction({ processTransactions, processTransact
             ...derived
         ]
     }
+    // console.log(123123);
+    if (derived.length === 0 && lastMessage) return lastMessage;
     return derived;
 }
