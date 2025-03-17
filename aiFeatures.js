@@ -450,16 +450,21 @@ export function cleanDescription(description) {
     }
     return '';
 }
-export function stripTags(fileContent) {
-    // 태그 이름이 무엇이든 상관없이 모든 태그 쌍의 내용을 추출하는 정규표현식 (global flag 사용)
-    const regex = /<([A-Za-z0-9_-]+)>([\s\S]*?)<\/\1>/g;
+export function stripTags(fileContent, allowedTags) {
+    // allowedTags가 제공되지 않으면 모든 태그를 처리 (기존 동작 유지)
+    const tagPattern = allowedTags && allowedTags.length > 0
+        ? allowedTags.map(tag => tag.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')
+        : '[A-Za-z0-9_-]+';
+
+    // 지정된 태그들만 매칭하는 정규표현식
+    const regex = new RegExp(`<(${tagPattern})>([\\s\\S]*?)<\\/\\1>`, 'g');
     const results = [];
     let match;
 
     while ((match = regex.exec(fileContent)) !== null) {
         let codeBlock = match[2];
 
-        // 각 코드 블록의 앞뒤 공백 제거
+        // 각 코드 블록의 앞뒤 공백 제거 및 들여쓰기 정리
         let lines = codeBlock.split('\n');
 
         // 비어있는 줄은 무시하고, 모든 줄에 공통으로 포함된 최소 들여쓰기 계산
@@ -487,9 +492,11 @@ export function stripTags(fileContent) {
 }
 
 
+
 async function langParser(text, callMode) {
     try {
-        if (false) text = stripTags(text).join('\n').trim() || text;
+        if (true) text = stripTags(text, ['CodeForNextTasks']).join('\n').trim() || text;
+        console.log('textcode', text);
         const striped = stripSourceCodeInFencedCodeBlock(text);
         let code, languageName;
         if (striped) {
