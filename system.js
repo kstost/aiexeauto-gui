@@ -785,6 +785,7 @@ export async function loadConfiguration(getDefault = false) {
         nodePath: '', // Node.js 경로
         npmPath: '', // npm 경로
         pythonPath: '', // Python 경로
+        latestMemoryDepth: 30,
     }
     if (getDefault) return config;
     let dataType = {
@@ -818,6 +819,7 @@ export async function loadConfiguration(getDefault = false) {
         nodePath: "string", // Node.js 경로
         npmPath: "string", // npm 경로
         pythonPath: "string", // Python 경로
+        latestMemoryDepth: "number",
     }
     let config_ = {};
     try {

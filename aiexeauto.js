@@ -334,7 +334,9 @@ if (prompt === 'version') {
         // ㅅㄷㄴㅅ 
         // 테스트 코드
         // let list = await getToolList();
-        // console.log(list);
+        // console.log(await getConfiguration('latestMemoryDepth'));
+        // await setConfiguration('latestMemoryDepth', 999);
+        // ;
         // process.exit(0);
     }
     if (true) {

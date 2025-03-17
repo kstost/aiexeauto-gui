@@ -201,7 +201,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         filename: await getNewFileName(),
         title: '',
     };
-    console.log('talktitle!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!', talktitle);
+    const talkSessionId = crypto.createHash('md5').update(talktitle.filename).digest('hex');
     if (!reduceLevel) reduceLevel = 0;
     let keepMode = processTransactions.length > 0;
     keepMode = false;
@@ -234,20 +234,21 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     // const processTransactions = [];
     const pushProcessTransactions = async (data) => {
         processTransactions.push(data);
+        return;
         // if (!retriver) return;
-        uniqueSumNumber++;
-        const indention = (n) => ' '.repeat(n);
-        const addContent = [
-            `<transaction>`,
-            `${indention(3)}<order>${uniqueSumNumber}</order>`,
-            `${indention(3)}<type>${data.class}</type>`,
-            `${indention(3)}<code>`,
-            `${indention(0)}${!data.data ? '' : data.data.split('\n').map(line => `${indention(6)}${line}`).join('\n')}`,
-            `${indention(3)}</code>`,
-            `</transaction>`,
-        ].join('\n');
-        const retriver = await getRetriver();
-        await retriver.addContent(taskId_, `transaction_${uniqueSumNumber}`, addContent);
+        // uniqueSumNumber++;
+        // const indention = (n) => ' '.repeat(n);
+        // const addContent = [
+        //     `<transaction>`,
+        //     `${indention(3)}<order>${uniqueSumNumber}</order>`,
+        //     `${indention(3)}<type>${data.class}</type>`,
+        //     `${indention(3)}<code>`,
+        //     `${indention(0)}${!data.data ? '' : data.data.split('\n').map(line => `${indention(6)}${line}`).join('\n')}`,
+        //     `${indention(3)}</code>`,
+        //     `</transaction>`,
+        // ].join('\n');
+        // const retriver = await getRetriver();
+        // await retriver.addContent(taskId_, `transaction_${uniqueSumNumber}`, addContent);
     };
 
     // await pid54.dismiss();
@@ -445,7 +446,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
                         whatdidwedo = await chatCompletion(
                             prompt,
-                            await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'whatdidwedo', mainKeyMission }),
+                            await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', mainKeyMission, talkSessionId }),
                             'whatDidWeDo',
                             interfaces,
                             caption('whatDidWeDo')
@@ -478,7 +479,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
                         whattodo = await chatCompletion(
                             prompt,
-                            await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'whattodo', mainKeyMission }),
+                            await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whattodo', mainKeyMission, talkSessionId }),
                             'whatToDo',
                             interfaces,
                             caption('whatToDo')
@@ -516,7 +517,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 while (true) {
                     await exceedCatcher(async () => {
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
-                        let promptList = await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission });
+                        let promptList = await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission, talkSessionId });
                         promptList = JSON.parse(JSON.stringify(promptList));
                         actData = await chatCompletion(
                             { systemPrompt, systemPromptForGemini },
@@ -775,7 +776,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             systemPrompt: await prompts.systemEvalpreparePrompt(multiLineMission, dataSourcePath),
                             systemPromptForGemini: await prompts.systemEvalpreparePrompt(multiLineMission, dataSourcePath, true),
                         },
-                        await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'evalpreparation', mainKeyMission }),
+                        await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'evalpreparation', mainKeyMission, talkSessionId }),
                         'evalprepareCode',
                         interfaces,
                         caption('evaluation')
@@ -792,7 +793,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             systemPrompt: await prompts.systemEvaluationPrompt(multiLineMission, check_list, dataSourcePath),
                             systemPromptForGemini: await prompts.systemEvaluationPrompt(multiLineMission, check_list, dataSourcePath, true),
                         },
-                        await makeRealTransaction({ processTransactions: processTransactions_, multiLineMission, type: 'evaluation', mainKeyMission, check_list }),
+                        await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'evaluation', mainKeyMission, check_list, talkSessionId }),
                         'evaluateCode',
                         interfaces,
                         caption('evaluation')

@@ -15,8 +15,9 @@ class LoggingCallbackHandler extends BaseCallbackHandler {
     name = "LoggingCallbackHandler";
 
     async handleLLMStart(llm, prompts) {
-        console.log("=== Raw POST Body to OpenAI ===");
-        console.log(JSON.stringify({
+        let logging = false;
+        if (logging) console.log("=== Raw POST Body to OpenAI ===");
+        if (logging) console.log(JSON.stringify({
             model: llm.modelName,
             messages: prompts.map(prompt => ({ role: "user", content: prompt })),
             temperature: llm.temperature,
@@ -68,7 +69,7 @@ export class Retriver {
     // }) 
 
     setPromptTemplate(prompt = {
-        instruction: "Answer detailed and specific the question using only the provided context.",
+        instruction: "Answer very detailed and specific the question using only the provided context.",
         context: "{context}",
         question: "{input}",
         answer_format: "Provide a clear and concise answer.",
@@ -169,7 +170,7 @@ export class Retriver {
         }
     }
 
-    async retrieve(dbname, question, prompt) {
+    async vectorQuery(dbname, question, prompt) {
         if (prompt) this.setPromptTemplate(prompt);
 
         const data = await this.getDatabase(dbname);
@@ -204,13 +205,82 @@ export class Retriver {
         });
 
         // LLM 요청 payload 로깅
-        console.log("=== LLM Request Payload ===");
-        console.log("Question:", question);
-        console.log("Prompt Template:", this.promptTemplateRaw); // 저장된 원본 템플릿 사용
+        // console.log("=== LLM Request Payload ===");
+        // console.log("Question:", question);
+        // console.log("Prompt Template:", this.promptTemplateRaw); // 저장된 원본 템플릿 사용
 
         // 검색된 문서(컨텍스트)를 미리 가져와 로깅
         const retrievedDocs = await retriever.invoke(question);
-        console.log("Retrieved Context:", retrievedDocs.map(doc => ({
+        // console.log("Retrieved Context:", retrievedDocs.map(doc => ({
+        //     content: doc.pageContent,
+        //     metadata: doc.metadata,
+        // })));
+
+        // 바인딩된 최종 프롬프트 생성 및 로깅
+        const contextString = retrievedDocs.map(doc => doc.pageContent).join("\n");
+        return contextString;
+        // return {
+        //     contextString, question
+        // };
+        // const finalPrompt = await this.prompt.invoke({
+        //     context: contextString,
+        //     input: question,
+        // });
+        // console.log("Final Prompt (Bound):", finalPrompt.messages[0].content);
+
+        // console.log("==========================");
+        // console.log(JSON.stringify(finalPrompt, null, 3));
+
+        // // 최종 LLM 호출 및 응답 로깅
+        // const response = await retrievalChain.invoke({ input: question });
+        // console.log("Answer from retrievalChain:", response.answer);
+        // console.log("==========================");
+
+        // return response.answer;
+    }
+    async retrieve(dbname, question, prompt) {
+        let logging = false;
+        if (prompt) this.setPromptTemplate(prompt);
+
+        const data = await this.getDatabase(dbname);
+        const allDocs = [];
+        const allEmbeddings = [];
+
+        for (const key in data.data) {
+            if (!await this.isContentEmbedded(dbname, key)) {
+                await this.embedContent(dbname, key);
+            }
+
+            const data = await this.getDatabase(dbname);
+            const cache = data.cache[key];
+            cache.chunks.forEach((chunk, idx) => {
+                allDocs.push(new Document({ pageContent: chunk, metadata: { file: key } }));
+                allEmbeddings.push(cache.embeddings[idx]);
+            });
+        }
+
+        const vectorStore = new MemoryVectorStore(this.embeddings);
+        await vectorStore.addVectors(allEmbeddings, allDocs);
+
+        const combineDocsChain = await createStuffDocumentsChain({
+            llm: this.llm,
+            prompt: this.prompt,
+        });
+
+        const retriever = vectorStore.asRetriever();
+        const retrievalChain = await createRetrievalChain({
+            retriever,
+            combineDocsChain,
+        });
+
+        // LLM 요청 payload 로깅
+        if (logging) console.log("=== LLM Request Payload ===");
+        if (logging) console.log("Question:", question);
+        if (logging) console.log("Prompt Template:", this.promptTemplateRaw); // 저장된 원본 템플릿 사용
+
+        // 검색된 문서(컨텍스트)를 미리 가져와 로깅
+        const retrievedDocs = await retriever.invoke(question);
+        if (logging) console.log("Retrieved Context:", retrievedDocs.map(doc => ({
             content: doc.pageContent,
             metadata: doc.metadata,
         })));
@@ -221,17 +291,25 @@ export class Retriver {
             context: contextString,
             input: question,
         });
-        console.log("Final Prompt (Bound):", finalPrompt.messages[0].content);
+        if (logging) console.log("Final Prompt (Bound):", finalPrompt.messages[0].content);
 
-        console.log("==========================");
-        console.log(JSON.stringify(finalPrompt, null, 3));
+        if (logging) console.log("==========================");
+        if (logging) console.log(JSON.stringify(finalPrompt, null, 3));
 
         // 최종 LLM 호출 및 응답 로깅
         const response = await retrievalChain.invoke({ input: question });
-        console.log("Answer from retrievalChain:", response.answer);
-        console.log("==========================");
+        if (logging) console.log("Answer from retrievalChain:", response.answer);
+        if (logging) console.log("==========================");
 
         return response.answer;
+    }
+    async embedAll(dbname) {
+        const data = await this.getDatabase(dbname);
+        for (const key in data.data) {
+            if (!await this.isContentEmbedded(dbname, key)) {
+                await this.embedContent(dbname, key);
+            }
+        }
     }
 
     async deleteContent(dbname, keyname) {
