@@ -489,7 +489,7 @@ export function stripTags(fileContent) {
 
 async function langParser(text, callMode) {
     try {
-        text = stripTags(text).join('\n').trim() || text;
+        if (false) text = stripTags(text).join('\n').trim() || text;
         const striped = stripSourceCodeInFencedCodeBlock(text);
         let code, languageName;
         if (striped) {

@@ -1,5 +1,6 @@
 export const i18nCaptions = {
     "ko": {
+        "firstPlanning": "계획 수립",
         "retrievingFromFile": "파일을 확인 중...",
         "retrievingFromWebpage": "웹페이지를 확인 중...",
         "webSearch": "웹페이지 검색",
@@ -123,6 +124,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "firstPlanning": "Planning",
         "retrievingFromFile": "Checking file...",
         "retrievingFromWebpage": "Checking webpage...",
         "webSearch": "Web Search",
@@ -246,6 +248,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "firstPlanning": "計画立案",
         "retrievingFromFile": "ファイルを確認中...",
         "retrievingFromWebpage": "ウェブページを確認中...",
         "webSearch": "ウェブ検索",
@@ -369,6 +372,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "firstPlanning": "kế hoạch",
         "retrievingFromFile": "Kiểm tra tệp...",
         "retrievingFromWebpage": "Kiểm tra trang web...",
         "webSearch": "Tìm kiếm trang web",
@@ -492,6 +496,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "firstPlanning": "计划立案",
         "retrievingFromFile": "检查文件...",
         "retrievingFromWebpage": "检查网页...",
         "webSearch": "网页搜索",

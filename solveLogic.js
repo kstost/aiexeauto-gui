@@ -379,13 +379,29 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let actDataEvalPrepare;
             const systemPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.systemPrompt, { languageFullName: await getLanguageFullName(), tools: toolsssss, });
             const userPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.userPrompt, { mission: multiLineMission, });
+            const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
             await exceedCatcher(async () => {
                 actDataEvalPrepare = await chatCompletion(
                     systemPrompt,
-                    [{ role: 'user', content: userPrompt, }],
-                    'evalprepareCode1',
+                    await makeRealTransaction({
+                        processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', mainKeyMission, talkSessionId, lastMessage: [{
+                            role: 'user', content: [
+                                "<MustAchieveMission>",
+                                userPrompt,
+                                "</MustAchieveMission>",
+                                ``,
+                                `You are an AI agent that processes data with Computer and Tools.`,
+                                `Clearfy the key point of the mission user requested.`,
+                                `You need to return the key point of the task in Korean.`,
+                                `Never include other than user's request.`,
+                                ``,
+                                `Response the key point of the task in three sentences.`,
+                            ].join('\n'),
+                        }]
+                    }),
+                    'firstPlanning1',
                     interfaces,
-                    caption('evaluation')
+                    caption('firstPlanning')
                 );
             }, () => areBothSame(processTransactions, ++reduceLevel));
             actDataEvalPrepare = actDataEvalPrepare.replace(/\[\s*\]/g, '');
@@ -396,13 +412,30 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let actDataEvalPrepare;
             const systemPrompt = templateBinding((await promptTemplate()).makeTodoList.systemPrompt, { languageFullName: await getLanguageFullName(), tools: toolsssss, });
             const userPrompt = templateBinding((await promptTemplate()).makeTodoList.userPrompt, { mission: multiLineMission, });
+            const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
             await exceedCatcher(async () => {
                 actDataEvalPrepare = await chatCompletion(
                     systemPrompt,
-                    [{ role: 'user', content: userPrompt, }],
-                    'evalprepareCode1',
+                    await makeRealTransaction({
+                        processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', mainKeyMission, talkSessionId, lastMessage: [{
+                            role: 'user', content: [
+                                "<MustAchieveMission>",
+                                userPrompt,
+                                "</MustAchieveMission>",
+                                ``,
+                                `You are an AI agent that processes data with Computer and Tools.`,
+                                `During the task process, you can use the provided Tools or create and execute Python Code, and all arrangements have been made so that you don't need to worry specifically about execution.`,
+                                `Please create a markdown-formatted detailed to-do list to handle the following task.`,
+                                ``,
+                                `Respond in Korean.`,
+                                ``,
+                                `Only respond with a markdown-formatted to-do list.`,
+                            ].join('\n'),
+                        }]
+                    }),
+                    'firstPlanning2',
                     interfaces,
-                    caption('evaluation')
+                    caption('firstPlanning')
                 );
             }, () => areBothSame(processTransactions, ++reduceLevel));
             actDataEvalPrepare = actDataEvalPrepare.replace(/\[\s*\]/g, '');

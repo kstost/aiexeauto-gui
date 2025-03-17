@@ -28,7 +28,7 @@ export async function archivingForRetriver({ data, talkSessionId, orderNumber })
     await retriver.addContent(talkSessionId, `message_${orderNumber}`, addContent);
     await retriver.embedAll(talkSessionId);
 }
-export async function makeRealTransaction({ processTransactions, processTransactionsReduced, multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission, check_list, talkSessionId }) {
+export async function makeRealTransaction({ processTransactions, processTransactionsReduced, multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission, check_list, talkSessionId, lastMessage }) {
     processTransactions = JSON.parse(JSON.stringify(processTransactions));
     processTransactionsReduced = JSON.parse(JSON.stringify(processTransactionsReduced));
     // let lll = processTransactions.length - (processTransactions.length - processTransactionsReduced.length);
@@ -122,7 +122,11 @@ export async function makeRealTransaction({ processTransactions, processTransact
             realTransactions[0].content = 'Response the first code for the first step of the mission.';
         }
     }
-    realTransactions[realTransactions.length - 1] = await makeCodePrompt(multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission, check_list);
+    if (lastMessage && lastMessage[0]) {
+        realTransactions[realTransactions.length - 1] = lastMessage[0];
+    } else {
+        realTransactions[realTransactions.length - 1] = await makeCodePrompt(multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission, check_list);
+    }
     let derived = [];
     for (let i = 0; i < realTransactions.length; i++) {
         let topDepth = (realTransactions.length - topLatestDepth >= i);
