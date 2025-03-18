@@ -1,0 +1,24 @@
+{
+    "name": "retrieve_from_pdf",
+    "description": "Read the contents of a specified PDF file and provide an answer to the given question based on the PDF file's data.",
+    "instructions": [
+        "Provide the PDF file path and the question to be answered based on the file's contents.",
+        "Use this for ask question about the PDF file.",
+        "Use this for analyze the information in the PDF file."
+    ],
+    "input_schema": [
+        {
+            "pdf_file_path": "",
+            "question": ""
+        },
+        {
+            "pdf_file_path": "PDF file path to read, e.g., ./program/document.pdf",
+            "question": "question to answer, e.g., What is the name of the project? or Extract the essential parts from this document and compile them into a comprehensive detailed report format."
+        }
+    ],
+    "activate": true,
+    "only_use_in_code": false,
+    "return_description": "",
+    "return_type": "",
+    "tooling_in_realworld": true
+}

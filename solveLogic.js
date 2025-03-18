@@ -560,7 +560,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         );
                     }, () => areBothSame(processTransactions, ++reduceLevel));
                     // console.log('actData', actData);
-                    let actDataResult = await actDataParser({ actData, processTransactions, out_state });
+                    let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId });
                     javascriptCode = actDataResult.javascriptCode || '';
                     requiredPackageNames = actDataResult.requiredPackageNames || [];
                     pythonCode = actDataResult.pythonCode || '';
@@ -639,6 +639,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let executionId;
             let pi3d13;
             const streamGetter = async (str, force = false) => {
+                if (actData.name === 'retrieve_from_pdf' && !force) return;
                 if (actData.name === 'retrieve_from_file' && !force) return;
                 if (actData.name === 'retrieve_from_webpage' && !force) return;
                 if (actData.name === 'show_output_range' && !force) return;
@@ -659,7 +660,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     actData.input.command = confirmed.confirmedCode;
                     // confirmedd = true;
                     // console.log('confirmed', confirmed);
-                    let actDataResult = await actDataParser({ actData, processTransactions, out_state });
+                    let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId });
                     setCodeDefault(actDataResult);
                 }
             } catch (error) {
@@ -715,7 +716,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             } catch (error) {
                 errorList.codeexecutionerror = { error };
             }
-            if (actData.name !== 'retrieve_from_file' && actData.name !== 'retrieve_from_webpage' && actData.name !== 'show_output_range') {
+            if (actData.name !== 'retrieve_from_file' && actData.name !== 'retrieve_from_webpage' && actData.name !== 'show_output_range' && actData.name !== 'retrieve_from_pdf') {
                 let pid = await out_state(``);
                 if (errorList.codeexecutionerror) {
                     await pid.fail(caption('codeExecutionAborted'));
@@ -736,6 +737,23 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     let answered = await retriving(parsed.file_path, parsed.result, parsed.question);
                     summarized = [
                         `📄 file_path: ${parsed.file_path}`,
+                        `💬 question: ${parsed.question}`,
+                        `💡 answer: ${answered}`,
+                    ].join('\n');
+                    streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
+                } catch {
+                }
+                await pid6.dismiss();
+            }
+            if (actData.name === 'retrieve_from_pdf' && codeExecutionResult?.output) {
+                let pid6 = await out_state(caption('retrievingFromPdf')); // `${stateLabel}를 ${model}가 처리중...`
+                try {
+                    let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
+                    const parsed = JSON.parse(decoded);
+                    console.log(parsed.data);
+                    let answered = await retriving(parsed.pdf_file_path, parsed.data, parsed.question);
+                    summarized = [
+                        `📄 pdf_file_path: ${parsed.pdf_file_path}`,
                         `💬 question: ${parsed.question}`,
                         `💡 answer: ${answered}`,
                     ].join('\n');

@@ -1,5 +1,6 @@
 export const i18nCaptions = {
     "ko": {
+        "retrievingFromPdf": "PDF 파일을 읽는 중...",
         "runningCode": "수행 준비 중...",
         "firstPlanning": "계획 수립",
         "retrievingFromFile": "파일을 확인 중...",
@@ -126,6 +127,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "retrievingFromPdf": "Reading PDF file...",
         "runningCode": "Preparing to run...",
         "firstPlanning": "Planning",
         "retrievingFromFile": "Checking file...",
@@ -252,6 +254,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "retrievingFromPdf": "PDF ファイルを読み込んでいます...",
         "runningCode": "実行準備中...",
         "firstPlanning": "計画立案",
         "retrievingFromFile": "ファイルを確認中...",
@@ -378,6 +381,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "retrievingFromPdf": "Đang đọc tệp PDF...",
         "runningCode": "Chuẩn bị thực thi...",
         "firstPlanning": "kế hoạch",
         "retrievingFromFile": "Kiểm tra tệp...",
@@ -504,6 +508,7 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "retrievingFromPdf": "正在读取PDF文件...",
         "runningCode": "准备执行...",
         "firstPlanning": "计划立案",
         "retrievingFromFile": "检查文件...",
