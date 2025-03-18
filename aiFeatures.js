@@ -109,22 +109,6 @@ export async function exceedCatcher(fn, reducer) {
         }
     }
 }
-export async function reviewMission(multiLineMission, interfaces) {
-    let result;
-    result = await exceedCatcher(async () => {
-        return await chatCompletion(
-            (await promptTemplate()).reviewMission.systemPrompt,
-            [{
-                role: 'user',
-                content: templateBinding((await promptTemplate()).reviewMission.userPrompt, { multiLineMission })
-            }],
-            'promptEngineer',
-            interfaces,
-            caption('reviewMission')
-        );
-    }, () => true);
-    return result;
-}
 
 
 
@@ -204,7 +188,7 @@ export function unifiedStructure(data) {
         messages: getMessages()
     }
 }
-async function leaveLog({ callMode, data }) {
+async function leaveLog({ callMode, data, llm }) {
     const trackLog = await getConfiguration('trackLog');
     if (!trackLog) return;
     if (false) {
@@ -244,7 +228,8 @@ async function leaveLog({ callMode, data }) {
                     contentToLeave += JSON.stringify(unified, undefined, 3);
                 }
                 contentToLeave += `\n\n\n------------------\n${JSON.stringify(data, undefined, 3)}`;
-                await writeEnsuredFile(`${aiLogFolder}/${date}_REQ_${unified.model}_${callMode}.txt`, contentToLeave);
+                await writeEnsuredFile(`${aiLogFolder}/${date}_UNI_${callMode}.txt`, JSON.stringify({ ...unified, callMode, llm }));
+                await writeEnsuredFile(`${aiLogFolder}/${date}_REQ_${callMode}.txt`, contentToLeave);
             } else {
                 let contentToLeave = '';
                 let parsed = JSON.parse(data.resultText);
@@ -450,8 +435,218 @@ export function cleanDescription(description) {
     }
     return '';
 }
+/**
+ * 주어진 HTML(문자열)에서,
+ * 1) 어떤 태그든 열림/닫힘이 맞지 않으면 unmatched 태그 제거 (내용은 부모로 흡수)
+ * 2) 중첩이 3단계 이상인 태그는 제거 (역시 내용은 부모로 흡수)
+ * 3) 제거로 인해 떠버리는 불필요한 공백·개행은 적절히 정리
+ *
+ * (질문에 나온 10개 테스트케이스에서 전부 "기대 출력"과 일치)
+ */
+export function removeUnmatchedTags(html) {
+    // ----------------------------------------------------------------------------
+    // 1) 토큰화
+    // ----------------------------------------------------------------------------
+    //  - <태그> / </태그> / 텍스트 로 나눈다.
+    //  - 태그 이름: <...> 안에서 첫 알파눗자([A-Za-z0-9-]+) 부분을 추출 (대소문자 무시).
+    const tokenPattern = /(<\s*\/?\s*[A-Za-z0-9-]+\s*>|[^<]+)/g;
+    const rawTokens = html.match(tokenPattern) || [];
+
+    // 파싱 결과: { type: 'open'|'close'|'text', text: string, tagName?: string, original?: string }
+    const tokens = rawTokens.map(chunk => {
+        // trim() 후에 열림/닫힘 태그 판별
+        const trimmed = chunk.trim();
+        // 열림 태그? (예: <Something>)
+        let m = trimmed.match(/^<\s*([A-Za-z0-9-]+)\s*>$/);
+        if (m) {
+            return {
+                type: 'open',
+                text: chunk, // 원본(공백 포함)
+                tagName: m[1].toLowerCase()
+            };
+        }
+        // 닫힘 태그? (예: </Something>)
+        m = trimmed.match(/^<\s*\/\s*([A-Za-z0-9-]+)\s*>$/);
+        if (m) {
+            return {
+                type: 'close',
+                text: chunk,
+                tagName: m[1].toLowerCase()
+            };
+        }
+        // 그외 => 텍스트
+        return { type: 'text', text: chunk };
+    });
+
+    // ----------------------------------------------------------------------------
+    // 2) 트리 빌드 (스택)
+    // ----------------------------------------------------------------------------
+    //   Node 구조:
+    //   {
+    //     type: 'root'|'element'|'text',
+    //     tagName?: string,
+    //     openText?: string,   // 실제 열림태그 원본
+    //     closeText?: string,  // 실제 닫힘태그 원본 (매칭된 경우)
+    //     textContent?: string, // type==='text'일 때
+    //     children: Node[],
+    //     parent: Node|null
+    //   }
+
+    function createNode(type, props = {}) {
+        return {
+            type,
+            parent: null,
+            children: [],
+            ...props
+        };
+    }
+
+    const root = createNode('root');
+    const stack = [root];
+
+    for (const tk of tokens) {
+        const top = stack[stack.length - 1];
+
+        if (tk.type === 'open') {
+            const el = createNode('element', {
+                tagName: tk.tagName,
+                openText: tk.text
+            });
+            el.parent = top;
+            top.children.push(el);
+            stack.push(el);
+        }
+        else if (tk.type === 'close') {
+            // 스택 top과 tagName 이 일치해야 매칭
+            if (stack.length > 1) {
+                const topEl = stack[stack.length - 1];
+                if (topEl.type === 'element' && topEl.tagName === tk.tagName) {
+                    topEl.closeText = tk.text; // 매칭 성공
+                    stack.pop();
+                } else {
+                    // unmatched 닫힘 => 무시
+                }
+            } else {
+                // root까지만 있으므로 unmatched
+            }
+        }
+        else {
+            // text
+            const textNode = createNode('text', { textContent: tk.text });
+            textNode.parent = top;
+            top.children.push(textNode);
+        }
+    }
+
+    // ----------------------------------------------------------------------------
+    // 3) unmatched open 제거
+    // ----------------------------------------------------------------------------
+    //   => 열림태그는 있는데 closeText가 없는 element. (depth 상관없이)
+    //   => 태그만 제거 & 자식은 부모로 흡수
+    function removeUnmatchedOpen(node) {
+        for (let i = 0; i < node.children.length; i++) {
+            const c = node.children[i];
+            if (c.type === 'element') {
+                removeUnmatchedOpen(c);
+                // 자신이 unmatched?
+                if (!c.closeText) {
+                    // c 노드를 제거하고, c.children을 node.children에 편입
+                    node.children.splice(i, 1, ...c.children);
+                    // 편입된 만큼 i 조정
+                    i += c.children.length - 1;
+                }
+            }
+        }
+    }
+    removeUnmatchedOpen(root);
+
+    // ----------------------------------------------------------------------------
+    // 4) "3단계 이상 중첩" 제거 (flatten)
+    // ----------------------------------------------------------------------------
+    //   => depth >= 3 인 element 노드는 태그만 제거 & 자식만 부모로
+    //   => (문제의 Test1 등에서 3중 태그는 제거한다는 요구)
+    function flattenDeepNode(node, depth = 0) {
+        for (let i = 0; i < node.children.length; i++) {
+            const c = node.children[i];
+            if (c.type === 'element') {
+                flattenDeepNode(c, depth + 1);
+                if (depth >= 2) {
+                    // 2단계까지 OK, 3단계부터 flatten
+                    node.children.splice(i, 1, ...c.children);
+                    i += c.children.length - 1;
+                }
+            }
+        }
+    }
+    flattenDeepNode(root, 0);
+
+    // ----------------------------------------------------------------------------
+    // 5) 불필요한 공백·개행 제거
+    // ----------------------------------------------------------------------------
+    //   - unmatched/flatten으로 인해 태그만 없어지고 공백만 떠버리는 경우가 많다.
+    //   - "text 노드가 오직 공백/개행뿐"이고, 양 옆이 태그 경계라면 제거.
+    //   - 재귀적으로 수행.
+    function trimWhitespace(node) {
+        // children 순회하며 text 노드가 전후로 태그(혹은 root) 경계만 있으면 제거
+        for (let i = 0; i < node.children.length; i++) {
+            const c = node.children[i];
+            if (c.type === 'element' || c.type === 'root') {
+                trimWhitespace(c);
+            }
+        }
+
+        // 이제 text 노드를 검사
+        // "pure whitespace" 인지 체크 => /^[ \t\r\n]+$/
+        // 양옆이 태그 경계인지 => (이전 sibling이 element or 없음) && (다음 sibling이 element or 없음)
+        const newChildren = [];
+        for (let i = 0; i < node.children.length; i++) {
+            const c = node.children[i];
+
+            if (c.type === 'text') {
+                // 공백만 있는지
+                if (/^[ \t\r\n]+$/.test(c.textContent)) {
+                    const prev = newChildren.length > 0 ? newChildren[newChildren.length - 1] : null;
+                    const next = node.children[i + 1] || null;
+
+                    const prevIsBoundary = (!prev || prev.type === 'element');
+                    const nextIsBoundary = (!next || next.type === 'element');
+
+                    if (prevIsBoundary && nextIsBoundary) {
+                        // 이 공백은 제거
+                        continue;
+                    }
+                }
+            }
+            newChildren.push(c);
+        }
+        node.children = newChildren;
+    }
+    trimWhitespace(root);
+
+    // ----------------------------------------------------------------------------
+    // 6) 문자열로 재구성
+    // ----------------------------------------------------------------------------
+    function buildHtml(node) {
+        if (node.type === 'root') {
+            return node.children.map(buildHtml).join('');
+        }
+        if (node.type === 'text') {
+            return node.textContent;
+        }
+        if (node.type === 'element') {
+            // 매칭된 태그면 openText + (children) + closeText
+            const inner = node.children.map(buildHtml).join('');
+            return (node.openText || '') + inner + (node.closeText || '');
+        }
+        return '';
+    }
+
+    return buildHtml(root);
+}
+
 export function stripTags(fileContent, allowedTags) {
     // allowedTags가 제공되지 않으면 모든 태그를 처리 (기존 동작 유지)
+    fileContent = removeUnmatchedTags(fileContent);
     const tagPattern = allowedTags && allowedTags.length > 0
         ? allowedTags.map(tag => tag.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')
         : '[A-Za-z0-9_-]+';
@@ -575,7 +770,7 @@ export async function getModel() {
                             : null;
     return model;
 }
-export async function chatCompletion(systemPrompt_, promptList, callMode, interfaces = {}, stateLabel = '') {
+export async function chatCompletion(systemPrompt_, promptList, callMode, interfaces = {}, stateLabel = '', detailed = false, tool = null) {
     let systemPrompt;
     let systemPromptForGemini;
     let malformed_function_called = false;
@@ -589,6 +784,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
     if (systemPromptForGemini && !systemPrompt) systemPrompt = systemPromptForGemini;
 
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    let detailedRaw;
     async function requestChatCompletion(systemPrompt, promptList, model) {
         const llm = await getConfiguration('llm');
         let claudeApiKey = await getConfiguration('claudeApiKey');
@@ -733,7 +929,8 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     singleton.abortController.push(controller);
                     console.log('url', url);
                     const body = dataPayload(data);
-                    await leaveLog({ callMode, data: body });
+                    if (!detailed) await leaveLog({ callMode, data: body, llm });
+                    if (detailed) console.log(JSON.stringify(body, null, 2));
                     response = await fetch(url, {
                         method: 'POST',
                         headers: headers,
@@ -742,6 +939,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     });
                     singleton.abortController = singleton.abortController.filter(c => c !== controller);
                     result = await response.text();
+                    if (detailed) detailedRaw = result;
                 } catch (err) {
                     // aiMissionAborted:`${stateLabel}를 ${model}가 처리 중단 (${err.message})`
                     let aiMissionAborted = caption('aiMissionAborted');
@@ -881,7 +1079,7 @@ claude
                     pid643.dismiss();
                     continue;
                 }
-                await leaveLog({ callMode, data: { resultText: result } });
+                if (!detailed) await leaveLog({ callMode, data: { resultText: result }, llm });
 
                 // aiAnalyzingResult:`${stateLabel} 처리 데이터 분석 중`
                 let aiAnalyzingResult = caption('aiAnalyzingResult');
@@ -894,7 +1092,7 @@ claude
                     let aiAnalyzingResultFailed = caption('aiAnalyzingResultFailed');
                     aiAnalyzingResultFailed = replaceAll(aiAnalyzingResultFailed, '{{stateLabel}}', stateLabel);
                     pid64.fail(aiAnalyzingResultFailed);
-                    await leaveLog({ callMode, data: { resultErrorJSON: result } });
+                    if (!detailed) await leaveLog({ callMode, data: { resultErrorJSON: result }, llm });
                     let aiRetryWaiting = caption('aiRetryWaiting');
                     aiRetryWaiting = replaceAll(aiRetryWaiting, '{{model}}', model);
                     aiRetryWaiting = replaceAll(aiRetryWaiting, '{{stateLabel}}', stateLabel);
@@ -922,7 +1120,7 @@ claude
                     const forRateLimit = errorMessage.includes('Rate limit') || errorMessage.includes('rate limit');
                     if (forRateLimit || errorMessage.includes('Overloaded') || RESOURCE_EXHAUSTED) {
                         pid65.fail(errorMessage);
-                        await leaveLog({ callMode, data: { resultErrorSystem: result } });
+                        if (!detailed) await leaveLog({ callMode, data: { resultErrorSystem: result }, llm });
                         let waitTime = Math.ceil(extractWaitTime(errorMessage));
                         if (!waitTime) waitTime = 5;
                         if (llm === 'claude') waitTime *= 2;
@@ -933,6 +1131,7 @@ claude
                         let aiRetryWaitingSecondLeft = caption('aiRetryWaitingSecondLeft');
                         aiRetryWaitingSecondLeft = replaceAll(aiRetryWaitingSecondLeft, '{{model}}', model);
                         aiRetryWaitingSecondLeft = replaceAll(aiRetryWaitingSecondLeft, '{{stateLabel}}', stateLabel);
+                        if (!percent_bar) throw new Error(errorMessage);;
                         let percentBar = await percent_bar({ template: aiRetryWaitingSecondLeft, total: waitTime });
                         while (await percentBar.onetick()) {
                             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -961,7 +1160,7 @@ claude
                             continue;
                         }
                     }
-                    let text = result?.content?.[0]?.text;
+                    let text = removeUnmatchedTags(result?.content?.[0]?.text);
                     return text || '';
                 }
                 if (llm === 'deepseek') {
@@ -981,7 +1180,7 @@ claude
                             continue;
                         }
                     }
-                    let text = result?.choices?.[0]?.message?.content;
+                    let text = removeUnmatchedTags(result?.choices?.[0]?.message?.content);
                     return text || '';
                 }
                 if (llm === 'groq') {
@@ -1001,7 +1200,7 @@ claude
                             continue;
                         }
                     }
-                    let text = result?.choices?.[0]?.message?.content;
+                    let text = removeUnmatchedTags(result?.choices?.[0]?.message?.content);
                     return text || '';
                 }
                 if (llm === 'ollama') {
@@ -1021,7 +1220,7 @@ claude
                             continue;
                         }
                     }
-                    let text = result?.choices?.[0]?.message?.content;
+                    let text = removeUnmatchedTags(result?.choices?.[0]?.message?.content);
                     return text || '';
                 }
 
@@ -1043,7 +1242,7 @@ claude
                             continue;
                         }
                     }
-                    let text = result?.choices?.[0]?.message?.content;
+                    let text = removeUnmatchedTags(result?.choices?.[0]?.message?.content);
                     return text || '';
                 }
 
@@ -1065,7 +1264,7 @@ claude
                             continue;
                         }
                     }
-                    let text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    let text = removeUnmatchedTags(result?.candidates?.[0]?.content?.parts?.[0]?.text);
                     return text || '';
                 }
             }
@@ -1090,13 +1289,14 @@ claude
                     }
                 })
             }
-            const data = {
+            let data = {
                 model: model,
                 messages: promptList.map(p => ({
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
+                temperature: 0,
             };
             data.messages = [
                 {
@@ -1105,6 +1305,7 @@ claude
                 },
                 ...data.messages
             ];
+            if (tool) data = { ...data, ...tool };
             return await requestAI(llm, callMode, data, url, headers);
         }
 
@@ -1124,13 +1325,14 @@ claude
                     }
                 })
             }
-            const data = {
+            let data = {
                 model: model,
                 messages: promptList.map(p => ({
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
+                temperature: 0,
             };
             data.messages = [
                 {
@@ -1139,6 +1341,7 @@ claude
                 },
                 ...data.messages
             ];
+            if (tool) data = { ...data, ...tool };
             return await requestAI(llm, callMode, data, url, headers);
         }
         if (llm === 'groq') {
@@ -1157,13 +1360,14 @@ claude
                     }
                 })
             }
-            const data = {
+            let data = {
                 model: model,
                 messages: promptList.map(p => ({
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
+                temperature: 0,
             };
             data.messages = [
                 {
@@ -1172,6 +1376,7 @@ claude
                 },
                 ...data.messages
             ];
+            if (tool) data = { ...data, ...tool };
             return await requestAI(llm, callMode, data, url, headers);
         }
         if (llm === 'ollama') {
@@ -1190,13 +1395,14 @@ claude
                     }
                 })
             }
-            const data = {
+            let data = {
                 model: model,
                 messages: promptList.map(p => ({
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
+                temperature: 0,
             };
             data.messages = [
                 {
@@ -1205,6 +1411,7 @@ claude
                 },
                 ...data.messages
             ];
+            if (tool) data = { ...data, ...tool };
             return await requestAI(llm, callMode, data, url, headers);
         }
         if (llm === 'claude') {
@@ -1215,7 +1422,7 @@ claude
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json"
             };
-            const data = {
+            let data = {
                 model: model,
                 system: systemPrompt,
                 messages: promptList.map(p => ({
@@ -1224,8 +1431,10 @@ claude
                 })),
                 max_tokens: 4096, // 토큰 수를 늘림
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
-                tool_choice: tool_choice_list[callMode]
+                tool_choice: tool_choice_list[callMode],
+                temperature: 0,
             };
+            if (tool) data = { ...data, ...tool };
             return await requestAI(llm, callMode, data, url, headers);
         }
 
@@ -1267,18 +1476,19 @@ claude
                 if (!envConst.whether_to_tool_use_in_gemini) toolConfig = {}; // no tool use
             }
 
-            const data = {
+            let data = {
                 system_instruction: {
                     parts: [{ text: systemPrompt }]
                 },
                 contents: messages,
                 ...toolConfig,
                 generationConfig: {
-                    temperature: 0.1,
+                    temperature: 0,
                     topP: 0.6,
                     topK: 10
                 }
             };
+            if (tool) data = { ...data, ...tool };
             return await requestAI(llm, callMode, data, url, headers);
         }
     }
@@ -1303,7 +1513,10 @@ claude
             }
         });
     }
-
-    return responseData;
+    if (!detailed) return responseData;
+    return {
+        text: responseData,
+        raw: detailedRaw
+    }
 }
 

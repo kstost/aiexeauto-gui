@@ -24,15 +24,26 @@ export class DisplayState {
         this.textContainer.style.fontWeight = '400';
         this.textContainer.style.fontFamily = 'Noto Sans KR';
         this.textContainer.style.marginTop = '-3px';
+        this.textContainer.style.whiteSpace = 'nowrap';
+        this.textContainer.style.overflow = 'hidden';
+        this.textContainer.style.textOverflow = 'ellipsis';
 
         this.state.appendChild(this.iconContainer);
         this.state.appendChild(this.textContainer);
     }
-    dismiss() {
+    dismiss(justAlpha = true) {
+        if (justAlpha) {
+            this.state.style.opacity = '0';
+            return;
+        }
         this.state.style.display = 'none';
     }
     setState({ text, state }) {
-        this.textContainer.textContent = text;
+        this.textContainer.innerHTML = text;
+        this.textContainer.querySelectorAll('a').forEach(a => {
+            a.style.color = 'rgb(77, 150, 209)';
+            a.style.textDecoration = 'none';
+        });
         this.state.style.display = 'flex';
         if (!text) this.state.style.display = 'none';
 

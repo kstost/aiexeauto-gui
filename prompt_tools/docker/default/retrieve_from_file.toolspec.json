@@ -2,7 +2,9 @@
     "name": "retrieve_from_file",
     "description": "Read the contents of a specified file and provide an answer to the given question based on the file's data.",
     "instructions": [
-        "Provide the file path and the question to be answered based on the file's contents."
+        "Provide the file path and the question to be answered based on the file's contents.",
+        "Use this for ask question about the file.",
+        "Use this for analyze the information in the file."
     ],
     "input_schema": [
         {

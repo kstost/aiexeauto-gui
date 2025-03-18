@@ -2,7 +2,10 @@
     "name": "read_file",
     "description": "Read a file and return the content.",
     "instructions": [
-        "Provide the file path to read."
+        "Provide the file path to read.",
+        "Plain text or Source code file is preferred.",
+        "Use this for read exact data in the file.",
+        "Use this for the file is not too large."
     ],
     "input_schema": [
         {

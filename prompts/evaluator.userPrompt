@@ -1,0 +1,28 @@
+{{last}}
+
+<MissionEvaluation>
+   <CompletionCheck>
+      Does the progress so far and current output indicate mission completion?
+   </CompletionCheck>
+   <ActionDetermination>
+      Judge what to do to complete the mission by the Output of the Execution and the history we did so far.
+   </ActionDetermination>
+</MissionEvaluation>
+
+{{mission}}
+
+The Must Achieve Mission is the most important mission. Please think deeply about it.
+
+{{check_list}}
+
+<OutputFormat>
+```json
+{ "evaluation": "Respond with the result based on whether the mission was successfully completed e.g, ENDOFMISSION or NOTSOLVED", "reason": "Explain the reason for the verdict in {{languageFullName}} of short length" }
+```
+</OutputFormat>
+
+**Refer closely to the previous output, as it contains key clues for determining success or failure**.
+
+Determine mission completion and decide next steps.
+
+**THE REASON MUST BE SHORT.**

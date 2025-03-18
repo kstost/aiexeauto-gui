@@ -38,6 +38,17 @@ let currentConfig = {};
 const codeExecutionDelay = 0;
 const dockerContainers = {};
 const toolList = [];// = {};
+let lastDismissed = [];// = {};
+function dissmissPreviousDisplayState() {
+    // return;
+    while (lastDismissed.length) {
+        lastDismissed.pop().dismiss(false);
+    }
+    // lastDismissed?.forEach(item => item.dismiss(false));
+    // if (lastDismissed) {
+    //     lastDismissed = null;
+    // }
+}
 window.electronAPI.receive('mission_aborting_response', (arg) => {
     aborting_responsed = true;
 });
@@ -84,6 +95,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             displayState[id] = new DisplayState();
             conversations.appendChild(displayState[id].state);
             displayState[id].setState({ text: text, state: state });
+            text && dissmissPreviousDisplayState();
             // scrollBodyToBottomSmoothly();
         },
         code_confirmed(confirmedCode, language) {
@@ -165,6 +177,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             // console.log(10, body);
             // displayState = new DisplayState();
+            console.log(body);
+            body.stateLabel && dissmissPreviousDisplayState();
             let id = randomId();
             displayState[id] = new DisplayState();
             conversations.appendChild(displayState[id].state);
@@ -316,6 +330,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             let id = body.labelId;
             if (!displayState[id]) return;
             displayState[id].dismiss();
+            lastDismissed.push(displayState[id]);
             delete displayState[id];
         },
         async succeed(body) {
@@ -999,6 +1014,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (false) await abortTask(taskId);
         // console.log(await task.promise);
         let { resultPath, containerId, processTransactions, talktitle, reduceLevel } = await task.promise;
+        dissmissPreviousDisplayState();
         let doneWithNothing = processTransactions.length === 0 || !talktitle;
         workData.talktitle = talktitle;
         workData.reduceLevel = reduceLevel;

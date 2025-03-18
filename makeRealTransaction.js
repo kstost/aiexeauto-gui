@@ -28,7 +28,7 @@ export async function archivingForRetriver({ data, talkSessionId, orderNumber })
     await retriver.addContent(talkSessionId, `message_${orderNumber}`, addContent);
     await retriver.embedAll(talkSessionId);
 }
-export async function makeRealTransaction({ processTransactions, processTransactionsReduced, multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission, check_list, talkSessionId, lastMessage }) {
+export async function makeRealTransaction({ processTransactions, processTransactionsReduced, multiLineMission, type, whatdidwedo, whattodo,  evaluationText, check_list, talkSessionId, lastMessage }) {
     processTransactions = JSON.parse(JSON.stringify(processTransactions));
     processTransactionsReduced = JSON.parse(JSON.stringify(processTransactionsReduced));
     // let lll = processTransactions.length - (processTransactions.length - processTransactionsReduced.length);
@@ -66,12 +66,9 @@ export async function makeRealTransaction({ processTransactions, processTransact
         let summarized = classData === 'output' ? processTransactions[i].summarized : null;
         let whattodo = processTransactions[i].whattodo;
         let whatdidwedo = processTransactions[i].whatdidwedo;
-        let mainkeymission = processTransactions[i].mainkeymission;
-        let notcurrentmission = processTransactions[i].notcurrentmission;
         let outputDataId = classData === 'output' ? processTransactions[i].outputDataId : null;
         let omitLevel = 1024;
         if (topDepth) omitLevel = 1024 * 10;
-        mainkeymission = mainKeyMission;
         if (output) {
             if (summarized) {
                 output = summarized;
@@ -88,7 +85,7 @@ export async function makeRealTransaction({ processTransactions, processTransact
             // output = summarized ? summarized : text;
         }
 
-        const printWhatToDo = whattodo && mainkeymission !== whattodo;
+        const printWhatToDo = whattodo;
         const usersTurn = role === 'user';
         let data = {
             role,
@@ -96,7 +93,7 @@ export async function makeRealTransaction({ processTransactions, processTransact
                 codeExecutionOutput: makeTag('CodeExecutionOutput', output || '(no output)'),
                 whatdidwedo: makeTag('WorkDoneSoFar', whatdidwedo, !!whatdidwedo),
                 nextTasks: printWhatToDo ? makeTag('NextTasks', whattodo, !!whattodo) : '',
-                nextTasksToDo: !printWhatToDo && !notcurrentmission && mainkeymission ? makeTag('NextTasksToDo', mainkeymission, !!mainkeymission) : '',
+                nextTasksToDo: '',
             }) : templateBinding((await promptTemplate()).transactions.assistantPrompt, {
                 codeForNextTasks: makeTag('CodeForNextTasks', code),
             }),
@@ -119,8 +116,6 @@ export async function makeRealTransaction({ processTransactions, processTransact
             realTransactions[0].content = 'Response the first code for the first step of the mission.';
         } else if (type === 'whatdidwedo') {
             realTransactions[0].content = 'Response the first code for the first step of the mission.';
-        } else if (type === 'deepThinkingPlan') {
-            realTransactions[0].content = 'Response the first code for the first step of the mission.';
         } else {
             realTransactions[0].content = 'Response the first code for the first step of the mission.';
         }
@@ -128,7 +123,7 @@ export async function makeRealTransaction({ processTransactions, processTransact
     if (lastMessage && lastMessage[0]) {
         realTransactions[realTransactions.length - 1] = lastMessage[0];
     } else {
-        realTransactions[realTransactions.length - 1] = await makeCodePrompt(multiLineMission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission, check_list);
+        realTransactions[realTransactions.length - 1] = await makeCodePrompt(multiLineMission, type, whatdidwedo, whattodo, evaluationText, processTransactions, check_list);
     }
     let derived = [];
     for (let i = 0; i < realTransactions.length; i++) {

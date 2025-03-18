@@ -15,8 +15,8 @@
         }
     ],
     "activate": true,
-    "only_use_in_code": true,
+    "only_use_in_code": false,
     "return_description": "Boolean value indicating whether the resource was downloaded successfully.",
     "return_type": "boolean",
-    "tooling_in_realworld": true
+    "tooling_in_realworld": false
 }

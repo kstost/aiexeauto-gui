@@ -2,7 +2,10 @@
     "name": "web_search",
     "description": "Search the web for the specified query.",
     "instructions": [
-        "Provide the query to search for."
+        "Provide the query to search for.",
+        "Only use for fact checking and research.",
+        "The types of languages that make up keywords should be flexibly determined based on the topic, taking into account the types of topics and cultural considerations.",
+        "Search keywords support various languages."
     ],
     "input_schema": [
         {

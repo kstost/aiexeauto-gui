@@ -584,9 +584,21 @@ export async function makeConfigUI(configurationContainer) {
     // 초기 설정값 로드
     await singleton.loadConfigurations();
 
-    llmSelect.addEventListener('change', async () => {
-        await setConfig('llm', llmSelect.value);
-        await singleton.loadConfigurations();
+    llmSelect.addEventListener('change', async (e) => {
+        if (llmSelect.value === 'gemini' || llmSelect.value === 'openai') {
+            await setConfig('llm', llmSelect.value);
+            await singleton.loadConfigurations();
+        } else {
+            // gemini나 openai가 아닌 경우 선택을 변경하지 않음
+            showAlert('LLMs other than OpenAI and Gemini are not supported.', 'warning');
+            // showAlert(caption('configChangeNotAllowed'), 'warning');
+            const currentLLM = await getConfig('llm');
+            if (currentLLM) {
+                llmSelect.value = currentLLM;
+            }
+            e.preventDefault();
+            return;
+        }
     });
 
     // 이벤트 리스너 등록

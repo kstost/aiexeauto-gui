@@ -20,7 +20,7 @@ async function list_directory(input) {
     // 폴더 먼저 출력
     for (let item of result) {
         const isDirectory = fs.statSync(directory_path + item).isDirectory();
-        if (isDirectory) console.log('📁 ' + directory_path + item + '/');
+        if (isDirectory) console.log('📁 FOLDER] ' + directory_path + item + '/');
         returnData.push({
             type: 'directory',
             name: item,
@@ -35,7 +35,7 @@ async function list_directory(input) {
         if (fileSize > 1024) { fileSize = fileSize / 1024; fileSizeUnit = 'KB'; }
         if (fileSize > 1024) { fileSize = fileSize / 1024; fileSizeUnit = 'MB'; }
         if (fileSize > 1024) { fileSize = fileSize / 1024; fileSizeUnit = 'GB'; }
-        console.log('📄 ' + directory_path + item + ' (' + fileSize.toFixed(1) + ' ' + fileSizeUnit + ') ');
+        console.log('📄 FILE] ' + directory_path + item + ' (' + fileSize.toFixed(1) + ' ' + fileSizeUnit + ') ');
         returnData.push({
             type: 'file',
             name: item,

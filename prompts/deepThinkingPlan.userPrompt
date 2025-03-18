@@ -1,0 +1,14 @@
+
+{{last}}
+
+{{mission}}
+
+<Instructions>
+  - Consider the mission and the current progress so far.
+  - Think deeply step by step for the next task.
+  - Skip optional tasks.
+  - Do not include code.
+  - Respond in {{languageFullName}}.
+</Instructions>
+
+Let's think step by step.

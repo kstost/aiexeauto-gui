@@ -118,6 +118,8 @@ RUN pip install \
     openpyxl \
     xlrd \
     xlwt \
+    reportlab \
+    PyPDF2 \
     PyMuPDF \
     pandas \
     matplotlib \
@@ -125,6 +127,12 @@ RUN pip install \
     opencv-python \
     numpy \
     requests
+
+
+# Download fonts
+RUN mkdir -p /fonts
+RUN cd /fonts && curl -O https://hangeul.naver.com/hangeul_static/webfont/zips/nanum-gothic.zip
+RUN cd /fonts && unzip nanum-gothic.zip
 
 # Set UTF-8 locale for compatibility
 # RUN locale-gen en_US.UTF-8

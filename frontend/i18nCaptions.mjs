@@ -1,8 +1,10 @@
 export const i18nCaptions = {
     "ko": {
+        "runningCode": "수행 준비 중...",
         "firstPlanning": "계획 수립",
         "retrievingFromFile": "파일을 확인 중...",
-        "retrievingFromWebpage": "웹페이지를 확인 중...",
+        "accessingWebpage": "웹페이지 접속 중...",
+        "retrievingFromWebpage": "웹페이지를 분석 중...",
         "webSearch": "웹페이지 검색",
         "nodePath": "Node.js 경로",
         "npmPath": "npm 경로",
@@ -124,9 +126,11 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
+        "runningCode": "Preparing to run...",
         "firstPlanning": "Planning",
         "retrievingFromFile": "Checking file...",
-        "retrievingFromWebpage": "Checking webpage...",
+        "accessingWebpage": "Accessing webpage...",
+        "retrievingFromWebpage": "Analyzing webpage...",
         "webSearch": "Web Search",
         "nodePath": "Node.js Path",
         "npmPath": "npm Path",
@@ -248,9 +252,11 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
     },
     "ja": {
+        "runningCode": "実行準備中...",
         "firstPlanning": "計画立案",
         "retrievingFromFile": "ファイルを確認中...",
-        "retrievingFromWebpage": "ウェブページを確認中...",
+        "accessingWebpage": "ウェブページにアクセス中...",
+        "retrievingFromWebpage": "ウェブページを分析中...",
         "webSearch": "ウェブ検索",
         "nodePath": "Node.js パス",
         "npmPath": "npm パス",
@@ -372,9 +378,11 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
+        "runningCode": "Chuẩn bị thực thi...",
         "firstPlanning": "kế hoạch",
         "retrievingFromFile": "Kiểm tra tệp...",
-        "retrievingFromWebpage": "Kiểm tra trang web...",
+        "accessingWebpage": "Đang truy cập trang web...",
+        "retrievingFromWebpage": "Đang phân tích trang web...",
         "webSearch": "Tìm kiếm trang web",
         "nodePath": "Đường dẫn Node.js",
         "npmPath": "Đường dẫn npm",
@@ -496,9 +504,11 @@ export const i18nCaptions = {
         "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
+        "runningCode": "准备执行...",
         "firstPlanning": "计划立案",
         "retrievingFromFile": "检查文件...",
-        "retrievingFromWebpage": "检查网页...",
+        "accessingWebpage": "访问网页...",
+        "retrievingFromWebpage": "分析网页...",
         "webSearch": "网页搜索",
         "nodePath": "Node.js路径",
         "npmPath": "npm路径",

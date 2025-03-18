@@ -1,0 +1,14 @@
+{{last}}
+
+<Mission>
+{{mission}}
+</Mission>
+
+<OutputFormat>
+```json
+{ "check_list": ["", "", ...] }
+```
+</OutputFormat>
+
+Make the check list for evalution whether the mission has been completed based on the work performed so far.
+Think Deeply Please.

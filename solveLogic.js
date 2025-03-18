@@ -8,7 +8,7 @@ import boxen from 'boxen';
 import axios from 'axios';
 import { importData, exportData } from './dataHandler.js';
 import { chatCompletion, getModel, isOllamaRunning, exceedCatcher, trimProcessTransactions, areBothSame, cleanDescription, stripTags } from './aiFeatures.js';
-import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames } from './codeExecution.js';
+import { isInstalledNpmPackage, installNpmPackage, checkValidSyntaxJavascript, stripFencedCodeBlocks, runCode, getRequiredPackageNames, isWindows } from './codeExecution.js';
 import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler.js';
 import { isNodeInitialized, initNodeProject, restoreWorkspace, waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
 import { cloneCustomTool, getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
@@ -24,7 +24,6 @@ import singleton from './singleton.js';
 import { validatePath } from './system.js';
 import { getAbsolutePath, caption, templateBinding } from './system.js';
 import { validateAndCreatePaths } from './dataHandler.js';
-import { reviewMission } from './aiFeatures.js';
 import open from 'open';
 import { ensureAppsHomePath } from './dataHandler.js';
 import { checkSyntax } from './docker.js';
@@ -89,24 +88,39 @@ export function makeTag(tagName, data, condition = true) {
     if (!condition) return;
     return `<${tagName}>\n${indention(1, data)}\n</${tagName}>`
 }
+export async function getOperatingSystem() {
+    const useDocker = await getConfiguration('useDocker');
+    if (useDocker) return 'Ubuntu Linux (Docker)';
+    if (isWindows()) return 'Windows';
+    return 'macOS';
+}
+export async function toolsForPrompt() {
+    return `${await (async () => {
+        const toolList = await getToolList();
+        let toolPrompts = [];
+        for (let tool of toolList) {
+            const toolData = await getToolData(tool);
+            if (!toolData) continue;
+            toolPrompts.push(toolData.prompt);
+        }
+        return toolPrompts.join('\n\t\n');
+    })()}`;
+}
+export async function getBinderDefault() {
+    return {
+        operatingSystem: await getOperatingSystem(),
+        languageFullName: await getLanguageFullName(),
+        tools: await toolsForPrompt(),
+    };
+}
 const prompts = {
     systemCodeGeneratorPrompt: async (mission, whattodo, useDocker, forGemini = false) => {
         const customRulesForCodeGenerator = (await getConfiguration('customRulesForCodeGenerator') || '').trim();
-        const tools = `${await (async () => {
-            const toolList = await getToolList();
-            let toolPrompts = [];
-            for (let tool of toolList) {
-                const toolData = await getToolData(tool);
-                if (!toolData) continue;
-                toolPrompts.push(toolData.prompt);
-            }
-            return toolPrompts.join('\n\t\n');
-        })()}`;
         return templateBinding((await promptTemplate()).codeGenerator.systemPrompt, {
             mission: indention(1, mission),
             whattodo: indention(1, whattodo),
             customRulesForCodeGenerator: makeTag('CodeGenerationRules', customRulesForCodeGenerator, !!customRulesForCodeGenerator),
-            tools: tools,
+            ...(await getBinderDefault()),
         });
     },
     systemEvaluationPrompt: async (mission, check_list, forGemini = false) => {
@@ -116,13 +130,13 @@ const prompts = {
             check_list: makeTag('MissionCheckList', check_list, !!check_list),
             mission: indention(1, mission),
             customRulesForEvaluator: makeTag('EvaluatorRules', customRulesForEvaluator, !!customRulesForEvaluator),
-            languageFullName: await getLanguageFullName(),
+            ...(await getBinderDefault()),
         });
     },
     systemEvalpreparePrompt: async (mission, forGemini = false) => {
         return templateBinding((await promptTemplate()).evalpreparer.systemPrompt, {
             mission: indention(1, mission),
-            languageFullName: await getLanguageFullName(),
+            ...(await getBinderDefault()),
         });
     },
 };
@@ -184,7 +198,7 @@ export function omitMiddlePart(text, length = 1024, outputDataId) {
     let lineCount = text.split('\n').length;
     let omitted = false;
     if (text.length > length) {
-        text = text.substring(0, length / 2) + `\n\n...(middle part omitted due to length. Total line count: ${lineCount}. You can see the other part by call 'show_output_range' function with outputDataId "${outputDataId}", and start line number n, end line number m)...\n\n` + text.substring(text.length - length / 2)
+        text = text.substring(0, length / 2) + `\n\n...(middle part omitted due to length. Total line count: ${lineCount} Lines. You can see the other part by call 'show_output_range' function with outputDataId "${outputDataId}", and start line number n, end line number m)...\n\n` + text.substring(text.length - length / 2)
         text = text.trim();
         omitted = true;
     } else {
@@ -207,10 +221,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     keepMode = false;
     processTransactions.forEach(transaction => {
         transaction.notcurrentmission = true;
-        delete transaction.mainkeymission;
-        // delete transaction.whattodo;
         delete transaction.whatdidwedo;
-        delete transaction.deepThinkingPlan;
     });
     if (processTransactions.at(-1)) delete processTransactions.at(-1).notcurrentmission;// = false;
 
@@ -353,15 +364,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         await pid63?.dismiss();
 
 
-        if (12313 < Math.random()) if (!keepMode) multiLineMission = await reviewMission(multiLineMission, interfaces);
         let nextPrompt;
-        let mainKeyMission;// = multiLineMission;
-        if (keepMode) {
-            nextPrompt = `${multiLineMission}`;
-            // nextPrompt = `<THE-MAIN-KEY-MISSION>${multiLineMission}</THE-MAIN-KEY-MISSION>`;
-            mainKeyMission = multiLineMission + '. Do until it achieves the mission.';
-            multiLineMission = 'Solve the THE-MAIN-KEY-MISSION until it achieves the mission.';
-        }
         let nextCodeForValidation;
         let evaluationText = '';
 
@@ -377,29 +380,32 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         })()}`;
         if (true) {
             let actDataEvalPrepare;
-            const systemPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.systemPrompt, { languageFullName: await getLanguageFullName(), tools: toolsssss, });
-            const userPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.userPrompt, { mission: multiLineMission, });
+            const systemPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.systemPrompt, {
+                ...(await getBinderDefault()),
+            });
+            const userPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.userPrompt, {
+                mission: multiLineMission,
+                ...(await getBinderDefault()),
+            });
             const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
             await exceedCatcher(async () => {
                 actDataEvalPrepare = await chatCompletion(
                     systemPrompt,
                     await makeRealTransaction({
-                        processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', mainKeyMission, talkSessionId, lastMessage: [{
+                        processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', talkSessionId, lastMessage: [{
                             role: 'user', content: [
-                                "<MustAchieveMission>",
                                 userPrompt,
-                                "</MustAchieveMission>",
-                                ``,
-                                `You are an AI agent that processes data with Computer and Tools.`,
-                                `Clearfy the key point of the mission user requested.`,
-                                `You need to return the key point of the task in Korean.`,
-                                `Never include other than user's request.`,
-                                ``,
-                                `Response the key point of the task in three sentences.`,
+                                // ``,
+                                // `You are an AI agent that processes data with Computer and Tools.`,
+                                // `Clearfy the key point of the mission user requested.`,
+                                // `You need to return the key point of the task in Korean.`,
+                                // `Never include other than user's request.`,
+                                // ``,
+                                // `Response the key point of the task in three sentences.`,
                             ].join('\n'),
                         }]
                     }),
-                    'firstPlanning1',
+                    'measureKeyPointOfMission',
                     interfaces,
                     caption('firstPlanning')
                 );
@@ -410,30 +416,25 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         }
         if (true) {
             let actDataEvalPrepare;
-            const systemPrompt = templateBinding((await promptTemplate()).makeTodoList.systemPrompt, { languageFullName: await getLanguageFullName(), tools: toolsssss, });
-            const userPrompt = templateBinding((await promptTemplate()).makeTodoList.userPrompt, { mission: multiLineMission, });
+            const systemPrompt = templateBinding((await promptTemplate()).makeTodoList.systemPrompt, {
+                ...(await getBinderDefault()),
+            });
+            const userPrompt = templateBinding((await promptTemplate()).makeTodoList.userPrompt, {
+                mission: multiLineMission,
+                ...(await getBinderDefault()),
+            });
             const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
             await exceedCatcher(async () => {
                 actDataEvalPrepare = await chatCompletion(
                     systemPrompt,
                     await makeRealTransaction({
-                        processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', mainKeyMission, talkSessionId, lastMessage: [{
+                        processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', talkSessionId, lastMessage: [{
                             role: 'user', content: [
-                                "<MustAchieveMission>",
                                 userPrompt,
-                                "</MustAchieveMission>",
-                                ``,
-                                `You are an AI agent that processes data with Computer and Tools.`,
-                                `During the task process, you can use the provided Tools or create and execute Python Code, and all arrangements have been made so that you don't need to worry specifically about execution.`,
-                                `Please create a markdown-formatted detailed to-do list to handle the following task.`,
-                                ``,
-                                `Respond in Korean.`,
-                                ``,
-                                `Only respond with a markdown-formatted to-do list.`,
                             ].join('\n'),
                         }]
                     }),
-                    'firstPlanning2',
+                    'makeTodoList',
                     interfaces,
                     caption('firstPlanning')
                 );
@@ -459,7 +460,6 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let pythonCode = '';
             let requiredPackageNames;
             let whatdidwedo = '';
-            let deepThinkingPlan = '';
             let whattodo = '';
             let validationMode = nextCodeForValidation ? true : false;
             let modelName = await getModel();
@@ -474,12 +474,14 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             if (!validationMode) {
                 processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
                 if (processTransactions.length > 1 && !nextPrompt) {
-                    const prompt = templateBinding((await promptTemplate()).recollection.systemPrompt, {});
+                    const prompt = templateBinding((await promptTemplate()).recollection.systemPrompt, {
+                        ...(await getBinderDefault()),
+                    });
                     await exceedCatcher(async () => {
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
                         whatdidwedo = await chatCompletion(
                             prompt,
-                            await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', mainKeyMission, talkSessionId }),
+                            await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whatdidwedo', talkSessionId }),
                             'whatDidWeDo',
                             interfaces,
                             caption('whatDidWeDo')
@@ -505,14 +507,13 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     const customRulesForCodeGenerator = (await getConfiguration('customRulesForCodeGenerator') || '').trim();
                     const prompt = templateBinding((await promptTemplate()).planning.systemPrompt, {
                         customRulesForCodeGenerator: makeTag('CodeGenerationRules', customRulesForCodeGenerator, !!customRulesForCodeGenerator),
-                        languageFullName: await getLanguageFullName(),
-                        tools: tools,
+                        ...(await getBinderDefault()),
                     });
                     await exceedCatcher(async () => {
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
                         whattodo = await chatCompletion(
                             prompt,
-                            await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whattodo', mainKeyMission, talkSessionId }),
+                            await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whattodo', talkSessionId }),
                             'whatToDo',
                             interfaces,
                             caption('whatToDo')
@@ -538,8 +539,6 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     processTransactions[processTransactions.length - 1].whattodo = whattodo;
                 } else {
                     processTransactions[processTransactions.length - 1].whattodo = nextPrompt;
-                    processTransactions[processTransactions.length - 1].mainkeymission = nextPrompt;
-                    // whattodo = nextPrompt;
                     nextPrompt = null;
                 }
 
@@ -550,7 +549,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 while (true) {
                     await exceedCatcher(async () => {
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
-                        let promptList = await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'coding', whatdidwedo, whattodo, deepThinkingPlan, evaluationText, mainKeyMission, talkSessionId });
+                        let promptList = await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'coding', whatdidwedo, whattodo, evaluationText, talkSessionId });
                         promptList = JSON.parse(JSON.stringify(promptList));
                         actData = await chatCompletion(
                             { systemPrompt, systemPromptForGemini },
@@ -572,8 +571,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         }).join('\n');
                     }
                     if (!pythonCode && !javascriptCode) {
-                        const pp33 = await out_state('');
-                        await pp33.fail(caption('codeGenerationFailed'));
+                        if (false) {
+                            const pp33 = await out_state('');
+                            await pp33.fail(caption('codeGenerationFailed'));
+                        }
                     } else {
                         break;
                     }
@@ -636,11 +637,13 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let runCodeFactor = false;
             let errorList = {};
             let executionId;
+            let pi3d13;
             const streamGetter = async (str, force = false) => {
                 if (actData.name === 'retrieve_from_file' && !force) return;
                 if (actData.name === 'retrieve_from_webpage' && !force) return;
                 if (actData.name === 'show_output_range' && !force) return;
                 // if (!useDocker) return;
+                if (pi3d13) pi3d13?.dismiss();
                 process.stdout.write(str);
                 if (executionId) {
                     await out_stream({ executionId, stream: str, state: 'stdout' });
@@ -678,6 +681,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             javascriptCodeToRun = confirmed.confirmedCode;
                             executionId = confirmed.executionId;
                         }
+                        pi3d13 = await out_state(caption('runningCode'));
                         await new Promise(resolve => setTimeout(resolve, 500));
                         await waitingForDataCheck(out_state);
                         const codeExecutionResult_ = await runNodeJSCode(containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames, streamGetter);
@@ -700,6 +704,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             pythonCode = confirmed.confirmedCode;
                             executionId = confirmed.executionId;
                         }
+                        pi3d13 = await out_state(caption('runningCode'));
                         await new Promise(resolve => setTimeout(resolve, 500));
                         await waitingForDataCheck(out_state);
                         const codeExecutionResult_ = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames, streamGetter);
@@ -719,6 +724,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 }
             }
             await operation_done({});
+            if (pi3d13) pi3d13?.dismiss();
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
             const data = javascriptCode || pythonCode;
             const weatherToPush = (!errorList.codeexecutionerror && data);
@@ -747,10 +753,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 }
             }
             if (actData.name === 'retrieve_from_webpage' && codeExecutionResult?.output) {
-                let pid6 = await out_state(caption('retrievingFromWebpage')); // `${stateLabel}를 ${model}가 처리중...`
+                let pid6;// = await out_state(caption('retrievingFromWebpage')); // `${stateLabel}를 ${model}가 처리중...`
                 try {
                     let output = codeExecutionResult?.output;
-                    console.log('output!!!!!!!!!!!!!!!!!!!!!!!', output);
+                    if (false) console.log('output!!!!!!!!!!!!!!!!!!!!!!!', output);
                     let fail = false;
                     let failedUrl = '';
                     try {
@@ -766,9 +772,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     if (!fail) {
                         let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
                         const parsed = JSON.parse(decoded);
+                        pid6 = await out_state(caption('retrievingFromWebpage') + ' <a href="' + parsed.url + '" target="_blank">🔗 ' + parsed.url + '</a>'); // `${stateLabel}를 ${model}가 처리중...`
                         let answered = await retriving(parsed.url, parsed.data, parsed.question);
                         summarized = [
-                            `🌏 url: ${parsed.url}`,
+                            `🔗 url: ${parsed.url}`,
                             `💬 question: ${parsed.question}`,
                             `💡 answer: ${answered}`,
                         ].join('\n');
@@ -777,7 +784,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 } catch {
 
                 }
-                await pid6.dismiss();
+                if (pid6) await pid6.dismiss();
             }
             if (actData.name === 'web_search' && codeExecutionResult?.output) {
                 summarized = codeExecutionResult?.output;
@@ -809,7 +816,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             systemPrompt: await prompts.systemEvalpreparePrompt(multiLineMission, dataSourcePath),
                             systemPromptForGemini: await prompts.systemEvalpreparePrompt(multiLineMission, dataSourcePath, true),
                         },
-                        await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'evalpreparation', mainKeyMission, talkSessionId }),
+                        await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'evalpreparation', talkSessionId }),
                         'evalprepareCode',
                         interfaces,
                         caption('evaluation')
@@ -826,7 +833,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             systemPrompt: await prompts.systemEvaluationPrompt(multiLineMission, check_list, dataSourcePath),
                             systemPromptForGemini: await prompts.systemEvaluationPrompt(multiLineMission, check_list, dataSourcePath, true),
                         },
-                        await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'evaluation', mainKeyMission, check_list, talkSessionId }),
+                        await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'evaluation', check_list, talkSessionId }),
                         'evaluateCode',
                         interfaces,
                         caption('evaluation')
@@ -913,7 +920,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
                 try {
                     const prompt = templateBinding((await promptTemplate()).missionNaming.systemPrompt, {
-                        languageFullName: await getLanguageFullName(),
+                        ...(await getBinderDefault()),
                     });
                     await exceedCatcher(async () => {
                         const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
@@ -933,7 +940,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                                     ].join('\n')
                                 }
                             ],
-                            '',
+                            'missionNaming',
                             interfaces,
                             caption('namingMission')
                         );

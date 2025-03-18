@@ -9,7 +9,7 @@ export function indention(num = 1, string = null, indentation = 2) {
         return ' '.repeat(num * indentation);
     }
 }
-export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepThinkingPlan, evaluationText, processTransactions, mainKeyMission, check_list) {
+export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evaluationText, processTransactions, check_list) {
     let output = processTransactions.at(-1).data;
     let summarized = processTransactions.at(-1).summarized;
     let outputDataId = processTransactions.at(-1).outputDataId;
@@ -35,9 +35,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
                 last: lastMessage,
                 evaluationText: makeTag('EvaluationOfPreviousTasks', evaluationText, !!evaluationText),
                 whatdidwedo: makeTag('WorkDoneSoFar', whatdidwedo, !!whatdidwedo),
-                deepThinkingPlan: makeTag('Plan', deepThinkingPlan, !!deepThinkingPlan),
-                whattodo: (whattodo && mainKeyMission !== whattodo) ? makeTag('NextTasks', whattodo, !!whattodo) : '',
-                mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
+                whattodo: whattodo ? makeTag('NextTasks', whattodo, !!whattodo) : '',
             }),
         };
     } else if (type === 'evaluation') {
@@ -48,7 +46,6 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
                 check_list: makeTag('MissionCheckList', check_list, !!check_list),
                 last: lastMessage,
                 mission: makeTag('MustAchieveMission', mission, !!mission),
-                mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
                 languageFullName: await getLanguageFullName(),
             }),
         };
@@ -58,7 +55,6 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
             content: templateBinding((await promptTemplate()).evalpreparer.userPrompt, {
                 last: lastMessage,
                 mission: indention(1, mission),
-                mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
                 languageFullName: await getLanguageFullName(),
             }),
         };
@@ -68,26 +64,13 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, deepT
             content: templateBinding((await promptTemplate()).recollection.userPrompt, {
                 last: lastMessage,
                 mission: makeTag('MustAchieveMission', mission, !!mission),
-                mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
                 languageFullName: await getLanguageFullName(),
             }),
         };
     } else if (type === 'whattodo') {
-        let deepThinkingPlan = processTransactions.at(-1).deepThinkingPlan;
         return {
             role: "user",
             content: templateBinding((await promptTemplate()).planning.userPrompt, {
-                last: lastMessage,
-                mission: makeTag('MustAchieveMission', mission, !!mission),
-                mainKeyMission: makeTag('THE-MAIN-KEY-MISSION', mainKeyMission, !!mainKeyMission),
-                deepThinkingPlan: deepThinkingPlan ? makeTag('Plan', deepThinkingPlan, !!deepThinkingPlan) : '',
-                languageFullName: await getLanguageFullName(),
-            }),
-        };
-    } else if (type === 'deepThinkingPlan') {
-        return {
-            role: "user",
-            content: templateBinding((await promptTemplate()).deepThinkingPlan.userPrompt, {
                 last: lastMessage,
                 mission: makeTag('MustAchieveMission', mission, !!mission),
                 languageFullName: await getLanguageFullName(),

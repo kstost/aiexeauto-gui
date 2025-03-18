@@ -1,0 +1,12 @@
+{{multiLineMission}}
+
+---
+Make the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.
+
+<WritingGuidelines>
+  - Write only the core content in a concise manner.
+  - Do not include code.
+  - You can NOT interact with the user.
+</WritingGuidelines>
+
+Response **only the prompt**.

@@ -148,7 +148,6 @@ export async function actDataParser({ actData, processTransactions, out_state })
             const base64 = Buffer.from(data).toString('base64');
             javascriptCodeBack = [`console.log('${base64}');`].join('\n');
         } else if (actData.name === 'retrieve_from_webpage') {
-            const p12 = await out_state(caption('retrievingFromWebpage'));
             console.log('retrieve_from_webpage!!!!!!!!!!!!!!......................!!!!!!!!');
             if (is_none_data(actData?.input?.url)) throw null;
             if (is_none_data(actData?.input?.question)) {
@@ -156,23 +155,55 @@ export async function actDataParser({ actData, processTransactions, out_state })
             }
             const url = actData.input.url;
             const question = actData.input.question;
+            const p12 = await out_state(caption('accessingWebpage') + ' <a href="' + url + '" target="_blank">🔗 ' + url + '</a>'); // `${stateLabel}를 ${model}가 처리중...`
             let result;
             let data;
             let fail = false;
+            if (true) {
+                if (url.indexOf('google.') !== -1) fail = true;
+                if (url.indexOf('youtube.') !== -1) fail = true;
+                if (url.indexOf('youtu.be') !== -1) fail = true;
+                if (url.indexOf('gmail') !== -1) fail = true;
+                if (url.indexOf('facebook') !== -1) fail = true;
+                if (url.endsWith('.pdf')) fail = true;
+            }
+
             if (false && !fail && !data && typeof result.data !== 'string') {
                 data = JSON.stringify(result.data);
             } else if (!fail && !data) {
                 let htmldata = '';
-                const browser = await puppeteer.launch({ headless: 'new' });
+                // const browser = await puppeteer.launch({ headless: 'new' });
+                const browser = await puppeteer.launch({
+                    headless: false,
+                    defaultViewport: {
+                        width: 1366,
+                        height: 768
+                    },
+                    args: ['--window-size=1366,768']
+                });
                 try {
-                    // null.dd;
                     console.log('puppeteer launch');
                     const page = await browser.newPage();
-                    await page.goto(url, { waitUntil: 'networkidle0' });
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    await page.setViewport({ width: 1366, height: 768 });
+
+                    // 실제 사용자 에이전트 설정
+                    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+
+                    // 쿠키 동의 대화 상자를 자동으로 처리하기 위한 준비
+                    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+                    // 스크롤 동작 시뮬레이션
+                    for (let i = 0; i < 20; i++) {
+                        await page.evaluate((i) => {
+                            let to = i % 2 === 0 ? 0 : document.body.scrollHeight;
+                            window.scrollTo(0, to)
+                        }, i);
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
                     htmldata = await page.evaluate(() => {
                         {
-                            const elements = document.querySelectorAll('style, script, link');
+                            const elements = document.querySelectorAll('style, script, link, canvas, video, audio, iframe, svg');
                             elements.forEach(element => {
                                 element.remove();
                             });
@@ -192,9 +223,9 @@ export async function actDataParser({ actData, processTransactions, out_state })
                     fail = true;
                 }
                 await browser.close();
-                // htmldata = htmldata.replace(/<style>.*?<\/style>/g, '');
+                console.log('htmldata!!!!!!!!!!!!!!!!!!!!!!', htmldata);
                 data = new TurndownService().turndown(htmldata);
-                // ignore style sheet with turndown ability
+                console.log('data!!!!!!!!!!!!!!!!!!!!!!', data);
             }
             let ob = { data, question, url };
             const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');

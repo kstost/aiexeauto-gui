@@ -57,6 +57,13 @@ export class TerminalStreamBox {
         this.placeholder.style.marginBottom = '1.5px';
         this.placeholder.style.fontStyle = 'italic'; // 선택 사항: 기울임체
         this.container.appendChild(this.placeholder);
+        this.hidden();
+    }
+    visible() {
+        this.container.style.display = 'block';
+    }
+    hidden() {
+        this.container.style.display = 'none';
     }
     destroy() {
         this.container.remove();
@@ -106,6 +113,7 @@ export class TerminalStreamBox {
         }
 
         this.container.appendChild(streamBox);
+        this.visible();
         // streamBox.style.opacity = '0';
         // streamBox.style.transition = 'opacity 0.15s ease';
         // window.requestAnimationFrame(() => {
