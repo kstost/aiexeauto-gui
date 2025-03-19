@@ -71,7 +71,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                 `const environment_variables = ${JSON.stringify(data?.environment_variables || {})}`,
                 `const aiexe_configuration = ${JSON.stringify(await loadConfiguration())}`,
                 `const virtual_playwright = '${(await virtualPlaywright()).replace(/\\/g, '\\\\')}'`,
-                `(async()=>{try{await (${code})(${JSON.stringify(actData.input)});}catch{}})();`,
+                `;(async()=>{try{await (${code})(${JSON.stringify(actData.input)});}catch{}})();`,
             ].join('\n');
         }
         if (kind === 'py') {
