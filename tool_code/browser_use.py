@@ -8,10 +8,12 @@ from dotenv import load_dotenv
 import subprocess
 
 async def _browser_use(input):
+    if aiexe_configuration["useDocker"]:
+        virtual_playwright = "playwright"
     try:
-        result = subprocess.run(["playwright", "install", "--help"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        result = subprocess.run([virtual_playwright, "install", "--help"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if result.returncode == 0:
-            subprocess.run(["playwright", "install"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run([virtual_playwright, "install"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
         pass
 

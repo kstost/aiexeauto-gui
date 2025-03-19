@@ -73,7 +73,7 @@ export async function getRetriver() {
     const retriver = new Retriver({
         dbPath: getAppPath('retrival'),
         APIKey: await getConfiguration('openaiApiKey'),
-        modelName: "gpt-4o-mini",
+        modelName: await getConfiguration('openaiModel'),
         embeddingModelName: "text-embedding-3-small",
         temperature: 0,
     });
@@ -660,6 +660,14 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let executionId;
             let pi3d13;
             const streamGetter = async (str, force = false) => {
+                try {
+                    if (toolInfo.ignore_output_type && !force) {
+                        const parsed = JSON.parse(str);
+                        if (toolInfo.ignore_output_type.includes(parsed.type)) {
+                            return;
+                        }
+                    }
+                } catch { }
                 if ((toolInfo.retrieve_mode || lazyMode) && !force) return;
                 if (pi3d13) pi3d13?.dismiss();
                 process.stdout.write(str);

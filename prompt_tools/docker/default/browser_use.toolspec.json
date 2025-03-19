@@ -24,5 +24,8 @@
         "disable_security": false
     },
     "activate": true,
+    "ignore_output_type": [
+        "stderr"
+    ],
     "tooling_in_realworld": true
 }

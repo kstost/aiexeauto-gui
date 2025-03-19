@@ -424,6 +424,7 @@ export async function getToolData(toolName) {
         const tooling_in_realworld = spec.tooling_in_realworld;
         const lazy_mode = spec.lazy_mode;
         const retrieve_mode = spec.retrieve_mode;
+        const ignore_output_type = spec.ignore_output_type;
         const environment_variables = spec.environment_variables;
         delete spec.activate;
         delete spec.npm_package_list;
@@ -435,6 +436,7 @@ export async function getToolData(toolName) {
         delete spec.tooling_in_realworld;
         delete spec.lazy_mode;
         delete spec.retrieve_mode;
+        delete spec.ignore_output_type;
         delete spec.environment_variables;
         if (!activate) return null;
         return {
@@ -448,6 +450,7 @@ export async function getToolData(toolName) {
             tooling_in_realworld,
             lazy_mode,
             retrieve_mode,
+            ignore_output_type,
             environment_variables
         };
     }
@@ -462,6 +465,7 @@ export async function getToolData(toolName) {
     const tooling_in_realworld = spec.tooling_in_realworld;
     const lazy_mode = spec.lazy_mode;
     const retrieve_mode = spec.retrieve_mode;
+    const ignore_output_type = spec.ignore_output_type;
     const environment_variables = spec.environment_variables;
     delete spec.activate;
     delete spec.npm_package_list;
@@ -473,6 +477,7 @@ export async function getToolData(toolName) {
     delete spec.tooling_in_realworld;
     delete spec.lazy_mode;
     delete spec.retrieve_mode;
+    delete spec.ignore_output_type;
     delete spec.environment_variables;
     if (!activate) return null;
     return {
@@ -486,6 +491,7 @@ export async function getToolData(toolName) {
         tooling_in_realworld,
         lazy_mode,
         retrieve_mode,
+        ignore_output_type,
         environment_variables
     };
 }

@@ -11,7 +11,7 @@ const defaultConfig = {
     geminiModel: "gemini-2.0-flash", // 원하는 모델 e.g. gemini-2.0-flash, gemini-2.0-flash-latest
     model: "claude-3-5-haiku-20241022",
     deepseekModel: "deepseek-chat",
-    openaiModel: "gpt-4o-mini",
+    openaiModel: "gpt-4o",
     ollamaModel: "qwen2.5:14b",
     groqModel: "llama-3.3-70b-versatile",
     llm: "gemini",

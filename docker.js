@@ -6,7 +6,7 @@ import { getToolCode, getToolData, getToolList, getAbsolutePath, getAppPath, isW
 import chalk from 'chalk';
 import { setHandler, removeHandler } from './sigintManager.js';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
-import { virtualPython, preparePythonRunningSpace, is_file, is_dir } from './codeExecution.js';
+import { virtualPython, preparePythonRunningSpace, is_file, is_dir, virtualPlaywright } from './codeExecution.js';
 import { loadConfiguration } from './system.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import singleton from './singleton.js';
@@ -119,7 +119,11 @@ export async function executeCommand(command, streamGetter = null, workingDirect
         const child = spawn(result.command, result.args, {
             stdio: ['pipe', 'pipe', 'pipe'],
             shell: false,
-            cwd: workingDirectory
+            cwd: workingDirectory,
+            env: {
+                ...process.env,
+                PYTHONIOENCODING: 'utf-8',
+            }
         });
         let stdout = '';
         let stderr = '';
@@ -146,6 +150,9 @@ export async function executeCommand(command, streamGetter = null, workingDirect
             });
         };
         setHandler(handleCtrlC);
+
+        child.stdout.setEncoding('utf8');
+        child.stderr.setEncoding('utf8');
 
         child.stdout.on('data', async (data) => {
             if (!khongLog) console.log('execution_stdout', data.toString());
@@ -567,7 +574,8 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
                 '..' === '..' && `    def ${toolName}(*args, **kwargs):`,
                 '..' === '..' && `        parameters = None`,
                 '..' === '..' && `        environment_variables = json.loads('${JSON.stringify(data?.environment_variables || {})}')`,
-                '..' === '..' && `        aiexe_configuration = json.loads('${JSON.stringify(await loadConfiguration())}')`,
+                '..' === '..' && `        aiexe_configuration = json.loads('${JSON.stringify(await loadConfiguration()).replace(/\\/g, '\\\\')}')`,
+                '..' === '..' && `        virtual_playwright = '${(await virtualPlaywright()).replace(/\\/g, '\\\\')}'`,
                 '..' === '..' && `        inputSpec = ${JSON.stringify(spec.input[0])}`,
                 '..' === '..' && `        inputNames = ${JSON.stringify(inputNames)}`,
                 '..' === '..' && `        kwargs_key_list = list(kwargs.keys())`,

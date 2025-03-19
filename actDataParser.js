@@ -3,6 +3,7 @@ import puppeteer from 'puppeteer';
 import { caption, getConfiguration } from './system.js';
 // import marked from 'marked';
 import TurndownService from 'turndown';
+import { virtualPlaywright } from './codeExecution.js';
 import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
 import { runPythonCode } from './docker.js';
 import { loadConfiguration } from './system.js';
@@ -69,13 +70,15 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             code = [
                 `const environment_variables = ${JSON.stringify(data?.environment_variables || {})}`,
                 `const aiexe_configuration = ${JSON.stringify(await loadConfiguration())}`,
+                `const virtual_playwright = '${(await virtualPlaywright()).replace(/\\/g, '\\\\')}'`,
                 `(async()=>{try{await (${code})(${JSON.stringify(actData.input)});}catch{}})();`,
             ].join('\n');
         }
         if (kind === 'py') {
             code = [
                 `environment_variables = json.loads('${JSON.stringify(data?.environment_variables || {})}')`,
-                `aiexe_configuration = json.loads('${JSON.stringify(await loadConfiguration())}')`,
+                `aiexe_configuration = json.loads('${JSON.stringify(await loadConfiguration()).replace(/\\/g, '\\\\')}')`,
+                `virtual_playwright = '${(await virtualPlaywright()).replace(/\\/g, '\\\\')}'`,
                 `${code}`,
                 `${actData.name}(${JSON.stringify(actData.input)})`,
             ].join('\n');

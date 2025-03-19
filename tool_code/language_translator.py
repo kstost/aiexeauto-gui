@@ -1,15 +1,15 @@
 from openai import OpenAI
 
-def translator(input):
+def language_translator(input):
     # OpenAI 클라이언트 초기화
-    openai = OpenAI(api_key='')
+    openai = OpenAI(api_key=aiexe_configuration["openaiApiKey"])
 
     # 번역 프롬프트 생성
     prompt = f"Translate the following text to {input['target_language']}: \"{input['text']}\""
 
     # OpenAI API 호출
     response = openai.chat.completions.create(
-        model="gpt-4o-mini",
+        model=aiexe_configuration["openaiModel"],
         messages=[
             {
                 "role": "system",

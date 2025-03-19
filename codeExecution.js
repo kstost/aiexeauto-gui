@@ -59,6 +59,11 @@ export async function virtualPython() {
     await preparePythonRunningSpace();
     return getAppPath(isWindows() ? '' + envConst.venvName + '/Scripts/python' : '' + envConst.venvName + '/bin/python');
 }
+export async function virtualPlaywright() {
+    if ((await getConfiguration('useDocker'))) return '';
+    await preparePythonRunningSpace();
+    return getAppPath(isWindows() ? '' + envConst.venvName + '/Scripts/playwright' : '' + envConst.venvName + '/bin/playwright');
+}
 export async function virtualPip() {
     if ((await getConfiguration('useDocker'))) return;
     await preparePythonRunningSpace();

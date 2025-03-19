@@ -1,11 +1,12 @@
 {
+    "name": "language_translator",
     "description": "Translate text to another language.",
     "instructions": [
         "Specify the target language."
     ],
     "return_description": "String of translated text",
     "return_type": "String",
-    "input": [
+    "input_schema": [
         {
             "text": "",
             "target_language": ""
@@ -19,6 +20,6 @@
     "pip_package_list": [
         "openai"
     ],
-    "activate": false,
+    "activate": true,
     "tooling_in_realworld": true
 }
