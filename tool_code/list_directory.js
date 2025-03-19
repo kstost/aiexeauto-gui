@@ -10,6 +10,7 @@ async function list_directory(input) {
     let { directory_path } = input;
     const fs = require('fs');
     directory_path = pathSanitizer(directory_path);
+    while (directory_path.trim().endsWith('/')) directory_path = directory_path.trim().slice(0, -1).trim();
     let returnData = [];
     const exists = fs.existsSync(directory_path);
     if (!exists) { console.error('❌ Directory does not exist to list: ' + directory_path + ''); process.exit(1); }
@@ -19,8 +20,8 @@ async function list_directory(input) {
     if (result.length === 0) { console.log('⚠️ Directory is empty'); process.exit(0); }
     // 폴더 먼저 출력
     for (let item of result) {
-        const isDirectory = fs.statSync(directory_path + item).isDirectory();
-        if (isDirectory) console.log('📁 FOLDER] ' + directory_path + item + '/');
+        const isDirectory = fs.statSync(directory_path + '/' + item).isDirectory();
+        if (isDirectory) console.log('📁 FOLDER] ' + directory_path + '/' + item + '/');
         returnData.push({
             type: 'directory',
             name: item,
@@ -28,14 +29,14 @@ async function list_directory(input) {
     }
     // 파일 출력
     for (let item of result) {
-        const isDirectory = fs.statSync(directory_path + item).isDirectory();
+        const isDirectory = fs.statSync(directory_path + '/' + item).isDirectory();
         if (isDirectory) continue;
-        let fileSize = fs.statSync(directory_path + item).size;
+        let fileSize = fs.statSync(directory_path + '/' + item).size;
         let fileSizeUnit = 'bytes';
         if (fileSize > 1024) { fileSize = fileSize / 1024; fileSizeUnit = 'KB'; }
         if (fileSize > 1024) { fileSize = fileSize / 1024; fileSizeUnit = 'MB'; }
         if (fileSize > 1024) { fileSize = fileSize / 1024; fileSizeUnit = 'GB'; }
-        console.log('📄 FILE] ' + directory_path + item + ' (' + fileSize.toFixed(1) + ' ' + fileSizeUnit + ') ');
+        console.log('📄 FILE] ' + directory_path + '/' + item + ' (' + fileSize.toFixed(1) + ' ' + fileSizeUnit + ') ');
         returnData.push({
             type: 'file',
             name: item,
