@@ -669,10 +669,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
             let confirmedd = false;
             try {
-                if (actData.name === 'run_command') {
+                if (actData.name === 'shell_command_execute') {
                     // actData.input.command;
                     let command = actData.input.command;
-                    let confirmed = await await_prompt({ mode: 'run_command', actname: actData.name, containerId, dockerWorkDir, command });
+                    let confirmed = await await_prompt({ mode: 'shell_command_execute', actname: actData.name, containerId, dockerWorkDir, command });
                     if (singleton.missionAborting) throw new Error(caption('missionAborted'));
                     actData.input.command = confirmed.confirmedCode;
                     // confirmedd = true;
@@ -781,15 +781,18 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 }
             }
             if (toolInfo.retrieve_mode) {
-                const dataNameKey = Object.keys(actData.input).filter(key => key !== 'question')[0] || '';
+                const otherKeys = Object.keys(actData.input).filter(key => key !== 'question');
+                let pickedName = otherKeys.length === 1 ? otherKeys[0] : '';
+                const dataNameKey = pickedName;//Object.keys(actData.input).filter(key => key !== 'question')[0] || '';
                 let output = codeExecutionResult?.output;
-                let pid6 = await out_state(caption('retrievingData') + ' 💬 ' + actData.input[dataNameKey] + ' : ' + actData.input.question);
-                let answered = await retriving(actData.input[dataNameKey], output, actData.input.question);
+                let pid6 = await out_state(caption('retrievingData') + ' 💬 ' + (dataNameKey ? (actData.input[dataNameKey] + ' : ') : '') + actData.input.question);
+                const md5Hash = crypto.createHash('md5').update(output).digest('hex');
+                let answered = await retriving(dataNameKey ? actData.input[dataNameKey] : md5Hash, output, actData.input.question);
                 summarized = [
-                    `📄 ${dataNameKey}: ${actData.input[dataNameKey]}`,
+                    dataNameKey ? `📄 ${dataNameKey}: ${actData.input[dataNameKey]}` : '',
                     `💬 question: ${actData.input.question}`,
                     `💡 answer: ${answered}`,
-                ].join('\n');
+                ].filter(Boolean).join('\n');
                 streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
                 await pid6.dismiss();
             }

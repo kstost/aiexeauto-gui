@@ -215,7 +215,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     'generate_nodejs_code',
                     'generate_nodejs_code_for_puppeteer',
                     'generate_python_code',
-                    'run_command',
+                    'shell_command_execute',
                 ];
                 if (currentConfig['planEditable']) {
                     codeRequiredConfirm.push('whattodo_confirm');
@@ -231,9 +231,9 @@ window.addEventListener('DOMContentLoaded', async () => {
                     'generate_nodejs_code',
                     'generate_nodejs_code_for_puppeteer',
                     'generate_python_code',
-                    'run_command',
+                    'shell_command_execute',
                 ].includes(actname)) {
-                    save = !(mode !== 'run_command' && actname === 'run_command');
+                    save = !(mode !== 'shell_command_execute' && actname === 'shell_command_execute');
                 }
 
                 const executionId = randomId();
@@ -276,7 +276,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     handleCodeConfirmation(editor, false).destroy();;
                 });
             }
-            else if ((actname === 'run_command' && mode === 'run_nodejs_code')) {
+            else if ((actname === 'shell_command_execute' && mode === 'run_nodejs_code')) {
                 language = 'javascript';
                 const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                 editor.setSize('100%', '100%');
@@ -301,9 +301,9 @@ window.addEventListener('DOMContentLoaded', async () => {
                     // console.log('pythonCodeToRun', pythonCodeToRun);
                     // console.log('pythonCode', pythonCode);
                     if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
-                } else if (mode === 'run_command') {
+                } else if (mode === 'shell_command_execute') {
                     language = 'bash';
-                    const { editor, runButton } = makeCodeBox('# Linux Shell Script\n' + body.command, 'bash', false);
+                    const { editor, runButton } = makeCodeBox(body.command, 'bash', false);
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor).destroy();

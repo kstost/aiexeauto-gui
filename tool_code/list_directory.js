@@ -5,6 +5,11 @@ async function list_directory(input) {
             if (path.indexOf('//') === -1) break;
             path = path.split('//').join('/');
         }
+        path = path.trim();
+        ['"', "'"].forEach(quote => {
+            while (path.trim().startsWith(quote)) path = path.trim().slice(1).trim();
+            while (path.trim().endsWith(quote)) path = path.trim().slice(0, -1).trim();
+        });
         return path;
     };
     let { directory_path } = input;

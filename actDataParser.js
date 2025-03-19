@@ -113,7 +113,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             if (is_none_data(actData?.input?.command)) throw null;
             if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
             if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
-        } else if (actData.name === 'run_command') {
+        } else if (actData.name === 'shell_command_execute') {
             if (is_none_data(actData?.input?.command)) throw null;
             javascriptCode = [
                 actData.input.command,

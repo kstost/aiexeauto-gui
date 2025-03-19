@@ -709,7 +709,7 @@ async function langParser(text, callMode) {
         }
         if (callMode === 'generateCode') {
             if (validation.bash) {
-                toolCall.name = 'run_command';
+                toolCall.name = 'shell_command_execute';
                 toolCall.args = {
                     command: code,
                 }

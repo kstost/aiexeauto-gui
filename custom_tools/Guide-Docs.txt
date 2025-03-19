@@ -1,14 +1,16 @@
 ================================================================
-Custom Tools Making Guide (최신 수정판)
+Custom Tools Making Guide
 ================================================================
 
 본 문서파일은 자동생성된 문서이며 언제든 변경될 수 있으므로
 여기에 중요한 정보를 담지 마세요.
 
-이 문서는 인공지능 에이전트에 새로운 사용자도구(Custom Tool)를
-부여하는 방법에 대해 설명합니다.
-각 단계를 순서대로 따라 하면 원하는 도구를 에이전트에
-간단하게 추가할 수 있습니다.
+본 스펙정의서를 AI에게 공유해서 학습시키고 우리가 원하는 도구를 만들어내도록 유도하는데 활용하실 수도 있습니다.
+
+----------------------------------------------------------------
+
+이 문서는 인공지능 에이전트에 새로운 사용자도구(Custom Tool)를 부여하는 방법에 대해 설명합니다.
+각 단계를 순서대로 따라 하면 원하는 도구를 에이전트에 간단하게 추가할 수 있습니다.
 
 ----------------------------------------------------------------
 1. 도구의 스펙(Specification) 정의
@@ -19,8 +21,8 @@ Custom Tools Making Guide (최신 수정판)
 
 {toolName}.json
 
-(예시 JSON / 새로운 포맷)
-
+예시 JSON:
+```json
 {
     "description": "Sum two numbers.",
     "instructions": [
@@ -43,10 +45,13 @@ Custom Tools Making Guide (최신 수정판)
     "npm_package_list": [
         "mathjs"
     ],
-    "activate": false
+    "activate": false,
+    "retrieve_mode": true,
+    "tooling_in_realworld": true
 }
+```
 
-(설명)
+설명:
 
 1) description
    - 해당 도구가 수행할 기능의 간단한 설명.
@@ -59,63 +64,89 @@ Custom Tools Making Guide (최신 수정판)
      - "Negative numbers are not allowed"
 
 3) return_description
+   - only_use_in_code 설정을 true로 한다면 이 내용은 채워줘야합니다.
    - 도구가 반환하는 값(리턴값)에 대한 설명.
    - 예: "Number of sum"
 
 4) return_type
+   - only_use_in_code 설정을 true로 한다면 이 내용은 채워줘야합니다.
    - 반환값의 타입 지정 (예: Number, String, Boolean, Array, Object 등).
 
 5) input
    - 도구 사용 시 필요한 입력 파라미터 정의.
    - 예:
        {
-         "number1": 0,
+         "number1": 0,  해당 값이 숫자인지 문자열인지를 나타낼 수 있는 임의의 값을 담아주면 됩니다. 숫자라면 0, 문자열이라면 "", 참거짓이라면 true
          "number2": 0
        },
        {
-         "number1": "First number to sum",
+         "number1": "First number to sum",  해당 값에 대한 설명을 담아줍니다.
          "number2": "Second number to sum"
        }
 
 6) only_use_in_code
    - 코드 생성 시에만 사용하도록 제한할지 여부 (true/false).
+   - 코드 생성시에 사용한다는 말의 의미는 AI가 실행을 위해 생성하는 파이썬 코드에서 본 함수를 사용가능하게 할지에 대한 이야기입니다.
+     이 값을 true로 한다면 파이썬 코드에서 본 함수를 활용 할 수 있도록 한다는 의미이며 false로 한다는 것은 파이썬 코드에서 뿐만 아니라 AI에 의해 필요한 상황에 AI에 의해 쓰임받을 수 있다는 의미입니다.
 
-7) npm_package_list
+7) npm_package_list (Node 코드로 하는경우)
    - 구현 시 필요한 NPM 패키지 목록.
    - 예: ["mathjs"]
 
-8) activate
+8) pip_package_list (Python 코드로 하는 경우)
+   - 구현 시 필요한 Python 패키지 목록.
+   - 예: ["requests", "PyMuPDF"]
+
+9) activate
    - 도구의 활성화 여부 (true/false).
-   - true 시 실제 에이전트에서 사용 가능.
+   - false로 하면 본 도구를 활용하지 않습니다
+
+10) tooling_in_realworld
+   - true로 한다면 Docker를 사용하지않는 상황에서도 본 도구를 활성화시킵니다
+   - 쓰기작업등의 민감한 작동을 하는 도구라면 false로 하는것이 안전합니다.
+   - 그럼에도 불구하고 만약 true로 하고자 한다면 only_use_in_code값을 true로 하고 실제 사용시에는 코드자동실행모드를 끄고 사용하는것이 안전합니다.
+
+11) retrieve_mode
+   - true로 한다면 함수에서 출력하는 내용에게 AI가 질문을 할 수 있도록 작동하도록 합니다.
+   - 이 경우 input 파라메터에는 `question`이라는 이름의 인자는 필수적으로 포함되어야합니다.
 
 ----------------------------------------------------------------
 2. 실제 도구(Javascript 파일) 구현
 ----------------------------------------------------------------
 
-스펙에 정의된 내용을 토대로 실제 동작할 자바스크립트 파일을 작성합니다.
+스펙에 정의된 내용을 토대로 실제 동작할 소스코드 파일을 작성합니다.
+자바스크립트, 파이썬 중 선택할 수 있습니다.
 파일의 이름은 다음과 같은 형식을 따릅니다.
 
-{toolName}.js
+{toolName}.js 혹은 {toolName}.py
 
-(예시 JS 코드)
-
-async function tool({ number1, number2 }) {
+예시 Javascript 코드:
+```javascript
+async function toolName({ number1, number2 }) {
     const mathjs = require('mathjs');
     const result = mathjs.add(number1, number2);
     console.log(`${number1} + ${number2} = ${result}`); // 출력을 통해 AI와의 대화 맥락에 포함하기 위함
     return result; // 코드와 맞물려 작동되는 경우를 위함
 }
-
-(주의사항)
-
+```
+(Javascript 코드 작성 주의사항)
 1) 코드는 오직 함수 한 개로만 구성합니다.
 2) export 키워드 등 다른 코드를 추가하거나, 함수 정의 외부에 어떤 코드도
    작성해서는 안 됩니다.
 3) JSON의 input 배열에 정의된 파라미터 이름(number1, number2)과
    함수 매개변수가 반드시 일치해야 합니다.
-4) npm_package_list에 명시된 패키지(require)는 반드시 함수 내부에서만 사용.
+4) 함수의 이름은 {toolName}와 동일하게 지정해주세요
 
-이 가이드를 바탕으로 필요한 사용자도구를 자유롭게 제작해보세요.
+예시 Python 코드:
+```python
+import math
+def tool_name(input):
+    result = input['number1'] + input['number2']
+    print(f"{input['number1']} + {input['number2']} = {result}")  # 출력을 통해 AI와의 대화 맥락에 포함하기 위함
+    return result  # 코드와 맞물려 작동되는 경우를 위함
+```
+(Python 코드 작성 주의사항)
+1) 함수의 이름은 {toolName}와 동일하게 지정해주세요
 
 ----------------------------------------------------------------
 (End of Document)

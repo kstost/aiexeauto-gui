@@ -1,9 +1,18 @@
 async function write_file(input) {
     const fs = require('fs').promises;
     const path = require('path');
-
-    const pathSanitizer = (filePath) => {
-        return path.normalize(filePath.split('\\').join('/')).replace(/\/+/g, '/');
+    const pathSanitizer = (path) => {
+        path = path.split('\\').join('/');
+        while (true) {
+            if (path.indexOf('//') === -1) break;
+            path = path.split('//').join('/');
+        }
+        path = path.trim();
+        ['"', "'"].forEach(quote => {
+            while (path.trim().startsWith(quote)) path = path.trim().slice(1).trim();
+            while (path.trim().endsWith(quote)) path = path.trim().slice(0, -1).trim();
+        });
+        return path;
     };
     if (!input || typeof input.file_path !== 'string' || typeof input.content !== 'string') {
         console.error('❌ Invalid input values.');

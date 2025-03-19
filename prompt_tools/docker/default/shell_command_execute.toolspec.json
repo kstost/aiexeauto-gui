@@ -1,8 +1,9 @@
 {
-    "name": "run_command",
-    "description": "Run a shell command.",
+    "name": "shell_command_execute",
+    "description": "Execute a shell command.",
     "instructions": [
-        "Provide the shell command to execute"
+        "Provide the shell command to execute",
+        "The command will be executed in the current working directory"
     ],
     "input_schema": [
         {
