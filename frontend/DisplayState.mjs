@@ -31,7 +31,7 @@ export class DisplayState {
         this.state.appendChild(this.iconContainer);
         this.state.appendChild(this.textContainer);
     }
-    dismiss(justAlpha = true) {
+    dismiss(justAlpha = false) {
         if (justAlpha) {
             this.state.style.opacity = '0';
             return;
