@@ -39,7 +39,7 @@ async def _browser_use(input):
 
     # Define the main async function
     agent = Agent(
-        task=input["task"],  # "What's the weather like today?" in Korean
+        task=input["task"] + ' "Provide a highly detailed investigation report."',  # "What's the weather like today?" in Korean
         llm=ChatOpenAI(model=os.environ["model"]),
         browser=browser,
     )
