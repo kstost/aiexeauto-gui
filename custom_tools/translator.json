@@ -8,17 +8,17 @@
     "input": [
         {
             "text": "",
-            "targetLanguage": ""
+            "target_language": ""
         },
         {
             "text": "Text to translate",
-            "targetLanguage": "Target language for translation (e.g. Korean, English, Japanese etc.)"
+            "target_language": "Target language for translation (e.g. Korean, English, Japanese etc.)"
         }
     ],
-    "only_use_in_code": true,
-    "npm_package_list": [
+    "only_use_in_code": false,
+    "pip_package_list": [
         "openai"
     ],
-    "activate": false,
+    "activate": true,
     "tooling_in_realworld": true
 }

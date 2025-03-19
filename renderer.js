@@ -191,6 +191,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             // return 1112;
         },
         async await_prompt(body) {
+            console.log('await_prompt', body);
             // currentConfig['autoCodeExecution'] = await getConfig('autoCodeExecution');
             // currentConfig['planEditable'] = await getConfig('planEditable');
 
@@ -203,6 +204,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const mode = body.mode; // "run_nodejs_code"
             const javascriptCodeToRun = body.javascriptCodeToRun;
+            const pythonCodeToRun = body.pythonCodeToRun;
             const pythonCode = body.pythonCode;
             const actname = body.actname;
             const whattodo = body.whattodo;
@@ -260,7 +262,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             if (!isCodeRequiredConfirm(actname)) {
                 language = 'javascript';
-                const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
+                let code = javascriptCodeToRun || pythonCodeToRun;
+                const { editor, runButton } = makeCodeBox(code, 'javascript');
                 editor.setSize('100%', '100%');
                 handleCodeConfirmation(editor, true);
                 if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
@@ -290,11 +293,13 @@ window.addEventListener('DOMContentLoaded', async () => {
                     if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
                 } else if (mode === 'run_python_code') {
                     language = 'python';
-                    const { editor, runButton } = makeCodeBox(pythonCode, 'python');
+                    const { editor, runButton } = makeCodeBox(pythonCodeToRun ? pythonCodeToRun : pythonCode, 'python');
                     editor.setSize('100%', '100%');
                     editor.setEventOnRun(async (code) => {
                         handleCodeConfirmation(editor);
                     });
+                    // console.log('pythonCodeToRun', pythonCodeToRun);
+                    // console.log('pythonCode', pythonCode);
                     if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
                 } else if (mode === 'run_command') {
                     language = 'bash';

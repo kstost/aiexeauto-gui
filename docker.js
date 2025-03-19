@@ -2,13 +2,14 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import { spawn, spawnSync } from 'child_process';
-import { getToolCode, getToolData, getToolList, getAbsolutePath, getAppPath, isWindows, getConfiguration, getHomePath } from './system.js';
+import { getToolCode, getToolData, getToolList, getAbsolutePath, getAppPath, isWindows, getConfiguration, getHomePath, pathSanitizing } from './system.js';
 import chalk from 'chalk';
 import { setHandler, removeHandler } from './sigintManager.js';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { virtualPython, preparePythonRunningSpace, is_file, is_dir } from './codeExecution.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import singleton from './singleton.js';
+import { indention } from './makeCodePrompt.js';
 import { runPythonCodeInRealWorld, runNodeCodeInRealWorld, prepareNodeRunningSpace, isInstalledNodeModuleInRealWorld, isInstalledPythonModuleInRealWorld, installNodeModulesInRealWorld, installPythonModulesInRealWorld } from './codeExecution.js';
 import open from 'open';
 import { getNodePath } from './executableFinder.js';
@@ -546,116 +547,84 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
         const toolList = await getToolList();
         let codeData = [];
         for (const toolName of toolList) {
-            // console.log('toolName', toolName);
-            // ㅣㄷㅅ..
-            const sourcecode = await getToolCode(toolName);
-            if (!sourcecode) continue;
+            const { code, kind } = await getToolCode(toolName);
+            if (!code) continue;
             let data = await getToolData(toolName);
-            // console.log('data--------2-', toolName);
-            // console.log('data---------', data);
-            let { prompt, spec, npm_package_list } = data;
+            let { prompt, spec, npm_package_list, pip_package_list } = data;
             if (spec) spec.input = spec.input_schema;
             npm_package_list = npm_package_list || [];
-            // console.log('sourcecode', sourcecode);
-            // console.log('specspecspec', spec);
-            // process.exit(0);
-            const sourcecodeBase64Encoded = Buffer.from(sourcecode || '').toString('base64');
+            pip_package_list = pip_package_list || [];
+            const sourcecodeBase64Encoded = Buffer.from(code || '').toString('base64');
             const inputNames = Object.keys(spec.input[0])
-            const pathSanitizer = (path) => {
-                path = path.split('\\').join('/');
-                while (true) {
-                    if (path.indexOf('//') === -1) break;
-                    path = path.split('//').join('/');
-                }
-                return path;
-            };
             let nodePath = await getConfiguration('nodePath');
             const useDocker = await getConfiguration('useDocker');
             if (useDocker) nodePath = '/usr/bin/node';
-            nodePath = pathSanitizer(nodePath);
-            const code = [
-                `#---`,
-                `    @staticmethod`,
-                `    def ${toolName}(*args, **kwargs):`,
-                // `        print('JS,파이썬코드수행START.')`,
-                `        try:`,
-                `            parameters = None`,
-                `            npm_package_list = ${JSON.stringify(npm_package_list)}`,
-                `            inputSpec = ${JSON.stringify(spec.input[0])}`,
-                `            inputNames = ${JSON.stringify(inputNames)}`,
-                `            for package_name in npm_package_list:`,
-                `                install_npm_package(package_name)`,
-
-
-                `            kwargs_key_list = list(kwargs.keys())`,
-                `            if len(args) == len(inputNames):`,
-                `                parameters = {}`,
-                `                counter = 0`,
-                `                for arg in args:`,
-                `                    parameters[inputNames[counter]] = arg`,
-                `                    counter += 1`,
-                `            elif len(kwargs_key_list) == len(inputNames):`,
-                `                check_counter = 0`,
-                `                for key in kwargs_key_list:`,
-                `                    if key in inputSpec:`,
-                `                        check_counter += 1`,
-                `                if check_counter == len(inputNames):`,
-                `                    parameters = kwargs`,
-                `            if parameters:`,
-                `                nodejsCodeBase64Encoded = '${sourcecodeBase64Encoded}'`,
-                `                decodedNodeJSCode = base64.b64decode(nodejsCodeBase64Encoded).decode('utf-8')`,
-                `                randomJSFileName = '${Math.random()}.js'`,
-                `                with open(randomJSFileName, 'w') as f:`,
-                `                    f.write('const fs=require("fs");fs.unlinkSync("'+randomJSFileName+'");(async()=>{                         const result = JSON.stringify((await (' + decodedNodeJSCode + ')(' + json.dumps(parameters) + '))||null);   await new Promise(resolve=>setTimeout(resolve, 100));console.log(String.fromCharCode(10)+"824395784357837378287348723475788687546"+String.fromCharCode(10));await new Promise(resolve=>setTimeout(resolve, 100));       console.log(result);                                                                       })();')`,
-                // `                print(parameters)`,
-                `                # node code.js 실행`,
-                `                process = subprocess.Popen(`,
-                `                    ["${nodePath}", randomJSFileName],`,
-                `                    stdout=subprocess.PIPE,`,
-                `                    stderr=subprocess.PIPE,`,
-                `                    text=True  # 출력 결과를 문자열로 변환`,
-                `                )`,
-                `                `,
-
-                `                stderr_lines = []`,
-                `                stdout_lines = []`,
-                `                # stdout, stderr를 동시에 실시간으로 읽어오기 위해 스레드 두 개 사용`,
-                `                t_stdout = threading.Thread(target=stream_output, args=(process.stdout, stdout_lines))`,
-                `                t_stderr = threading.Thread(target=stream_output, args=(process.stderr, stderr_lines))`,
-                `                `,
-                `                t_stdout.start()`,
-                `                t_stderr.start()`,
-                `                `,
-                `                # 프로세스가 종료될 때까지 대기`,
-                `                process.wait()`,
-                `                `,
-                `                # 스트리밍이 끝나기를 기다림`,
-                `                t_stdout.join()`,
-                `                t_stderr.join()`,
-                // `                print('JS,파이썬코드수행종료.')`,
-                // `                print(json.dumps(stdout_lines))`,
-                `                loaded = json.loads(''.join(stdout_lines))`,
-                // `                saveData = loaded`,
-                // `                randomAlphabetFileName = '${Math.random().toString(36).substring(2, 7)}.txt'`,
-                // `                os.makedirs('/tmpmem/', exist_ok=True)`,
-                // `                with open('/tmpmem/'+randomAlphabetFileName, 'w') as f:`,
-                // `                    if isinstance(saveData, str):`,
-                // `                        f.write(saveData)`,
-                // `                    elif isinstance(saveData, dict):`,
-                // `                        f.write(json.dumps(saveData))`,
-                // `                    elif isinstance(saveData, list):`,
-                // `                        f.write(json.dumps(saveData))`,
-                // `                    else:`,
-                // `                        f.write(str(saveData))`,
-                // `                print('📄 The return value of ${toolName} is saved in file /tmpmem/'+randomAlphabetFileName)`,
-                `                return loaded`,
-                `        except BaseException as e:`,
-                // `            print('JS,파이썬코드수행ERRR.')`,
-                // `            print(e)`,
-                `            pass`,
-                `#---`,
-            ];
-            codeData.push(code.join('\n'));
+            nodePath = pathSanitizing(nodePath);
+            const code_ = [
+                '..' === '..' && `# ---`,
+                '..' === '..' && `    @staticmethod`,
+                '..' === '..' && `    def ${toolName}(*args, **kwargs):`,
+                '..' === '..' && `        parameters = None`,
+                '..' === '..' && `        inputSpec = ${JSON.stringify(spec.input[0])}`,
+                '..' === '..' && `        inputNames = ${JSON.stringify(inputNames)}`,
+                '..' === '..' && `        kwargs_key_list = list(kwargs.keys())`,
+                '..' === '..' && `        if len(args) == len(inputNames):`,
+                '..' === '..' && `            parameters = {}`,
+                '..' === '..' && `            counter = 0`,
+                '..' === '..' && `            for arg in args:`,
+                '..' === '..' && `                parameters[inputNames[counter]] = arg`,
+                '..' === '..' && `                counter += 1`,
+                '..' === '..' && `        elif len(kwargs_key_list) == len(inputNames):`,
+                '..' === '..' && `            check_counter = 0`,
+                '..' === '..' && `            for key in kwargs_key_list:`,
+                '..' === '..' && `                if key in inputSpec:`,
+                '..' === '..' && `                    check_counter += 1`,
+                '..' === '..' && `            if check_counter == len(inputNames):`,
+                '..' === '..' && `                parameters = kwargs`,
+                '..' === '..' && `        code_kind = '${kind}'`,
+                kind === 'py' && `        if code_kind == 'py':`,
+                kind === 'py' && `            try:`,
+                kind === 'py' && `                pip_package_list = ${JSON.stringify(pip_package_list)}`,
+                kind === 'py' && `                for package_name in pip_package_list:`,
+                kind === 'py' && `                    subprocess.check_call([sys.executable, "-m", "pip", "install", package_name, "--quiet"])`,
+                kind === 'py' && `                `.trim() + `${indention(4, code, 4)}`,
+                kind === 'py' && `                return ${toolName}(parameters)`,
+                kind === 'py' && `                pass`,
+                kind === 'py' && `            except BaseException as e:`,
+                kind === 'py' && `                pass`,
+                kind === 'js' && `        if code_kind == 'js':`,
+                kind === 'js' && `            try:`,
+                kind === 'js' && `                npm_package_list = ${JSON.stringify(npm_package_list)}`,
+                kind === 'js' && `                for package_name in npm_package_list:`,
+                kind === 'js' && `                    install_npm_package(package_name)`,
+                kind === 'js' && `                if parameters:`,
+                kind === 'js' && `                    nodejsCodeBase64Encoded = '${sourcecodeBase64Encoded}'`,
+                kind === 'js' && `                    decodedNodeJSCode = base64.b64decode(nodejsCodeBase64Encoded).decode('utf-8')`,
+                kind === 'js' && `                    randomJSFileName = '${Math.random()}.js'`,
+                kind === 'js' && `                    with open(randomJSFileName, 'w') as f:`,
+                kind === 'js' && `                        f.write('const fs=require("fs");fs.unlinkSync("'+randomJSFileName+'");(async()=>{                         const result = JSON.stringify((await (' + decodedNodeJSCode + ')(' + json.dumps(parameters) + '))||null);   await new Promise(resolve=>setTimeout(resolve, 100));console.log(String.fromCharCode(10)+"824395784357837378287348723475788687546"+String.fromCharCode(10));await new Promise(resolve=>setTimeout(resolve, 100));       console.log(result);                                                                       })();')`,
+                kind === 'js' && `                    process = subprocess.Popen(`,
+                kind === 'js' && `                        ["${nodePath}", randomJSFileName],`,
+                kind === 'js' && `                        stdout=subprocess.PIPE,`,
+                kind === 'js' && `                        stderr=subprocess.PIPE,`,
+                kind === 'js' && `                        text=True`,
+                kind === 'js' && `                    )`,
+                kind === 'js' && `                    stderr_lines = []`,
+                kind === 'js' && `                    stdout_lines = []`,
+                kind === 'js' && `                    t_stdout = threading.Thread(target=stream_output, args=(process.stdout, stdout_lines))`,
+                kind === 'js' && `                    t_stderr = threading.Thread(target=stream_output, args=(process.stderr, stderr_lines))`,
+                kind === 'js' && `                    t_stdout.start()`,
+                kind === 'js' && `                    t_stderr.start()`,
+                kind === 'js' && `                    process.wait()`,
+                kind === 'js' && `                    t_stdout.join()`,
+                kind === 'js' && `                    t_stderr.join()`,
+                kind === 'js' && `                    loaded = json.loads(''.join(stdout_lines))`,
+                kind === 'js' && `                    return loaded`,
+                kind === 'js' && `            except BaseException as e:`,
+                kind === 'js' && `                pass`,
+                '..' === '..' && `# ---`,
+            ].filter(Boolean);
+            codeData.push(code_.join('\n'));
         }
         return codeData.join('\n').trim();
     }
@@ -664,8 +633,7 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     const warninglist = ["DeprecationWarning", "UserWarning", "FutureWarning", "ImportWarning", "RuntimeWarning", "SyntaxWarning", "PendingDeprecationWarning", "ResourceWarning", "InsecureRequestWarning", "InsecurePlatformWarning"];
     const modulelist = ["abc", "argparse", "array", "ast", "asyncio", "atexit", "base64", "bdb", "binascii", "bisect", "builtins", "bz2", "calendar", "cmath", "cmd", "code", "codecs", "codeop", "collections", "colorsys", "compileall", "concurrent", "configparser", "contextlib", "contextvars", "copy", "copyreg", "cProfile", "csv", "ctypes", "dataclasses", "datetime", "dbm", "decimal", "difflib", "dis", "doctest", "email", "encodings", "ensurepip", "enum", "errno", "faulthandler", "filecmp", "fileinput", "fnmatch", "fractions", "ftplib", "functools", "gc", "getopt", "getpass", "gettext", "glob", "graphlib", "gzip", "hashlib", "heapq", "hmac", "html", "http", "imaplib", "importlib", "inspect", "io", "ipaddress", "itertools", "json", "keyword", "linecache", "locale", "logging", "lzma", "mailbox", "mailcap", "marshal", "math", "mimetypes", "mmap", "modulefinder", "multiprocessing", "netrc", "nntplib", "numbers", "operator", "optparse", "os", "pathlib", "pdb", "pickle", "pickletools", "pkgutil", "platform", "plistlib", "poplib", "posixpath", "pprint", "profile", "pstats", "pty", "pwd", "py_compile", "pyclbr", "pydoc", "queue", "quopri", "random", "re", "reprlib", "rlcompleter", "runpy", "sched", "secrets", "select", "selectors", "shelve", "shlex", "shutil", "signal", "site", "smtpd", "smtplib", "sndhdr", "socket", "socketserver", "sqlite3", "ssl", "stat", "statistics", "string", "stringprep", "struct", "subprocess", "sunau", "symtable", "sys", "sysconfig", "syslog", "tabnanny", "tarfile", "telnetlib", "tempfile", "test", "textwrap", "threading", "time", "timeit", "token", "tokenize", "trace", "traceback", "tracemalloc", "tty", "turtle", "types", "typing", "unicodedata", "unittest", "urllib", "uu", "uuid", "venv", "warnings", "wave", "weakref", "webbrowser", "wsgiref", "xdrlib", "xml", "xmlrpc", "zipapp", "zipfile", "zipimport", "zlib", "zoneinfo", "numpy", "pandas", "matplotlib", "seaborn", "scipy", "tensorflow", "keras", "torch", "statsmodels", "xgboost", "lightgbm", "gensim", "nltk", "pillow", "requests", "beautifulsoup4", "mahotas", "simplecv", "pycairo", "pyglet", "openpyxl", "xlrd", "xlwt", "pyexcel", "PyPDF2", "reportlab", "moviepy", "vidgear", "imutils", "pytube", "pafy"];
     // console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
-    let tools;
-    tools = await implementTool();
+    let tools = await implementTool();
     // console.log('toolstoolstools', tools);
     // try {
     // } catch (e) {
@@ -752,7 +720,8 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     // [remove.003] unlink - /Users/kst/.aiexeauto/workspace/.code_0.7196721389583982.py
     if ((ensureAppsHomePath(tmpPyFile)) && linuxStyleRemoveDblSlashes(tmpPyFile).includes('/.aiexeauto/workspace/') && await is_file(tmpPyFile) && tmpPyFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
         console.log(`[remove.003] unlink - ${tmpPyFile}`);
-        await fs.promises.unlink(tmpPyFile);
+        if (!false) await fs.promises.unlink(tmpPyFile);
+        else console.log('not removed!!!!!!!!', tmpPyFile);
     } else {
         console.log(`[remove.003!] unlink - ${tmpPyFile}`);
     }

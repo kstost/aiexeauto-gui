@@ -19,5 +19,7 @@
     "only_use_in_code": false,
     "return_description": "String of the file content.",
     "return_type": "string",
-    "tooling_in_realworld": true
+    "tooling_in_realworld": true,
+    "pip_package_list": [],
+    "npm_package_list": []
 }

@@ -7,6 +7,7 @@ import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject 
 import { runPythonCode } from './docker.js';
 export async function actDataParser({ actData, processTransactions, out_state, containerId }) {
     console.log('actDataParser!!!!!!!!!!!!!!!!!!!!!!', actData);
+    let lazyMode = '';
     const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
     let toolingFailed = false;
     function shellCommander(shellCommand) {
@@ -59,14 +60,22 @@ export async function actDataParser({ actData, processTransactions, out_state, c
         return false;
     }
     async function loadToolCode(actData) {
-        const code = await getToolCode(actData.name);
-        if (!code) return '';
-        return [
-            // code,
-            `(async()=>{try{await (${code})(${JSON.stringify(actData.input)});}catch{}})();`,
-        ].join('\n');
+        let { code, kind } = await getToolCode(actData.name);
+        if (!code) return {};
+        if (kind === 'js') {
+            code = [
+                `(async()=>{try{await (${code})(${JSON.stringify(actData.input)});}catch{}})();`,
+            ].join('\n');
+        }
+        if (kind === 'py') {
+            code = [
+                `${code}`,
+                `${actData.name}(${JSON.stringify(actData.input)})`,
+            ].join('\n');
+        }
+        return { code, kind };
     }
-    let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack;
+    let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack;
     try {
         function formatToolCode(actData) {
             let input = actData.input;
@@ -75,8 +84,8 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             let formattedInput = keys.map((key, index) => `${key}="${values[index]}"`).join(',');
             return `default_api.${actData.name}(${formattedInput})`;
         }
-
-
+        let toolCode;
+        try { toolCode = await loadToolCode(actData); } catch { }
         if (actData.name === 'generate_nodejs_code') {
             if (is_none_data(actData?.input?.nodejs_code)) throw null;
             javascriptCode = actData.input.nodejs_code;
@@ -94,16 +103,16 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             if (!actData.input.directory_path) actData.input.directory_path = './';
             actData.input.directory_path = `${actData.input.directory_path}/`;
             while (actData.input.directory_path.includes('//')) actData.input.directory_path = actData.input.directory_path.replace('//', '/');
-            javascriptCode = formatToolCode(actData);
-            javascriptCodeBack = await loadToolCode(actData);
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
         } else if (actData.name === 'apt_install') {
             if (is_none_data(actData?.input?.package_name)) throw null;
             javascriptCode = formatToolCode(actData);
             javascriptCodeBack = shellCommander(`apt install -y ${actData.input.package_name}`);
         } else if (actData.name === 'which_command') {
             if (is_none_data(actData?.input?.command)) throw null;
-            javascriptCode = formatToolCode(actData);
-            javascriptCodeBack = await loadToolCode(actData);
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
         } else if (actData.name === 'run_command') {
             if (is_none_data(actData?.input?.command)) throw null;
             javascriptCode = [
@@ -111,24 +120,26 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             ].join('\n');
             javascriptCodeBack = shellCommander(actData.input.command);
         } else if (actData.name === 'retrieve_from_file') {
+            lazyMode = actData.name;
             if (is_none_data(actData?.input?.file_path)) throw null;
             if (is_none_data(actData?.input?.question)) throw null;
-            javascriptCode = formatToolCode(actData);
-            javascriptCodeBack = await loadToolCode(actData);
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
         } else if (actData.name === 'remove_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
-            javascriptCode = formatToolCode(actData);
-            javascriptCodeBack = await loadToolCode(actData);
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
         } else if (actData.name === 'remove_directory_recursively') {
             if (is_none_data(actData?.input?.directory_path)) throw null;
-            javascriptCode = formatToolCode(actData);
-            javascriptCodeBack = await loadToolCode(actData);
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
         } else if (actData.name === 'rename_file_or_directory') {
             if (is_none_data(actData?.input?.old_path)) throw null;
             if (is_none_data(actData?.input?.new_path)) throw null;
-            javascriptCode = formatToolCode(actData);
-            javascriptCodeBack = await loadToolCode(actData);
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
         } else if (actData.name === 'show_output_range') {
+            lazyMode = actData.name;
             if (is_none_data(actData?.input?.outputDataId)) throw null;
             if (is_none_data(actData?.input?.startLineNumber)) throw null;
             if (is_none_data(actData?.input?.endLineNumber)) throw null;
@@ -149,6 +160,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             const base64 = Buffer.from(data).toString('base64');
             javascriptCodeBack = [`console.log('${base64}');`].join('\n');
         } else if (actData.name === 'retrieve_from_pdf') {
+            lazyMode = actData.name;
             if (is_none_data(actData?.input?.pdf_file_path)) throw null;
             if (is_none_data(actData?.input?.question)) throw null;
             const p12 = await out_state(caption('retrievingFromPdf')); // `${stateLabel}를 ${model}가 처리중...`
@@ -173,6 +185,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             javascriptCodeBack = [`console.log('${base64}');`,].join('\n');
             await p12.dismiss();
         } else if (actData.name === 'retrieve_from_webpage') {
+            lazyMode = actData.name;
             console.log('retrieve_from_webpage!!!!!!!!!!!!!!......................!!!!!!!!');
             if (is_none_data(actData?.input?.url)) throw null;
             if (is_none_data(actData?.input?.question)) {
@@ -279,25 +292,16 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             // other tool
             const name = actData.name;
             const input = JSON.parse(JSON.stringify(actData.input));
-            const { spec, npm_package_list } = await getToolData(name);
+            const { spec, npm_package_list, pip_package_list } = await getToolData(name);
             const rule = spec.input_schema[0];
             const desc = spec.input_schema[1];
             const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
             const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
             if (structure1 === structure2) {
-                // let pp3 = null;
-                // console.log('actData.name!!!!!!!!!!!!!!!!!!!!!!!!!!!', name, caption('webSearch'));
-                // if (name === 'web_search') {
-                // pp3 = await out_state(caption('webSearch'));
-                // console.log('pp3!!!!!!!!!!!!!!!!!!!!!!!!!!!', pp3);
-                // }
-                javascriptCode = formatToolCode(actData);
-                javascriptCodeBack = await loadToolCode(actData);
+                if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+                if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
                 if (npm_package_list) requiredPackageNames = npm_package_list;
-                // if (pp3) {
-                // await pp3.dismiss();
-                // console.log('pp3 dismissed!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-                // }
+                if (pip_package_list) requiredPackageNames = pip_package_list;
             }
         }
         /*
@@ -306,10 +310,11 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             실패했다면 actData 어떤 모습인지 확인할 수 있도록 actDataCloneBackedUp 준비했어.
         */
         if (!javascriptCode && !pythonCode) toolingFailed = true;
-        return { javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, toolingFailed, actDataCloneBackedUp };
+        return { javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, toolingFailed, actDataCloneBackedUp, lazyMode };
     } catch {
         return {
-            toolingFailed
+            toolingFailed,
+            lazyMode
         }
     }
 

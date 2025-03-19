@@ -30,6 +30,22 @@ import { checkSyntax } from './docker.js';
 import { Retriver } from "./retriver.js";
 import crypto from 'crypto';
 let spinners = {};
+function outputParse(output) {
+    let errorData, decoded, parsed;
+    errorData = isErrorData(output);
+    decoded = Buffer.from(output, 'base64').toString('utf-8');
+    try { parsed = JSON.parse(decoded); } catch { }
+    return { errorData, decoded, parsed };
+}
+function isErrorData(output) {
+    try {
+        let parsed = JSON.parse(output);
+        if (parsed.constructor === Array) {
+            return parsed[0];
+        }
+    } catch {
+    }
+}
 async function getNewFileName() {
     const path = getAppPath('list');
     if (!fs.existsSync(path)) {
@@ -64,10 +80,10 @@ export async function getRetriver() {
     return retriver;
 }
 export async function retriving(key, data, question) {
-    const retriver = await getRetriver();
-    if (!question) question = `Extract the essential parts from this document and compile them into a comprehensive detailed report format.`;
-    const md5Hash = crypto.createHash('md5').update(key).digest('hex');
     try {
+        const retriver = await getRetriver();
+        if (!question) question = `Extract the essential parts from this document and compile them into a comprehensive detailed report format.`;
+        const md5Hash = crypto.createHash('md5').update(key).digest('hex');
         const rId = `task_${md5Hash}`;
         let exist = false;
         try {
@@ -455,9 +471,11 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             //     delete singleton.reservedDataCheck;
             // }
             iterationCount++;
+            let lazyMode = false;
             let javascriptCode = '';
             let javascriptCodeBack = '';
             let pythonCode = '';
+            let pythonCodeBack = '';
             let requiredPackageNames;
             let whatdidwedo = '';
             let whattodo = '';
@@ -470,6 +488,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 requiredPackageNames = actDataResult.requiredPackageNames || [];
                 pythonCode = actDataResult.pythonCode || '';
                 javascriptCodeBack = actDataResult.javascriptCodeBack || '';
+                pythonCodeBack = actDataResult.pythonCodeBack || '';
             }
             if (!validationMode) {
                 processTransactions.length === 0 && await pushProcessTransactions({ class: 'output', data: null });
@@ -561,10 +580,12 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     }, () => areBothSame(processTransactions, ++reduceLevel));
                     // console.log('actData', actData);
                     let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId });
+                    lazyMode = actDataResult.lazyMode;
                     javascriptCode = actDataResult.javascriptCode || '';
                     requiredPackageNames = actDataResult.requiredPackageNames || [];
                     pythonCode = actDataResult.pythonCode || '';
                     javascriptCodeBack = actDataResult.javascriptCodeBack || '';
+                    pythonCodeBack = actDataResult.pythonCodeBack || '';
                     if (pythonCode) {
                         pythonCode = pythonCode.split('\n').filter(line => {
                             return line.trim() !== 'import default_api'
@@ -609,18 +630,6 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 return codeRequiredConfirm.includes(actData.name);
             }
 
-            // if (actData.name === 'generate_nodejs_code') {
-            //     javascriptCode = actData.input.nodejs_code;
-            //     requiredPackageNames = actData.input.npm_package_list;
-            // } else if (actData.name === 'generate_nodejs_code_for_puppeteer') {
-            //     javascriptCode = actData.input.nodejs_code;
-            //     requiredPackageNames = actData.input.npm_package_list;
-            // } else if (actData.name === 'generate_python_code') {
-            //     pythonCode = actData.input.python_code;
-            //     requiredPackageNames = actData.input.pip_package_list;
-
-
-
 
 
 
@@ -639,11 +648,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let executionId;
             let pi3d13;
             const streamGetter = async (str, force = false) => {
-                if (actData.name === 'retrieve_from_pdf' && !force) return;
-                if (actData.name === 'retrieve_from_file' && !force) return;
-                if (actData.name === 'retrieve_from_webpage' && !force) return;
-                if (actData.name === 'show_output_range' && !force) return;
-                // if (!useDocker) return;
+                if (lazyMode && !force) return;
                 if (pi3d13) pi3d13?.dismiss();
                 process.stdout.write(str);
                 if (executionId) {
@@ -698,17 +703,23 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         // result = await runCode(page, javascriptCodeToRun, requiredPackageNames);
                     }
                 } else if (!javascriptCode && pythonCode) {
+                    let pythonCodeToRun = pythonCodeBack ? pythonCodeBack : pythonCode;
+                    console.log('pythonCodeToRun', pythonCodeToRun);
+                    // console.log('pythonCode', pythonCode);
+                    // console.log('pythonCodeBack', pythonCodeBack);
                     if (true) {
                         if (!confirmedd) {
-                            let confirmed = await await_prompt({ mode: 'run_python_code', actname: actData.name, containerId, dockerWorkDir, pythonCode, requiredPackageNames });
+                            let confirmed = await await_prompt({ mode: 'run_python_code', actname: actData.name, containerId, dockerWorkDir, pythonCodeToRun, requiredPackageNames });
+                            console.log('confirmed!!!!!!!!!!!!!', confirmed);
                             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
-                            pythonCode = confirmed.confirmedCode;
+                            pythonCodeToRun = confirmed.confirmedCode;
                             executionId = confirmed.executionId;
                         }
+                        // console.log('pythonCodeToRun222222222', pythonCodeToRun);
                         pi3d13 = await out_state(caption('runningCode'));
                         await new Promise(resolve => setTimeout(resolve, 500));
                         await waitingForDataCheck(out_state);
-                        const codeExecutionResult_ = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames, streamGetter);
+                        const codeExecutionResult_ = await runPythonCode(containerId, dockerWorkDir, pythonCodeToRun, requiredPackageNames, streamGetter);
                         if (codeExecutionResult_) codeExecutionResult = codeExecutionResult_;
                         runCodeFactor = true;
                     }
@@ -716,7 +727,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             } catch (error) {
                 errorList.codeexecutionerror = { error };
             }
-            if (actData.name !== 'retrieve_from_file' && actData.name !== 'retrieve_from_webpage' && actData.name !== 'show_output_range' && actData.name !== 'retrieve_from_pdf') {
+            if (!lazyMode) {
                 let pid = await out_state(``);
                 if (errorList.codeexecutionerror) {
                     await pid.fail(caption('codeExecutionAborted'));
@@ -729,11 +740,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
             const data = javascriptCode || pythonCode;
             const weatherToPush = (!errorList.codeexecutionerror && data);
-            let summarized;
-            if (actData.name === 'retrieve_from_file' && codeExecutionResult?.output) {
-                let pid6 = await out_state(caption('retrievingFromFile')); // `${stateLabel}를 ${model}가 처리중...`
-                try {
-                    const parsed = JSON.parse(codeExecutionResult?.output);
+            let { summarized, errorData, decoded, parsed } = lazyMode ? outputParse(codeExecutionResult?.output) : {};
+            const handlers = {
+                async retrieve_from_file() {
+                    let pid6 = await out_state(caption('retrievingFromFile'));
                     let answered = await retriving(parsed.file_path, parsed.result, parsed.question);
                     summarized = [
                         `📄 file_path: ${parsed.file_path}`,
@@ -741,16 +751,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         `💡 answer: ${answered}`,
                     ].join('\n');
                     streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
-                } catch {
-                }
-                await pid6.dismiss();
-            }
-            if (actData.name === 'retrieve_from_pdf' && codeExecutionResult?.output) {
-                let pid6 = await out_state(caption('retrievingFromPdf')); // `${stateLabel}를 ${model}가 처리중...`
-                try {
-                    let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
-                    const parsed = JSON.parse(decoded);
-                    console.log(parsed.data);
+                    await pid6.dismiss();
+                },
+                async retrieve_from_pdf() {
+                    let pid6 = await out_state(caption('retrievingFromPdf'));
                     let answered = await retriving(parsed.pdf_file_path, parsed.data, parsed.question);
                     summarized = [
                         `📄 pdf_file_path: ${parsed.pdf_file_path}`,
@@ -758,51 +762,29 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         `💡 answer: ${answered}`,
                     ].join('\n');
                     streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
-                } catch {
-                }
-                await pid6.dismiss();
-            }
-            if (actData.name === 'show_output_range' && codeExecutionResult?.output) {
-                try {
-                    const decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
+                    await pid6.dismiss();
+                },
+                async show_output_range(){
                     summarized = decoded;
                     streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
-                } catch {
-                }
-            }
-            if (actData.name === 'retrieve_from_webpage' && codeExecutionResult?.output) {
-                let pid6;// = await out_state(caption('retrievingFromWebpage')); // `${stateLabel}를 ${model}가 처리중...`
-                try {
-                    let output = codeExecutionResult?.output;
-                    if (false) console.log('output!!!!!!!!!!!!!!!!!!!!!!!', output);
-                    let fail = false;
-                    let failedUrl = '';
-                    try {
-                        let parsed = JSON.parse(output);
-                        if (parsed.constructor === Array) {
-                            failedUrl = parsed[0];
-                            fail = true;
-                            summarized = `❌ Page Not Found: ${failedUrl}`;
-                            streamGetter(JSON.stringify({ str: summarized, type: 'stderr' }), true);
-                        }
-                    } catch {
-                    }
-                    if (!fail) {
-                        let decoded = Buffer.from(codeExecutionResult?.output, 'base64').toString('utf-8');
-                        const parsed = JSON.parse(decoded);
-                        pid6 = await out_state(caption('retrievingFromWebpage') + ' <a href="' + parsed.url + '" target="_blank">🔗 ' + parsed.url + '</a>'); // `${stateLabel}를 ${model}가 처리중...`
+                },
+                async retrieve_from_webpage(){
+                    let pid6 = await out_state(caption('retrievingFromWebpage') + ' <a href="' + parsed.url + '" target="_blank">🔗 ' + parsed.url + '</a>'); 
+                    summarized = `❌ Page Not Found: ${errorData}`;
+                    if (!errorData) {
                         let answered = await retriving(parsed.url, parsed.data, parsed.question);
                         summarized = [
                             `🔗 url: ${parsed.url}`,
                             `💬 question: ${parsed.question}`,
                             `💡 answer: ${answered}`,
                         ].join('\n');
-                        streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
                     }
-                } catch {
-
+                    streamGetter(JSON.stringify({ str: summarized, type: errorData ? 'stderr' : 'stdout' }), true);
+                    if (pid6) await pid6.dismiss();
                 }
-                if (pid6) await pid6.dismiss();
+            }
+            if (lazyMode && codeExecutionResult?.output) {
+                await handlers[lazyMode]();
             }
             if (actData.name === 'web_search' && codeExecutionResult?.output) {
                 summarized = codeExecutionResult?.output;

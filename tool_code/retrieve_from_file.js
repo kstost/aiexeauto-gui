@@ -20,7 +20,9 @@ async function retrieve_from_file(input) {
         process.exit(0);
     }
     // console.log('📄 Contents of ' + file_path + '');
-    console.log(JSON.stringify({ file_path, result, question }));
+    const data = JSON.stringify({ file_path, result, question });
+    const base64 = Buffer.from(data).toString('base64');
+    console.log(base64);
 
     /*
     One line explanation of the return data:
