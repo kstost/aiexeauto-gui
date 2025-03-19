@@ -800,6 +800,16 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 summarized = codeExecutionResult?.output;
                 summarized = `${summarized}\n\nNext Step: You can access the URL with the question by \`retrieve_from_webpage(url, question)\``
             }
+            if (actData.name === 'browser_use' && codeExecutionResult?.output) {
+                summarized = `${codeExecutionResult?.output}`.split('\n');
+                let add = false;
+                let sum = [];
+                for (let line of summarized) {
+                    if (add) sum.push(line);
+                    if (line.trim() === ':[FINAL RESULT]:') add = true;
+                }
+                summarized = sum.join('\n');
+            }
 
             const codeExecutionResultOutput = codeExecutionResult?.output?.replace(/\x1b\[[0-9;]*m/g, '') || '';
 

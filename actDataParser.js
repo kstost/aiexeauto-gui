@@ -5,6 +5,7 @@ import { caption, getConfiguration } from './system.js';
 import TurndownService from 'turndown';
 import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
 import { runPythonCode } from './docker.js';
+import { loadConfiguration } from './system.js';
 export async function actDataParser({ actData, processTransactions, out_state, containerId }) {
     console.log('actDataParser!!!!!!!!!!!!!!!!!!!!!!', actData);
     let lazyMode = '';
@@ -62,13 +63,19 @@ export async function actDataParser({ actData, processTransactions, out_state, c
     async function loadToolCode(actData) {
         let { code, kind } = await getToolCode(actData.name);
         if (!code) return {};
+        let data;
+        try { data = await getToolData(actData.name); } catch { }
         if (kind === 'js') {
             code = [
+                `const environment_variables = ${JSON.stringify(data?.environment_variables || {})}`,
+                `const aiexe_configuration = ${JSON.stringify(await loadConfiguration())}`,
                 `(async()=>{try{await (${code})(${JSON.stringify(actData.input)});}catch{}})();`,
             ].join('\n');
         }
         if (kind === 'py') {
             code = [
+                `environment_variables = json.loads('${JSON.stringify(data?.environment_variables || {})}')`,
+                `aiexe_configuration = json.loads('${JSON.stringify(await loadConfiguration())}')`,
                 `${code}`,
                 `${actData.name}(${JSON.stringify(actData.input)})`,
             ].join('\n');
@@ -119,12 +126,12 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                 actData.input.command,
             ].join('\n');
             javascriptCodeBack = shellCommander(actData.input.command);
-        // } else if (actData.name === 'retrieve_from_file') {
-        //     lazyMode = actData.name;
-        //     if (is_none_data(actData?.input?.file_path)) throw null;
-        //     if (is_none_data(actData?.input?.question)) throw null;
-        //     if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-        //     if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+            // } else if (actData.name === 'retrieve_from_file') {
+            //     lazyMode = actData.name;
+            //     if (is_none_data(actData?.input?.file_path)) throw null;
+            //     if (is_none_data(actData?.input?.question)) throw null;
+            //     if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+            //     if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
         } else if (actData.name === 'remove_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
             if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }

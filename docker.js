@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import { setHandler, removeHandler } from './sigintManager.js';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { virtualPython, preparePythonRunningSpace, is_file, is_dir } from './codeExecution.js';
+import { loadConfiguration } from './system.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import singleton from './singleton.js';
 import { indention } from './makeCodePrompt.js';
@@ -565,6 +566,8 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
                 '..' === '..' && `    @staticmethod`,
                 '..' === '..' && `    def ${toolName}(*args, **kwargs):`,
                 '..' === '..' && `        parameters = None`,
+                '..' === '..' && `        environment_variables = json.loads('${JSON.stringify(data?.environment_variables || {})}')`,
+                '..' === '..' && `        aiexe_configuration = json.loads('${JSON.stringify(await loadConfiguration())}')`,
                 '..' === '..' && `        inputSpec = ${JSON.stringify(spec.input[0])}`,
                 '..' === '..' && `        inputNames = ${JSON.stringify(inputNames)}`,
                 '..' === '..' && `        kwargs_key_list = list(kwargs.keys())`,
@@ -632,15 +635,12 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
 
     const warninglist = ["DeprecationWarning", "UserWarning", "FutureWarning", "ImportWarning", "RuntimeWarning", "SyntaxWarning", "PendingDeprecationWarning", "ResourceWarning", "InsecureRequestWarning", "InsecurePlatformWarning"];
     const modulelist = ["abc", "argparse", "array", "ast", "asyncio", "atexit", "base64", "bdb", "binascii", "bisect", "builtins", "bz2", "calendar", "cmath", "cmd", "code", "codecs", "codeop", "collections", "colorsys", "compileall", "concurrent", "configparser", "contextlib", "contextvars", "copy", "copyreg", "cProfile", "csv", "ctypes", "dataclasses", "datetime", "dbm", "decimal", "difflib", "dis", "doctest", "email", "encodings", "ensurepip", "enum", "errno", "faulthandler", "filecmp", "fileinput", "fnmatch", "fractions", "ftplib", "functools", "gc", "getopt", "getpass", "gettext", "glob", "graphlib", "gzip", "hashlib", "heapq", "hmac", "html", "http", "imaplib", "importlib", "inspect", "io", "ipaddress", "itertools", "json", "keyword", "linecache", "locale", "logging", "lzma", "mailbox", "mailcap", "marshal", "math", "mimetypes", "mmap", "modulefinder", "multiprocessing", "netrc", "nntplib", "numbers", "operator", "optparse", "os", "pathlib", "pdb", "pickle", "pickletools", "pkgutil", "platform", "plistlib", "poplib", "posixpath", "pprint", "profile", "pstats", "pty", "pwd", "py_compile", "pyclbr", "pydoc", "queue", "quopri", "random", "re", "reprlib", "rlcompleter", "runpy", "sched", "secrets", "select", "selectors", "shelve", "shlex", "shutil", "signal", "site", "smtpd", "smtplib", "sndhdr", "socket", "socketserver", "sqlite3", "ssl", "stat", "statistics", "string", "stringprep", "struct", "subprocess", "sunau", "symtable", "sys", "sysconfig", "syslog", "tabnanny", "tarfile", "telnetlib", "tempfile", "test", "textwrap", "threading", "time", "timeit", "token", "tokenize", "trace", "traceback", "tracemalloc", "tty", "turtle", "types", "typing", "unicodedata", "unittest", "urllib", "uu", "uuid", "venv", "warnings", "wave", "weakref", "webbrowser", "wsgiref", "xdrlib", "xml", "xmlrpc", "zipapp", "zipfile", "zipimport", "zlib", "zoneinfo", "numpy", "pandas", "matplotlib", "seaborn", "scipy", "tensorflow", "keras", "torch", "statsmodels", "xgboost", "lightgbm", "gensim", "nltk", "pillow", "requests", "beautifulsoup4", "mahotas", "simplecv", "pycairo", "pyglet", "openpyxl", "xlrd", "xlwt", "pyexcel", "PyPDF2", "reportlab", "moviepy", "vidgear", "imutils", "pytube", "pafy"];
-    // console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
     let tools = await implementTool();
-    // console.log('toolstoolstools', tools);
     // try {
     // } catch (e) {
     //     // console.log(e);
     //     // process.exit(0);
     // }
-    // console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA22222A')
     const pathSanitizer = (path) => {
         path = path.split('\\').join('/');
         while (true) {
@@ -707,10 +707,10 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
         let result = await runPythonCodeInRealWorld(code, streamGetter);
         result.output = `${result.stderr}\n\n${result.stdout}`;
         return result;
+    } else {
     }
 
     await writeEnsuredFile(tmpPyFile, code);
-    // console.log(code);
 
     {
         let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + tmpPyFile + '" "' + containerId + ':' + workDir + '/' + pyFileName + '"');

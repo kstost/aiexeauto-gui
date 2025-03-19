@@ -424,6 +424,7 @@ export async function getToolData(toolName) {
         const tooling_in_realworld = spec.tooling_in_realworld;
         const lazy_mode = spec.lazy_mode;
         const retrieve_mode = spec.retrieve_mode;
+        const environment_variables = spec.environment_variables;
         delete spec.activate;
         delete spec.npm_package_list;
         delete spec.pip_package_list;
@@ -434,6 +435,7 @@ export async function getToolData(toolName) {
         delete spec.tooling_in_realworld;
         delete spec.lazy_mode;
         delete spec.retrieve_mode;
+        delete spec.environment_variables;
         if (!activate) return null;
         return {
             prompt,
@@ -445,7 +447,8 @@ export async function getToolData(toolName) {
             only_use_in_code,
             tooling_in_realworld,
             lazy_mode,
-            retrieve_mode
+            retrieve_mode,
+            environment_variables
         };
     }
     let data = await getCustomToolList(toolName);
@@ -459,6 +462,7 @@ export async function getToolData(toolName) {
     const tooling_in_realworld = spec.tooling_in_realworld;
     const lazy_mode = spec.lazy_mode;
     const retrieve_mode = spec.retrieve_mode;
+    const environment_variables = spec.environment_variables;
     delete spec.activate;
     delete spec.npm_package_list;
     delete spec.pip_package_list;
@@ -469,6 +473,7 @@ export async function getToolData(toolName) {
     delete spec.tooling_in_realworld;
     delete spec.lazy_mode;
     delete spec.retrieve_mode;
+    delete spec.environment_variables;
     if (!activate) return null;
     return {
         prompt: await makeMdWithSpec(toolName),
@@ -480,7 +485,8 @@ export async function getToolData(toolName) {
         only_use_in_code,
         tooling_in_realworld,
         lazy_mode,
-        retrieve_mode
+        retrieve_mode,
+        environment_variables
     };
 }
 export function getCodePath(itemPath) {

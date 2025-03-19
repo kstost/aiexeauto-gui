@@ -125,9 +125,11 @@ RUN pip install \
     matplotlib \
     scipy \
     opencv-python \
+    browser-use \
     numpy \
     requests
 
+RUN playwright install
 
 # Download fonts
 RUN mkdir -p /fonts

@@ -1,0 +1,28 @@
+{
+    "name": "browser_use",
+    "description": "Use the browser to search the internet as AI Agent.",
+    "instructions": [
+        "Use the browser to search the internet."
+    ],
+    "return_description": "",
+    "return_type": "",
+    "input_schema": [
+        {
+            "task": ""
+        },
+        {
+            "task": "Compare the price of gpt-4o and DeepSeek-V3"
+        }
+    ],
+    "only_use_in_code": false,
+    "pip_package_list": [
+        "browser-use"
+    ],
+    "environment_variables": {
+        "ANONYMIZED_TELEMETRY": false,
+        "headless": false,
+        "disable_security": false
+    },
+    "activate": true,
+    "tooling_in_realworld": true
+}
