@@ -605,6 +605,18 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 javascriptCode = nextCodeForValidation;
                 nextCodeForValidation = null;
             }
+
+            let toolInfo;
+            try { toolInfo = await getToolData(actData.name); } catch { } finally { if (!toolInfo) toolInfo = {} }
+            // if (!lazyMode) {
+            //     lazyMode = toolInfo.lazy_mode;
+            // }
+            // try {
+            //     const asoidf = await getToolData('sdfsdfs'+actData.name);
+            //     console.log('asoid!3333333333333333333!!!!!!!!!!!!!!!!!!!!!!!!!f', asoidf);
+            // } catch {
+
+            // }
             javascriptCode = stripFencedCodeBlocks(javascriptCode);
             // const pid9 = await out_state(`packages : ${requiredPackageNames.join(', ')}`);
             requiredPackageNames = await installPackages(requiredPackageNames, pythonCode, javascriptCode, useDocker, containerId, dockerWorkDir, spinners, out_state, createSpinner, await_prompt);
@@ -648,7 +660,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let executionId;
             let pi3d13;
             const streamGetter = async (str, force = false) => {
-                if (lazyMode && !force) return;
+                if ((toolInfo.retrieve_mode || lazyMode) && !force) return;
                 if (pi3d13) pi3d13?.dismiss();
                 process.stdout.write(str);
                 if (executionId) {
@@ -727,7 +739,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             } catch (error) {
                 errorList.codeexecutionerror = { error };
             }
-            if (!lazyMode) {
+            if (!lazyMode && !toolInfo.retrieve_mode) {
                 let pid = await out_state(``);
                 if (errorList.codeexecutionerror) {
                     await pid.fail(caption('codeExecutionAborted'));
@@ -742,34 +754,12 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             const weatherToPush = (!errorList.codeexecutionerror && data);
             let { summarized, errorData, decoded, parsed } = lazyMode ? outputParse(codeExecutionResult?.output) : {};
             const handlers = {
-                async retrieve_from_file() {
-                    let pid6 = await out_state(caption('retrievingFromFile'));
-                    let answered = await retriving(parsed.file_path, parsed.result, parsed.question);
-                    summarized = [
-                        `📄 file_path: ${parsed.file_path}`,
-                        `💬 question: ${parsed.question}`,
-                        `💡 answer: ${answered}`,
-                    ].join('\n');
-                    streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
-                    await pid6.dismiss();
-                },
-                async retrieve_from_pdf() {
-                    let pid6 = await out_state(caption('retrievingFromPdf'));
-                    let answered = await retriving(parsed.pdf_file_path, parsed.data, parsed.question);
-                    summarized = [
-                        `📄 pdf_file_path: ${parsed.pdf_file_path}`,
-                        `💬 question: ${parsed.question}`,
-                        `💡 answer: ${answered}`,
-                    ].join('\n');
-                    streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
-                    await pid6.dismiss();
-                },
-                async show_output_range(){
+                async show_output_range() {
                     summarized = decoded;
                     streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
                 },
-                async retrieve_from_webpage(){
-                    let pid6 = await out_state(caption('retrievingFromWebpage') + ' <a href="' + parsed.url + '" target="_blank">🔗 ' + parsed.url + '</a>'); 
+                async retrieve_from_webpage() {
+                    let pid6 = await out_state(caption('retrievingFromWebpage') + ' <a href="' + parsed.url + '" target="_blank">🔗 ' + parsed.url + '</a>');
                     summarized = `❌ Page Not Found: ${errorData}`;
                     if (!errorData) {
                         let answered = await retriving(parsed.url, parsed.data, parsed.question);
@@ -783,8 +773,25 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     if (pid6) await pid6.dismiss();
                 }
             }
-            if (lazyMode && codeExecutionResult?.output) {
-                await handlers[lazyMode]();
+
+            // toolInfo
+            if (lazyMode) {
+                if (lazyMode.constructor.name === 'String') {
+                    if (codeExecutionResult?.output) await handlers[lazyMode]();
+                }
+            }
+            if (toolInfo.retrieve_mode) {
+                const dataNameKey = Object.keys(actData.input).filter(key => key !== 'question')[0] || '';
+                let output = codeExecutionResult?.output;
+                let pid6 = await out_state(caption('retrievingData') + ' 💬 ' + actData.input[dataNameKey] + ' : ' + actData.input.question);
+                let answered = await retriving(actData.input[dataNameKey], output, actData.input.question);
+                summarized = [
+                    `📄 ${dataNameKey}: ${actData.input[dataNameKey]}`,
+                    `💬 question: ${actData.input.question}`,
+                    `💡 answer: ${answered}`,
+                ].join('\n');
+                streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
+                await pid6.dismiss();
             }
             if (actData.name === 'web_search' && codeExecutionResult?.output) {
                 summarized = codeExecutionResult?.output;

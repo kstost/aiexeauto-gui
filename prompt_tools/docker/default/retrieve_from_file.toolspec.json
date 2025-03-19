@@ -20,5 +20,6 @@
     "only_use_in_code": false,
     "return_description": "",
     "return_type": "",
+    "retrieve_mode": true,
     "tooling_in_realworld": true
 }

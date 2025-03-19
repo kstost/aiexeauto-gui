@@ -422,6 +422,8 @@ export async function getToolData(toolName) {
         const return_type = spec.return_type;
         const only_use_in_code = spec.only_use_in_code;
         const tooling_in_realworld = spec.tooling_in_realworld;
+        const lazy_mode = spec.lazy_mode;
+        const retrieve_mode = spec.retrieve_mode;
         delete spec.activate;
         delete spec.npm_package_list;
         delete spec.pip_package_list;
@@ -430,6 +432,8 @@ export async function getToolData(toolName) {
         delete spec.only_use_in_code;
         delete spec.instructions;
         delete spec.tooling_in_realworld;
+        delete spec.lazy_mode;
+        delete spec.retrieve_mode;
         if (!activate) return null;
         return {
             prompt,
@@ -439,7 +443,9 @@ export async function getToolData(toolName) {
             return_description,
             return_type,
             only_use_in_code,
-            tooling_in_realworld
+            tooling_in_realworld,
+            lazy_mode,
+            retrieve_mode
         };
     }
     let data = await getCustomToolList(toolName);
@@ -451,6 +457,8 @@ export async function getToolData(toolName) {
     const return_type = spec.return_type;
     const only_use_in_code = spec.only_use_in_code;
     const tooling_in_realworld = spec.tooling_in_realworld;
+    const lazy_mode = spec.lazy_mode;
+    const retrieve_mode = spec.retrieve_mode;
     delete spec.activate;
     delete spec.npm_package_list;
     delete spec.pip_package_list;
@@ -459,6 +467,8 @@ export async function getToolData(toolName) {
     delete spec.only_use_in_code;
     delete spec.instructions;
     delete spec.tooling_in_realworld;
+    delete spec.lazy_mode;
+    delete spec.retrieve_mode;
     if (!activate) return null;
     return {
         prompt: await makeMdWithSpec(toolName),
@@ -468,7 +478,9 @@ export async function getToolData(toolName) {
         return_description,
         return_type,
         only_use_in_code,
-        tooling_in_realworld
+        tooling_in_realworld,
+        lazy_mode,
+        retrieve_mode
     };
 }
 export function getCodePath(itemPath) {

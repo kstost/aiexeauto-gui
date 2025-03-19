@@ -1,9 +1,9 @@
+import os
+import re
+def path_sanitizer(file_path):
+    normalized = os.path.normpath(file_path.replace('\\', '/'))
+    return re.sub(r'/+', '/', normalized)
 def read_file(input_data):
-    import os
-    import re
-    def path_sanitizer(file_path):
-        normalized = os.path.normpath(file_path.replace('\\', '/'))
-        return re.sub(r'/+', '/', normalized)
     if not input_data or not isinstance(input_data.get('file_path'), str):
         print('❌ Invalid input values.')
         return ''

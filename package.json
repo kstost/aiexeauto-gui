@@ -1,6 +1,6 @@
 {
   "name": "aiexeauto",
-  "version": "1.0.130",
+  "version": "1.0.131",
   "main": "aiexeauto.js",
   "type": "module",
   "bin": {

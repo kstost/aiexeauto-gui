@@ -119,12 +119,12 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                 actData.input.command,
             ].join('\n');
             javascriptCodeBack = shellCommander(actData.input.command);
-        } else if (actData.name === 'retrieve_from_file') {
-            lazyMode = actData.name;
-            if (is_none_data(actData?.input?.file_path)) throw null;
-            if (is_none_data(actData?.input?.question)) throw null;
-            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+        // } else if (actData.name === 'retrieve_from_file') {
+        //     lazyMode = actData.name;
+        //     if (is_none_data(actData?.input?.file_path)) throw null;
+        //     if (is_none_data(actData?.input?.question)) throw null;
+        //     if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+        //     if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
         } else if (actData.name === 'remove_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
             if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
@@ -159,31 +159,31 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             // console.log(data);
             const base64 = Buffer.from(data).toString('base64');
             javascriptCodeBack = [`console.log('${base64}');`].join('\n');
-        } else if (actData.name === 'retrieve_from_pdf') {
-            lazyMode = actData.name;
-            if (is_none_data(actData?.input?.pdf_file_path)) throw null;
-            if (is_none_data(actData?.input?.question)) throw null;
-            const p12 = await out_state(caption('retrievingFromPdf')); // `${stateLabel}를 ${model}가 처리중...`
-            const requiredPackageNames = ['PyMuPDF'];
-            const pythonCode = [
-                "import fitz",
-                `pdf_document = fitz.open('${actData.input.pdf_file_path}')`,
-                "text = ''",
-                "for page_num in range(len(pdf_document)):",
-                "    page = pdf_document[page_num]",
-                "    text += page.get_text()",
-                "pdf_document.close()",
-                "print(text)",
-            ].join('\n');
-            const dockerWorkDir = await getConfiguration('dockerWorkDir');
-            const codeExecutionResult_ = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames);
-            // const base64 = Buffer.from(codeExecutionResult_.stdout).toString('base64');
-            let ob = { data: codeExecutionResult_.stdout, question: actData.input.question, pdf_file_path: actData.input.pdf_file_path };
-            const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');
+            // } else if (actData.name === 'retrieve_from_pdf') {
+            //     lazyMode = actData.name;
+            //     if (is_none_data(actData?.input?.pdf_file_path)) throw null;
+            //     if (is_none_data(actData?.input?.question)) throw null;
+            //     const p12 = await out_state(caption('retrievingFromPdf')); // `${stateLabel}를 ${model}가 처리중...`
+            //     const requiredPackageNames = ['PyMuPDF'];
+            //     const pythonCode = [
+            //         "import fitz",
+            //         `pdf_document = fitz.open('${actData.input.pdf_file_path}')`,
+            //         "text = ''",
+            //         "for page_num in range(len(pdf_document)):",
+            //         "    page = pdf_document[page_num]",
+            //         "    text += page.get_text()",
+            //         "pdf_document.close()",
+            //         "print(text)",
+            //     ].join('\n');
+            //     const dockerWorkDir = await getConfiguration('dockerWorkDir');
+            //     const codeExecutionResult_ = await runPythonCode(containerId, dockerWorkDir, pythonCode, requiredPackageNames);
+            //     // const base64 = Buffer.from(codeExecutionResult_.stdout).toString('base64');
+            //     let ob = { data: codeExecutionResult_.stdout, question: actData.input.question, pdf_file_path: actData.input.pdf_file_path };
+            //     const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');
 
-            javascriptCode = formatToolCode(actData);
-            javascriptCodeBack = [`console.log('${base64}');`,].join('\n');
-            await p12.dismiss();
+            //     javascriptCode = formatToolCode(actData);
+            //     javascriptCodeBack = [`console.log('${base64}');`,].join('\n');
+            //     await p12.dismiss();
         } else if (actData.name === 'retrieve_from_webpage') {
             lazyMode = actData.name;
             console.log('retrieve_from_webpage!!!!!!!!!!!!!!......................!!!!!!!!');
