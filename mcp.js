@@ -4,11 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import singleton from "./singleton.js";
 // getCodePath
-import { getHomePath } from "./system.js";
-
-const CONFIG_PATH = "/Users/kst/Library/Application Support/Claude/claude_desktop_config.json";
-
-
+import { getHomePath, getConfiguration, isWindows } from "./system.js";
 
 export async function convertToolsInfoToAIEXEStyle(toolsInfo) {
     // AIEXE 스타일의 기본 toolspec 객체 구조
@@ -209,8 +205,27 @@ export async function loadServerConfig() {
         }
 
         // 모든 서버 구성을 배열로 반환
+        let nodePath = isWindows() ? await getConfiguration('nodePath') : '';
         return Object.keys(servers).map(serverName => {
             const serverConfig = servers[serverName];
+            if (isWindows()) {
+                if (serverConfig.command === 'npx' || serverConfig.command === 'npx.cmd') {
+                    return {
+                        name: serverName,
+                        command: nodePath,
+                        args: [
+                            "-e",
+                            `require('child_process').execSync('npx ${(serverConfig.args || []).map(d => `"${d}"`).join(' ')}', {stdio: 'inherit'})`
+                        ],
+                    };
+                } else {
+                    return {
+                        name: serverName,
+                        command: serverConfig.command,
+                        args: serverConfig.args || [],
+                    };
+                }
+            }
             return {
                 name: serverName,
                 command: serverConfig.command,
