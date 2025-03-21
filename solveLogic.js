@@ -460,6 +460,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             console.log(actDataEvalPrepare);
             multiLineMission = `${multiLineMission}\n\n${actDataEvalPrepare}`;
         }
+        let nextPlan;
         while (iterationCount < maxIterations || !maxIterations) {
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
             await waitingForDataCheck(out_state);
@@ -520,33 +521,39 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         customRulesForCodeGenerator: makeTag('CodeGenerationRules', customRulesForCodeGenerator, !!customRulesForCodeGenerator),
                         ...(await getBinderDefault()),
                     });
-                    await exceedCatcher(async () => {
-                        const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
-                        whattodo = await chatCompletion(
-                            prompt,
-                            await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whattodo', talkSessionId }),
-                            'whatToDo',
-                            interfaces,
-                            caption('whatToDo')
-                        );
-                    }, () => areBothSame(processTransactions, ++reduceLevel));
-                    // if (whattodo) {
-                    //     whattodo = `${whattodo}`;
-                    //     whattodo = `${stripTags(whattodo) || ''}`;
-                    //     whattodo = whattodo.trim();
-                    //     while (whattodo.startsWith('//')) whattodo = whattodo.slice(1);
-                    //     whattodo = whattodo.trim();
-                    //     whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
-                    // }
-                    whattodo = cleanDescription(whattodo);
-                    if (await getConfiguration('planEditable')) {
-                        let confirmed = await await_prompt({ mode: 'whattodo_confirm', actname: 'whattodo_confirm', containerId, dockerWorkDir, whattodo });
-                        if (singleton.missionAborting) throw new Error(caption('missionAborted'));
-                        whattodo = confirmed.confirmedCode;
-                        if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                    if (nextPlan) {
+                        whattodo = nextPlan;
+                        nextPlan = null;
                     } else {
-                        if (whattodo.trim().startsWith('# Call') || whattodo.trim().startsWith('#Call')) { } else {
-                            await out_print({ data: whattodo, mode: 'whattodo' });
+
+                        await exceedCatcher(async () => {
+                            const processTransactions_ = trimProcessTransactions(processTransactions, reduceLevel);
+                            whattodo = await chatCompletion(
+                                prompt,
+                                await makeRealTransaction({ processTransactions, processTransactionsReduced: processTransactions_, multiLineMission, type: 'whattodo', talkSessionId }),
+                                'whatToDo',
+                                interfaces,
+                                caption('whatToDo')
+                            );
+                        }, () => areBothSame(processTransactions, ++reduceLevel));
+                        // if (whattodo) {
+                        //     whattodo = `${whattodo}`;
+                        //     whattodo = `${stripTags(whattodo) || ''}`;
+                        //     whattodo = whattodo.trim();
+                        //     while (whattodo.startsWith('//')) whattodo = whattodo.slice(1);
+                        //     whattodo = whattodo.trim();
+                        //     whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                        // }
+                        whattodo = cleanDescription(whattodo);
+                        if (await getConfiguration('planEditable')) {
+                            let confirmed = await await_prompt({ mode: 'whattodo_confirm', actname: 'whattodo_confirm', containerId, dockerWorkDir, whattodo });
+                            if (singleton.missionAborting) throw new Error(caption('missionAborted'));
+                            whattodo = confirmed.confirmedCode;
+                            if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+                        } else {
+                            if (whattodo.trim().startsWith('# Call') || whattodo.trim().startsWith('#Call')) { } else {
+                                await out_print({ data: whattodo, mode: 'whattodo' });
+                            }
                         }
                     }
                     processTransactions[processTransactions.length - 1].whattodo = whattodo;
@@ -768,6 +775,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                                 aoidfsja = [
                                     `"${mcpInfo.args.thought}"`,
                                 ].filter(Boolean).join('\n');
+                                nextPlan = aoidfsja;
                             } else {
                                 const desc = toolInfo?.description?.split('\n')?.[0] || '';
                                 aoidfsja = [

@@ -194,6 +194,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         async await_prompt(body) {
             // currentConfig['autoCodeExecution'] = await getConfig('autoCodeExecution');
             // currentConfig['planEditable'] = await getConfig('planEditable');
+            dissmissPreviousDisplayState();
 
             let _resolve = null;
             let _reject = null;
