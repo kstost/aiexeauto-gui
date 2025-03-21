@@ -2,6 +2,7 @@ import { makeTag, omitMiddlePart, getLanguageFullName } from './solveLogic.js';
 import { getConfiguration } from './system.js';
 import { templateBinding } from './system.js';
 import { promptTemplate } from './system.js';
+import { isSequentialthinking } from './system.js';
 export function indention(num = 1, string = null, indentation = 2) {
     if (string) {
         return string.split('\n').map(line => ' '.repeat(num * indentation) + line).join('\n');
@@ -36,6 +37,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
                 evaluationText: makeTag('EvaluationOfPreviousTasks', evaluationText, !!evaluationText),
                 whatdidwedo: makeTag('WorkDoneSoFar', whatdidwedo, !!whatdidwedo),
                 whattodo: whattodo ? makeTag('NextTasks', whattodo, !!whattodo) : '',
+                sequentialthinking: await isSequentialthinking() ? `**Rely on the \`sequentialthinking\` function tool for strategizing**` : ``
             }),
         };
     } else if (type === 'evaluation') {

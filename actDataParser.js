@@ -3,10 +3,12 @@ import puppeteer from 'puppeteer';
 import { caption, getConfiguration } from './system.js';
 // import marked from 'marked';
 import TurndownService from 'turndown';
+import { getToolsInfoByToolName } from './mcp.js';
 import { virtualPlaywright } from './codeExecution.js';
 import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
 import { runPythonCode } from './docker.js';
 import { loadConfiguration } from './system.js';
+import singleton from './singleton.js';
 export async function actDataParser({ actData, processTransactions, out_state, containerId }) {
     console.log('actDataParser!!!!!!!!!!!!!!!!!!!!!!', actData);
     let lazyMode = '';
@@ -70,7 +72,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             code = [
                 `const environment_variables = ${JSON.stringify(data?.environment_variables || {})}`,
                 `const aiexe_configuration = ${JSON.stringify(await loadConfiguration())}`,
-                `const virtual_playwright = '${(await virtualPlaywright()).replace(/\\/g, '\\\\')}'`,
+                `const virtual_playwright = '${(await virtualPlaywright()).replace(/\\/g, '\\\\')}';`,
                 `;(async()=>{try{await (${code})(${JSON.stringify(actData.input)});}catch{}})();`,
             ].join('\n');
         }
@@ -85,14 +87,14 @@ export async function actDataParser({ actData, processTransactions, out_state, c
         }
         return { code, kind };
     }
-    let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack;
+    let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, mcpInfo;
     try {
         function formatToolCode(actData) {
             let input = actData.input;
             let keys = Object.keys(input);
             let values = Object.values(input);
             let formattedInput = keys.map((key, index) => `${key}="${values[index]}"`).join(',');
-            return `default_api.${actData.name}(${formattedInput})`;
+            return `# Call \`${actData.name}\` tool with arguments: ${formattedInput}`;
         }
         let toolCode;
         try { toolCode = await loadToolCode(actData); } catch { }
@@ -300,18 +302,29 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             ].join('\n');
         } else {
             // other tool
-            const name = actData.name;
-            const input = JSON.parse(JSON.stringify(actData.input));
-            const { spec, npm_package_list, pip_package_list } = await getToolData(name);
-            const rule = spec.input_schema[0];
-            const desc = spec.input_schema[1];
-            const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
-            const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
-            if (structure1 === structure2) {
-                if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-                if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
-                if (npm_package_list) requiredPackageNames = npm_package_list;
-                if (pip_package_list) requiredPackageNames = pip_package_list;
+
+            const mcpToolInfo = await getToolsInfoByToolName(singleton.serverClients, actData.name);
+            if (mcpToolInfo) {
+                pythonCodeBack = '';
+                mcpInfo = {
+                    args: actData.input,
+                    name: actData.name,
+                    code: formatToolCode(actData)
+                };
+            } else {
+                const name = actData.name;
+                const input = JSON.parse(JSON.stringify(actData.input));
+                const { spec, npm_package_list, pip_package_list } = await getToolData(name);
+                const rule = spec.input_schema[0];
+                const desc = spec.input_schema[1];
+                const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
+                const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
+                if (structure1 === structure2) {
+                    if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+                    if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+                    if (npm_package_list) requiredPackageNames = npm_package_list;
+                    if (pip_package_list) requiredPackageNames = pip_package_list;
+                }
             }
         }
         /*
@@ -320,7 +333,11 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             실패했다면 actData 어떤 모습인지 확인할 수 있도록 actDataCloneBackedUp 준비했어.
         */
         if (!javascriptCode && !pythonCode) toolingFailed = true;
-        return { javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, toolingFailed, actDataCloneBackedUp, lazyMode };
+        if (mcpInfo) {
+            javascriptCode = '';
+            pythonCode = '';
+        }
+        return { javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, toolingFailed, actDataCloneBackedUp, lazyMode, mcpInfo };
     } catch {
         return {
             toolingFailed,

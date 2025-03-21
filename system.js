@@ -16,6 +16,7 @@ import { indention } from './makeCodePrompt.js';
 import { virtualPython, is_file, is_dir } from './codeExecution.js';
 import { getDockerPath } from './executableFinder.js';
 import { getNodePath, getNPMPath, getPythonPath } from './executableFinder.js';
+import { connectAllServers, closeAllServers, convertToolsInfoToAIEXEStyle, getAllToolNames, getToolsClientByToolName, getToolsInfoByToolName, getMCPNameByToolName } from './mcp.js';
 export function getSystemLangCode() {
     try {
         return app.getLocale().split('-')[0] || 'en'
@@ -286,6 +287,21 @@ export async function cloneCustomTool() {
         }
     }
 }
+export async function getMCPToolList(toolName_ = null) {
+    let candidateList = {};
+    const serverClients = singleton.serverClients;
+    if (!serverClients) return candidateList;
+    const toolNames = await getAllToolNames(serverClients);
+    for (const toolName of toolNames) {
+        if (toolName_ && toolName_ !== toolName) continue;
+        const toolInfo = await getToolsInfoByToolName(serverClients, toolName)
+        const result = await convertToolsInfoToAIEXEStyle(toolInfo)
+        candidateList[toolName] = {
+            spec: result
+        };
+    }
+    return candidateList;
+}
 export async function getCustomToolList(toolName) {
     const candidateList = {};
     try {
@@ -363,7 +379,7 @@ export async function getPromptToolPath() {
     return list;
 }
 export async function getToolList() {
-    const list = (async () => {
+    const list = await (async () => {
         let list = await getPromptToolPath();
         let rlist = [];
         for (const path of list) {
@@ -372,6 +388,9 @@ export async function getToolList() {
             rlist.push(...clist);
         }
         Object.keys(await getCustomToolList()).forEach(tool => {
+            rlist.push(tool);
+        });
+        Object.keys(await getMCPToolList()).forEach(tool => {
             rlist.push(tool);
         });
 
@@ -400,7 +419,7 @@ export async function getToolSpec(toolName) {
         const toolSpec = await fs.promises.readFile(toolSpecPath, 'utf8');
         data = JSON.parse(toolSpec);
     }
-    data = data || (await getCustomToolList(toolName))[toolName].spec;
+    data = data || (await getCustomToolList(toolName))?.[toolName]?.spec || (await getMCPToolList(toolName))?.[toolName]?.spec;
     if (data) {
         if (!data.input_schema) data.input_schema = data.input;
         if (!data.input) data.input = data.input_schema;
@@ -454,8 +473,8 @@ export async function getToolData(toolName) {
             environment_variables
         };
     }
-    let data = await getCustomToolList(toolName);
-    const spec = data[toolName].spec;
+    let spec = (await getCustomToolList(toolName))?.[toolName]?.spec || (await getMCPToolList(toolName))?.[toolName]?.spec;
+    if (!spec) return null;
     const activate = !!spec.activate;//.includes(llm);
     const npm_package_list = spec.npm_package_list;
     const pip_package_list = spec.pip_package_list;
@@ -795,3 +814,89 @@ export function convertJsonToResponseFormat(struct, descriptions = {}) {
 // function adsfioajsfij(){
 //     asdfsdf;
 // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 편집 거리(Levenshtein Distance) 계산 함수
+function getEditDistance(str1, str2) {
+    const len1 = str1.length;
+    const len2 = str2.length;
+
+    // 2차원 배열(DP 테이블) 준비
+    const dp = Array.from({ length: len1 + 1 }, () =>
+        Array(len2 + 1).fill(0)
+    );
+
+    // 초기값 설정
+    for (let i = 0; i <= len1; i++) {
+        dp[i][0] = i;
+    }
+    for (let j = 0; j <= len2; j++) {
+        dp[0][j] = j;
+    }
+
+    // dp 테이블 채우기
+    for (let i = 1; i <= len1; i++) {
+        for (let j = 1; j <= len2; j++) {
+            const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,    // 삭제
+                dp[i][j - 1] + 1,    // 삽입
+                dp[i - 1][j - 1] + cost // 교체
+            );
+        }
+    }
+
+    return dp[len1][len2];
+}
+
+export async function isSequentialthinking() {
+    const candidates = await getToolList();
+    return candidates.includes('sequentialthinking');
+}
+
+// getSimilar 함수
+export async function getSimilar(target) {
+    const candidates = await getToolList();
+    let bestMatch = null;
+    let minDistance = Infinity;
+
+    for (let c of candidates) {
+        const distance = getEditDistance(target, c);
+        if (distance < minDistance) {
+            minDistance = distance;
+            bestMatch = c;
+        }
+    }
+
+    return bestMatch;
+}
+
+// // 예시
+// const result = getSimilar('bana1na', ['apple', 'mango', 'banana', 'php']);
+// console.log(result); // "banana"

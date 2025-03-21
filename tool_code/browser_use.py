@@ -8,13 +8,12 @@ from dotenv import load_dotenv
 import subprocess
 
 async def _browser_use(input):
-    virtual_playwright_ = virtual_playwright
     if aiexe_configuration["useDocker"]:
-        virtual_playwright_ = "playwright"
+        virtual_playwright = "playwright"
     try:
-        result = subprocess.run([virtual_playwright_, "install", "--help"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        result = subprocess.run([virtual_playwright, "install", "--help"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if result.returncode == 0:
-            subprocess.run([virtual_playwright_, "install"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run([virtual_playwright, "install"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
         pass
 
@@ -39,7 +38,7 @@ async def _browser_use(input):
 
     # Define the main async function
     agent = Agent(
-        task=input["task"] + ' "Provide a highly detailed investigation report."',  # "What's the weather like today?" in Korean
+        task=input["task"],  # "What's the weather like today?" in Korean
         llm=ChatOpenAI(model=os.environ["model"]),
         browser=browser,
     )

@@ -86,7 +86,7 @@ export function makeCodeBox(code, mode = 'javascript', lineNumbers = true) {
     cancelButton.style.border = 'none';
     cancelButton.style.cursor = 'pointer';
 
-    cancelButton.remove();
+    // cancelButton.remove();
 
     // 실행 버튼
     const runButton = document.createElement('button');
@@ -112,11 +112,26 @@ export function makeCodeBox(code, mode = 'javascript', lineNumbers = true) {
     runButton.style.backgroundColor = '#2196F3'; // 푸른 계열 색상
 
     // 실행 버튼 클릭 시 등록된 runCallback가 호출되도록 수정
+    let ifConfirmed = false;
+    let cancel = false;
+    cancelButton.addEventListener('click', () => {
+        if (ifConfirmed) return;
+        // ifConfirmed = true;
+        // editor.setValue('');
+        cancel = true;
+        runButton.click();
+        // runButton.remove();
+        // cancelButton.remove();
+        // console.log(editor.runCallback);
+    });
     runButton.addEventListener('click', () => {
+        if (ifConfirmed) return;
+        ifConfirmed = true;
         runButton.remove();
+        cancelButton.remove();
         // 채ㅜ
         if (typeof editor.runCallback === 'function') {
-            editor.runCallback(editor.getValue());
+            editor.runCallback(cancel);
         } else {
             console.warn('실행 이벤트가 등록되지 않았습니다.');
         }
@@ -131,5 +146,5 @@ export function makeCodeBox(code, mode = 'javascript', lineNumbers = true) {
     wrapper.style.border = '0px solid #ccc';
     // wrapper.style.boxShadow = '0 0 10px 0 rgba(0, 0, 0, 0.1)';
 
-    return { editor, runButton };
+    return { editor, runButton, cancelButton };
 }

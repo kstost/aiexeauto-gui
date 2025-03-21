@@ -10,6 +10,7 @@ import chalk from 'chalk';
 import path from 'path';
 import { app, BrowserWindow, ipcMain, globalShortcut, Menu, dialog } from 'electron';
 import open from 'open';
+import { connectAllServers, closeAllServers, convertToolsInfoToAIEXEStyle, getAllToolNames, getToolsClientByToolName, getToolsInfoByToolName, getMCPNameByToolName } from './mcp.js';
 import { join } from 'path';
 import singleton from './singleton.js';
 import { installProcess, shell_exec } from './codeExecution.js';
@@ -17,7 +18,7 @@ import { fileURLToPath } from 'url';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { is_dir } from './codeExecution.js';
 import { exportFromDockerForDataCheck } from './docker.js';
-import { cloneCustomTool, getToolList, supportLanguage, toolSupport } from './system.js';
+import { cloneCustomTool, getToolList, supportLanguage, toolSupport, getCustomToolList, getMCPToolList } from './system.js';
 import envConst from './envConst.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -283,6 +284,9 @@ if (prompt === 'version') {
         let exported;
         let containerId;
         // let processTransactions;
+
+        // getToolsClientByToolName
+        // await get
         try {
             let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle, reduceLevel });
             exported = solved.exported;
@@ -292,6 +296,7 @@ if (prompt === 'version') {
             reduceLevel = solved.reduceLevel;
         } catch (err) {
         } finally {
+            await closeAllServers();
             if (dataSourceNotAssigned) {
                 await flushFolder([dataSourcePath]);
             }
@@ -330,14 +335,15 @@ if (prompt === 'version') {
         // })();
 
     }
-    if (true) {
-        // ㅅㄷㄴㅅ 
-        // 테스트 코드
-        // let list = await getToolList();
-        // console.log(await getConfiguration('latestMemoryDepth'));
-        // await setConfiguration('latestMemoryDepth', 999);
-        // ;
-        // process.exit(0);
+    if (false) {
+        singleton.serverClients = await connectAllServers();
+        // Add result raw: { content: [ { type: 'text', text: '8' } ] }
+        const client = await getToolsClientByToolName(singleton.serverClients, 'md5hash1');
+        const toolInfo = await getToolsInfoByToolName(singleton.serverClients, 'md5hash1');
+        console.log('client', client);
+        console.log('toolInfo', toolInfo);
+        // await get
+        process.exit(0);
     }
     if (true) {
 

@@ -1,6 +1,6 @@
 {
   "name": "aiexeauto",
-  "version": "1.0.135",
+  "version": "1.0.140",
   "main": "aiexeauto.js",
   "type": "module",
   "bin": {
@@ -35,7 +35,9 @@
     "ora": "^8.1.1",
     "puppeteer": "^23.8.0",
     "tar": "^7.4.3",
-    "turndown": "^7.2.0"
+    "turndown": "^7.2.0",
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@electron/notarize": "^2.3.2",

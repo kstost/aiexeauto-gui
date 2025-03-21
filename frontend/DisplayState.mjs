@@ -9,7 +9,7 @@ export class DisplayState {
         this.state.style.borderRadius = '8px';
         this.state.style.border = '0px solid #64B5F6'; // 기본 border 색상 (로딩 상태)
         this.state.style.backgroundColor = '#333333';
-        this.state.style.transition = 'all 0.3s cubic-bezier(.25,.8,.25,1)';
+        // this.state.style.transition = 'all 0.3s cubic-bezier(.25,.8,.25,1)';
         this.state.style.marginTop = '3px';
         this.state.style.marginBottom = '3px';
         this.state.style.fontSize = '16px';
@@ -31,7 +31,8 @@ export class DisplayState {
         this.state.appendChild(this.iconContainer);
         this.state.appendChild(this.textContainer);
     }
-    dismiss(justAlpha = false) {
+    dismiss(justAlpha = true) {
+        justAlpha = false;
         if (justAlpha) {
             this.state.style.opacity = '0';
             return;

@@ -1,5 +1,5 @@
 import singleton from './singleton.js';
-import { getAppPath, convertJsonToResponseFormat, getConfiguration, getToolList, getToolData } from './system.js';
+import { getAppPath, convertJsonToResponseFormat, getConfiguration, getToolList, getToolData, getSimilar } from './system.js';
 import { writeEnsuredFile } from './dataHandler.js';
 import fs from 'fs';
 import { getLanguageFullName } from './solveLogic.js';
@@ -852,7 +852,6 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 let toolPrompts = [];
                 for (let tool of toolList) {
                     const toolData = await getToolData(tool);
-                    // console.log('tool', tool, toolData);
                     if (!toolData) continue;
                     if (toolData.only_use_in_code) continue;
                     if (!useDocker) if (!toolData.tooling_in_realworld) continue;
@@ -1172,7 +1171,7 @@ claude
                             if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
-                                name: toolCall.function.name,
+                                name: await getSimilar(toolCall.function.name),
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
@@ -1192,7 +1191,7 @@ claude
                             if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
-                                name: toolCall.function.name,
+                                name: await getSimilar(toolCall.function.name),
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
@@ -1212,7 +1211,7 @@ claude
                             if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
-                                name: toolCall.function.name,
+                                name: await getSimilar(toolCall.function.name),
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
@@ -1234,7 +1233,7 @@ claude
                             if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
-                                name: toolCall.function.name,
+                                name: await getSimilar(toolCall.function.name),
                                 input: JSON.parse(toolCall.function.arguments)
                             };
                         } catch {
@@ -1256,7 +1255,7 @@ claude
                             if (!toolCall && forRetry < 1) throw null;
                             return {
                                 type: 'tool_use',
-                                name: toolCall.name,
+                                name: await getSimilar(toolCall.name),
                                 input: toolCall.args
                             };
                         } catch {
@@ -1281,7 +1280,8 @@ claude
             };
             if (tools_ofsdijfsadiosoidjaoisjdf) {
                 tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)).map(function_ => {
-                    function_.parameters = function_.input_schema;
+                    function_.parameters = function_.input__schema || function_.input_schema;
+                    delete function_.input__schema;
                     delete function_.input_schema;
                     return {
                         "type": "function",
@@ -1317,7 +1317,8 @@ claude
             };
             if (tools_ofsdijfsadiosoidjaoisjdf) {
                 tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)).map(function_ => {
-                    function_.parameters = function_.input_schema;
+                    function_.parameters = function_.input__schema || function_.input_schema;
+                    delete function_.input__schema;
                     delete function_.input_schema;
                     return {
                         "type": "function",
@@ -1352,7 +1353,8 @@ claude
             };
             if (tools_ofsdijfsadiosoidjaoisjdf) {
                 tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)).map(function_ => {
-                    function_.parameters = function_.input_schema;
+                    function_.parameters = function_.input__schema || function_.input_schema;
+                    delete function_.input__schema;
                     delete function_.input_schema;
                     return {
                         "type": "function",
@@ -1387,7 +1389,8 @@ claude
             };
             if (tools_ofsdijfsadiosoidjaoisjdf) {
                 tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)).map(function_ => {
-                    function_.parameters = function_.input_schema;
+                    function_.parameters = function_.input__schema || function_.input_schema;
+                    delete function_.input__schema;
                     delete function_.input_schema;
                     return {
                         "type": "function",
@@ -1455,17 +1458,26 @@ claude
             // tools가 있는 경우 Gemini 형식으로 변환
             let toolConfig = null;
             if (tools_ofsdijfsadiosoidjaoisjdf) {
+
                 toolConfig = {
                     tools: [{
-                        function_declarations: tools_ofsdijfsadiosoidjaoisjdf.map(tool => ({
-                            name: tool.name,
-                            description: tool.description,
-                            parameters: {
-                                type: "object",
-                                properties: tool.input_schema.properties || {},
-                                required: tool.input_schema.required || []
+                        function_declarations: tools_ofsdijfsadiosoidjaoisjdf.map(tool => {
+                            const properties = tool?.input__schema?.properties || tool?.input_schema?.properties || {};
+                            const required = tool?.input__schema?.required || tool?.input_schema?.required || [];
+                            let dasf = {
+                                name: tool.name,
+                                description: tool.description,
+                                parameters: {
+                                    type: "object",
+                                    properties,
+                                    required
+                                }
+                            };
+                            if (required.length === 0) {
+                                delete dasf.parameters;
                             }
-                        }))
+                            return dasf;
+                        })
                     }],
                     tool_config: {
                         function_calling_config: {
@@ -1473,6 +1485,9 @@ claude
                         }
                     }
                 };
+                // if (required.length === 0) {
+                //     toolConfig.tools[0]
+                // }
                 if (!envConst.whether_to_tool_use_in_gemini) toolConfig = {}; // no tool use
             }
 

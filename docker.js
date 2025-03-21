@@ -556,7 +556,18 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
         let codeData = [];
         for (const toolName of toolList) {
             const { code, kind } = await getToolCode(toolName);
-            if (!code) continue;
+            if (!code) {
+                const code_ = [
+                    '..' === '..' && `# ---`,
+                    '..' === '..' && `    @staticmethod`,
+                    '..' === '..' && `    def ${toolName}(*args, **kwargs):`,
+                    '..' === '..' && `        print('${toolName} is only available as Tool Calling.')`,
+                    '..' === '..' && `        return ('${toolName} is only available as Tool Calling.')`,
+                    '..' === '..' && `# ---`,
+                ].filter(Boolean);
+                codeData.push(code_.join('\n'));
+                continue;
+            }
             let data = await getToolData(toolName);
             let { prompt, spec, npm_package_list, pip_package_list } = data;
             if (spec) spec.input = spec.input_schema;

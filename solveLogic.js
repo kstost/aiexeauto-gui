@@ -13,9 +13,11 @@ import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler
 import { isNodeInitialized, initNodeProject, restoreWorkspace, waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
 import { cloneCustomTool, getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
 import fs from 'fs';
-import { getConfiguration } from './system.js';
+import { connectAllServers } from './mcp.js';
+import { getConfiguration, isSequentialthinking } from './system.js';
 import { actDataParser } from './actDataParser.js';
 import { makeCodePrompt, indention } from './makeCodePrompt.js';
+import { getToolsClientByToolName, getToolsInfoByToolName } from './mcp.js';
 import { makeRealTransaction } from './makeRealTransaction.js';
 import path from 'path';
 // getAppPath
@@ -227,6 +229,15 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
     // const pid1 = await out_state(caption('solvingLogic'));
     // 채ㅜ내
+    singleton.serverClients = await connectAllServers({ interfaces });
+    if (false) if (await isSequentialthinking()) {
+        multiLineMission = [
+            multiLineMission,
+            // '---',
+            // '**Rely very heavily on the sequential thinking tool when strategizing.**'
+        ].join('\n');
+    }
+
     if (!talktitle) talktitle = {
         filename: await getNewFileName(),
         title: '',
@@ -384,16 +395,6 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         let nextCodeForValidation;
         let evaluationText = '';
 
-        const toolsssss = `${await (async () => {
-            const toolList = await getToolList();
-            let toolPrompts = [];
-            for (let tool of toolList) {
-                const toolData = await getToolData(tool);
-                if (!toolData) continue;
-                toolPrompts.push(toolData.prompt);
-            }
-            return toolPrompts.join('\n\t\n');
-        })()}`;
         if (true) {
             let actDataEvalPrepare;
             const systemPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.systemPrompt, {
@@ -472,6 +473,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             // }
             iterationCount++;
             let lazyMode = false;
+            let mcpInfo;// = {};
             let javascriptCode = '';
             let javascriptCodeBack = '';
             let pythonCode = '';
@@ -485,6 +487,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             let actData;
             function setCodeDefault(actDataResult = {}) {
                 javascriptCode = actDataResult.javascriptCode || '';
+                // 채ㅜ내
                 requiredPackageNames = actDataResult.requiredPackageNames || [];
                 pythonCode = actDataResult.pythonCode || '';
                 javascriptCodeBack = actDataResult.javascriptCodeBack || '';
@@ -512,17 +515,6 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
                 }
                 if (!nextPrompt) {
-                    const tools = `${await (async () => {
-                        const toolList = await getToolList();
-                        let toolPrompts = [];
-                        for (let tool of toolList) {
-                            const toolData = await getToolData(tool);
-                            if (!toolData) continue;
-                            toolPrompts.push(toolData.prompt);
-                        }
-                        return toolPrompts.join('\n\t\n');
-                    })()}`;
-
                     const customRulesForCodeGenerator = (await getConfiguration('customRulesForCodeGenerator') || '').trim();
                     const prompt = templateBinding((await promptTemplate()).planning.systemPrompt, {
                         customRulesForCodeGenerator: makeTag('CodeGenerationRules', customRulesForCodeGenerator, !!customRulesForCodeGenerator),
@@ -553,7 +545,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         whattodo = confirmed.confirmedCode;
                         if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
                     } else {
-                        await out_print({ data: whattodo, mode: 'whattodo' });
+                        if (whattodo.trim().startsWith('# Call') || whattodo.trim().startsWith('#Call')) { } else {
+                            await out_print({ data: whattodo, mode: 'whattodo' });
+                        }
                     }
                     processTransactions[processTransactions.length - 1].whattodo = whattodo;
                 } else {
@@ -578,10 +572,12 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             caption('codeGeneration')
                         );
                     }, () => areBothSame(processTransactions, ++reduceLevel));
-                    // console.log('actData', actData);
                     let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId });
+                    // 채ㅜㄴ 
+                    mcpInfo = actDataResult.mcpInfo;
                     lazyMode = actDataResult.lazyMode;
                     javascriptCode = actDataResult.javascriptCode || '';
+
                     requiredPackageNames = actDataResult.requiredPackageNames || [];
                     pythonCode = actDataResult.pythonCode || '';
                     javascriptCodeBack = actDataResult.javascriptCodeBack || '';
@@ -591,16 +587,11 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             return line.trim() !== 'import default_api'
                         }).join('\n');
                     }
-                    if (!pythonCode && !javascriptCode) {
-                        if (false) {
-                            const pp33 = await out_state('');
-                            await pp33.fail(caption('codeGenerationFailed'));
-                        }
+                    if (!pythonCode && !javascriptCode && !mcpInfo) {
                     } else {
                         break;
                     }
                 }
-
             } else {
                 javascriptCode = nextCodeForValidation;
                 nextCodeForValidation = null;
@@ -676,6 +667,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 }
             }
             let confirmedd = false;
+            let canceled = false;
             try {
                 if (actData.name === 'shell_command_execute') {
                     // actData.input.command;
@@ -683,6 +675,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     let confirmed = await await_prompt({ mode: 'shell_command_execute', actname: actData.name, containerId, dockerWorkDir, command });
                     if (singleton.missionAborting) throw new Error(caption('missionAborted'));
                     actData.input.command = confirmed.confirmedCode;
+                    canceled = confirmed.cancel;
                     // confirmedd = true;
                     // console.log('confirmed', confirmed);
                     let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId });
@@ -699,12 +692,14 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             try {
 
                 if (!pythonCode && javascriptCode) {
+
                     let javascriptCodeToRun = javascriptCodeBack ? javascriptCodeBack : javascriptCode;
                     if (true) {
                         if (!confirmedd) {
                             let confirmed = await await_prompt({ mode: 'run_nodejs_code', actname: actData.name, containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames });
                             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
                             javascriptCodeToRun = confirmed.confirmedCode;
+                            // javascriptCode = confirmed.confirmedCode;
                             executionId = confirmed.executionId;
                         }
                         pi3d13 = await out_state(caption('runningCode'));
@@ -712,6 +707,12 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         await waitingForDataCheck(out_state);
                         const codeExecutionResult_ = await runNodeJSCode(containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames, streamGetter);
                         if (codeExecutionResult_) codeExecutionResult = codeExecutionResult_;
+                        if (actData.name === 'shell_command_execute') {
+                            javascriptCodeToRun = '';
+                            javascriptCode = '';
+                            pythonCodeBack = '';
+                            pythonCode = actData.input.command;
+                        }
                         runCodeFactor = true;
                     } else {
                         // console.log('로컬 환경에서 JavaScript 실행');
@@ -733,9 +734,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             console.log('confirmed!!!!!!!!!!!!!', confirmed);
                             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
                             pythonCodeToRun = confirmed.confirmedCode;
+                            pythonCode = confirmed.confirmedCode;
                             executionId = confirmed.executionId;
                         }
-                        // console.log('pythonCodeToRun222222222', pythonCodeToRun);
                         pi3d13 = await out_state(caption('runningCode'));
                         await new Promise(resolve => setTimeout(resolve, 500));
                         await waitingForDataCheck(out_state);
@@ -743,6 +744,82 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                         if (codeExecutionResult_) codeExecutionResult = codeExecutionResult_;
                         runCodeFactor = true;
                     }
+                } else if (mcpInfo) {
+                    let addResult;
+                    let client
+                    try {
+                        if (!confirmedd) {
+                            //run_python_code
+                            const toolInfo = await getToolsInfoByToolName(singleton.serverClients, actData.name);
+                            const mcpSum = {
+                                toolInfo
+                            }
+                            let aoidfsja
+                            //  = [
+                            //     // `# MCP Code Execution`,
+                            //     // `Name: ${toolInfo.name}`,
+                            //     // desc && `Description: ${desc}`,
+                            //     // `with Args: ${JSON.stringify(mcpInfo.args)}`,
+
+                            //     `"${mcpInfo.args.thought}"`,
+                            //     // if()
+                            // ].filter(Boolean).join('\n');
+                            if (actData.name === 'sequentialthinking') {
+                                aoidfsja = [
+                                    `"${mcpInfo.args.thought}"`,
+                                ].filter(Boolean).join('\n');
+                            } else {
+                                const desc = toolInfo?.description?.split('\n')?.[0] || '';
+                                aoidfsja = [
+                                    `'''`,
+                                    `# MCP Code Execution`,
+                                    `Name: ${toolInfo.name}`,
+                                    desc && `Description: ${desc}`,
+                                    `${JSON.stringify(mcpInfo.args)}`,
+                                    `'''`,
+                                ].filter(Boolean).join('\n');
+                            }
+
+                            let confirmed = await await_prompt({ mode: 'mcp_code_execution', actname: 'mcp_code_execution', mcpname: actData.name, containerId, dockerWorkDir, pythonCodeToRun: aoidfsja, requiredPackageNames });
+                            if (singleton.missionAborting) throw new Error(caption('missionAborted'));
+                            executionId = confirmed.executionId;
+                            canceled = confirmed.cancel;
+                        }
+                        if (!canceled) {
+
+                            pi3d13 = await out_state(caption('runningCode'));
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            await waitingForDataCheck(out_state);
+                            client = await getToolsClientByToolName(singleton.serverClients, actData.name);
+                            addResult = await client.callTool({
+                                name: mcpInfo.name,
+                                arguments: mcpInfo.args,
+                            });
+                            streamGetter(JSON.stringify({ str: addResult?.content?.[0]?.text || '', type: 'stdout' }));
+                            runCodeFactor = true;
+                        }
+                        else {
+                            mcpInfo.code = [
+                                `# ToolName: ${mcpInfo.name}`,
+                                `# Args: ${JSON.stringify(mcpInfo.args)}`,
+                                `#`,
+                                `# This Call is Cancelled to execute`,
+                            ].join('\n');
+                            console.log('cannnnnn', mcpInfo.code);
+                        }
+                        runCodeFactor = true;
+                    } catch (error) {
+                        console.log('error', error);
+                    }
+                    runCodeFactor = true;
+                    pythonCode = mcpInfo.code;
+                    codeExecutionResult = {
+                        stdout: addResult?.content?.[0]?.text || '',
+                        stderr: '',
+                        output: addResult?.content?.[0]?.text || '',
+                        code: 0,
+                        error: null
+                    };
                 }
             } catch (error) {
                 errorList.codeexecutionerror = { error };
@@ -752,13 +829,16 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 if (errorList.codeexecutionerror) {
                     await pid.fail(caption('codeExecutionAborted'));
                 } else {
-                    await pid.succeed(replaceAll(caption('codeExecutionCompleted'), '{{iterationCount}}', iterationCount)); // `코드 수행 #${iterationCount}차 완료`
+                    await pid.dismiss();
+                    if (false) await pid.succeed(replaceAll(caption('codeExecutionCompleted'), '{{iterationCount}}', iterationCount)); // `코드 수행 #${iterationCount}차 완료`
                 }
             }
             await operation_done({});
             if (pi3d13) pi3d13?.dismiss();
             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
             const data = javascriptCode || pythonCode;
+            // console.
+
             const weatherToPush = (!errorList.codeexecutionerror && data);
             let { summarized, errorData, decoded, parsed } = lazyMode ? outputParse(codeExecutionResult?.output) : {};
             const handlers = {

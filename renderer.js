@@ -102,9 +102,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             let lineNumbers = true;
             if (language === 'bash') lineNumbers = false;
             if (language === 'text') lineNumbers = false;
-            const { editor, runButton } = makeCodeBox(confirmedCode, language, lineNumbers);
+            const { editor, runButton, cancelButton } = makeCodeBox(confirmedCode, language, lineNumbers);
             editor.setSize('100%', '100%');
             runButton.remove();
+            cancelButton.remove();
         },
         out_print(message) {
             const inputBox = new ContentBox();
@@ -191,7 +192,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             // return 1112;
         },
         async await_prompt(body) {
-            console.log('await_prompt', body);
             // currentConfig['autoCodeExecution'] = await getConfig('autoCodeExecution');
             // currentConfig['planEditable'] = await getConfig('planEditable');
 
@@ -210,20 +210,26 @@ window.addEventListener('DOMContentLoaded', async () => {
             const whattodo = body.whattodo;
             let language;
 
+
             function isCodeRequiredConfirm(actname) {
                 const codeRequiredConfirm = [
                     'generate_nodejs_code',
                     'generate_nodejs_code_for_puppeteer',
                     'generate_python_code',
+                    'mcp_code_execution',
                     'shell_command_execute',
                 ];
                 if (currentConfig['planEditable']) {
                     codeRequiredConfirm.push('whattodo_confirm');
                 }
-                return codeRequiredConfirm.includes(actname);
+                const result = codeRequiredConfirm.includes(actname);
+                return result;
             }
-            function handleCodeConfirmation(editor, destroy = false, save = true) {
-                console.log('handleCodeConfirmation', actname);
+            function handleCodeConfirmation(editor, destroy = false, save = true, cancel = false) {
+                if (cancel) {
+                    save = false;
+                    destroy = true;
+                }
                 const toolActList = {};
                 toolList.forEach(tool => toolActList[tool] = true);
                 if (toolActList[actname]) save = false;
@@ -231,49 +237,62 @@ window.addEventListener('DOMContentLoaded', async () => {
                     'generate_nodejs_code',
                     'generate_nodejs_code_for_puppeteer',
                     'generate_python_code',
+                    'mcp_code_execution',
                     'shell_command_execute',
                 ].includes(actname)) {
                     save = !(mode !== 'shell_command_execute' && actname === 'shell_command_execute');
                 }
-
                 const executionId = randomId();
                 terminalStreamBoxes[executionId] = new TerminalStreamBox();
                 conversations.appendChild(terminalStreamBoxes[executionId].container);
 
-                const sourceCode = editor.getValue();
+                let sourceCode = !cancel ? editor.getValue() : '';
+                if (cancel) {
+                    let descriptionPrefix;
+                    if (actname === 'generate_nodejs_code') {
+                        descriptionPrefix = '//';
+                    }
+                    if (actname === 'generate_python_code') {
+                        descriptionPrefix = '#';
+                    }
+                    if (actname === 'mcp_code_execution') {
+                        descriptionPrefix = '//';
+                    }
+                    if (actname === 'shell_command_execute') {
+                        descriptionPrefix = '#';
+                    }
+                    sourceCode = editor.getValue().split('\n').map(line => descriptionPrefix + ' ' + line).join('\n');
+                    sourceCode = sourceCode + `\n\n${descriptionPrefix} This Code is Cancelled to Run`;
+                }
                 scrollBodyToBottomSmoothly();
                 if (save) workData.history.push({ class: 'code_confirmed', confirmedCode: sourceCode, executionId, language });
-                _resolve({ confirmedCode: sourceCode, executionId });
+                _resolve({ confirmedCode: sourceCode, executionId, cancel });
                 if (destroy) {
-                    // console.log(editor);
                     editor.getWrapperElement().parentElement.remove();
-                    // const theTextArea = editor.getWrapperElement().querySelector('textarea');
-                    // editor.toTextArea(); // codemirror instance destroy
-                    // theTextArea.parentElement.remove();
-                    // console.log(theTextArea);
+                }
+                if (cancel) {
+                    terminalStreamBoxes[executionId].destroy()
+                }
+                if (body.mcpname === 'sequentialthinking') {
+                    terminalStreamBoxes[executionId].destroy()
                 }
                 return terminalStreamBoxes[executionId];
             }
-            // console.log(actname);
-
-            // let confirmed = await await_prompt({ mode: 'run_nodejs_code', actname: actData.name, containerId, dockerWorkDir, javascriptCodeToRun, requiredPackageNames });
-            // console.log('actname', actname);
-
 
             if (!isCodeRequiredConfirm(actname)) {
                 language = 'javascript';
                 let code = javascriptCodeToRun || pythonCodeToRun;
                 const { editor, runButton } = makeCodeBox(code, 'javascript');
                 editor.setSize('100%', '100%');
-                handleCodeConfirmation(editor, true);
+                handleCodeConfirmation(editor, true, true);
                 if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
             }
             else if ((mode === 'whattodo_confirm')) {
                 language = 'text';
                 const { editor, runButton } = makeCodeBox(whattodo, 'text', false);
                 editor.setSize('100%', '100%');
-                editor.setEventOnRun(async (code) => {
-                    handleCodeConfirmation(editor, false).destroy();;
+                editor.setEventOnRun(async (cancel) => {
+                    handleCodeConfirmation(editor, false, true, cancel).destroy();;
                 });
             }
             else if ((actname === 'shell_command_execute' && mode === 'run_nodejs_code')) {
@@ -287,26 +306,34 @@ window.addEventListener('DOMContentLoaded', async () => {
                     language = 'javascript';
                     const { editor, runButton } = makeCodeBox(javascriptCodeToRun, 'javascript');
                     editor.setSize('100%', '100%');
-                    editor.setEventOnRun(async (code) => {
-                        handleCodeConfirmation(editor);
+                    editor.setEventOnRun(async (cancel) => {
+                        handleCodeConfirmation(editor, false, true, cancel);
                     });
                     if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
                 } else if (mode === 'run_python_code') {
                     language = 'python';
                     const { editor, runButton } = makeCodeBox(pythonCodeToRun ? pythonCodeToRun : pythonCode, 'python');
                     editor.setSize('100%', '100%');
-                    editor.setEventOnRun(async (code) => {
-                        handleCodeConfirmation(editor);
+                    editor.setEventOnRun(async (cancel) => {
+                        handleCodeConfirmation(editor, false, true, cancel);
                     });
                     // console.log('pythonCodeToRun', pythonCodeToRun);
                     // console.log('pythonCode', pythonCode);
                     if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
+                } else if (mode === 'mcp_code_execution') {
+                    language = 'python';
+                    const { editor, runButton } = makeCodeBox(pythonCodeToRun ? pythonCodeToRun : pythonCode, 'python');
+                    editor.setSize('100%', '100%');
+                    editor.setEventOnRun(async (cancel) => {
+                        handleCodeConfirmation(editor, false, true, cancel);
+                    });
+                    if (currentConfig['autoCodeExecution'] || body.mcpname === 'sequentialthinking') { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
                 } else if (mode === 'shell_command_execute') {
                     language = 'bash';
                     const { editor, runButton } = makeCodeBox(body.command, 'bash', false);
                     editor.setSize('100%', '100%');
-                    editor.setEventOnRun(async (code) => {
-                        handleCodeConfirmation(editor).destroy();
+                    editor.setEventOnRun(async (cancel) => {
+                        handleCodeConfirmation(editor, false, true, cancel).destroy();
                     });
                     if (currentConfig['autoCodeExecution']) { await new Promise(r => setTimeout(r, codeExecutionDelay)); runButton.click(); }
                 }
