@@ -272,6 +272,16 @@ export async function cloneCustomTool() {
         } else {
             console.log(`[cloneCustomTool.002!] cp - ${source} ${target}`);
         }
+        {
+            const source = getCodePath(`custom_tools/aiexe_mcp_config.json`);
+            const target = getHomePath(`${customPath}/aiexe_mcp_config.json`);
+            if (ensureAppsHomePath(target) && !(await is_file(target))) {
+                await fs.promises.copyFile(source, target);
+            } else {
+                console.log(`[cloneCustomTool.002!] cp - ${source} ${target}`);
+            }
+
+        }
         return;
     }
     fs.mkdirSync(workspace, { recursive: true });
