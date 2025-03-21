@@ -775,7 +775,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                                 aoidfsja = [
                                     `"${mcpInfo.args.thought}"`,
                                 ].filter(Boolean).join('\n');
-                                nextPlan = aoidfsja;
+                                if(false) nextPlan = aoidfsja;
                             } else {
                                 const desc = toolInfo?.description?.split('\n')?.[0] || '';
                                 aoidfsja = [
