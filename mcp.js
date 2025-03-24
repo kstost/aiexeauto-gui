@@ -3,6 +3,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import fs from "fs/promises";
 import path from "path";
 import singleton from "./singleton.js";
+import { is_dir } from "./codeExecution.js";
 // getCodePath
 import { getHomePath, getConfiguration, isWindows } from "./system.js";
 
@@ -175,6 +176,7 @@ export async function runClient(serverName) {
     const transport = new StdioClientTransport({
         command: serverConfig.command,
         args: serverConfig.args,
+        env: serverConfig.env,
     });
     const client = new Client(
         {
@@ -205,7 +207,13 @@ export async function loadServerConfig() {
         }
 
         // 모든 서버 구성을 배열로 반환
-        let nodePath = isWindows() ? await getConfiguration('nodePath') : '';
+        let nodePath = isWindows() ? await getConfiguration('nodePath') : await getConfiguration('nodePath');
+        let npxPath = path.dirname(nodePath);
+        if (!npxPath || !(await is_dir(npxPath))) {
+            npxPath = 'npx';
+        } else {
+            npxPath = npxPath + '/npx';
+        }
         return Object.keys(servers).map(serverName => {
             const serverConfig = servers[serverName];
             if (isWindows()) {
@@ -217,12 +225,20 @@ export async function loadServerConfig() {
                             "-e",
                             `require('child_process').execSync('npx ${(serverConfig.args || []).map(d => `"${d}"`).join(' ')}', {stdio: 'inherit'})`
                         ],
+                        env: serverConfig.env,
                     };
-                } else {
+                }
+            }
+            else {
+                if (serverConfig.command === 'npx') {
                     return {
                         name: serverName,
-                        command: serverConfig.command,
-                        args: serverConfig.args || [],
+                        command: nodePath,
+                        args: [
+                            "-e",
+                            `require('child_process').execSync('${npxPath} ${(serverConfig.args || []).map(d => `"${d}"`).join(' ')}', {stdio: 'inherit'})`
+                        ],
+                        env: serverConfig.env,
                     };
                 }
             }
@@ -230,6 +246,7 @@ export async function loadServerConfig() {
                 name: serverName,
                 command: serverConfig.command,
                 args: serverConfig.args || [],
+                env: serverConfig.env,
             };
         });
     } catch (err) {
