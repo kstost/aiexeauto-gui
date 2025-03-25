@@ -132,7 +132,10 @@ export async function connectAllServers(args) {
         let client;
         try {
             client = await runClient(config.name);
-        } catch { }
+        } catch (e) {
+            console.log(process.env);
+            console.error(e);
+        }
         if (!client) {
             pd.dismiss();
             continue;
@@ -176,7 +179,10 @@ export async function runClient(serverName) {
     const transport = new StdioClientTransport({
         command: serverConfig.command,
         args: serverConfig.args,
-        env: serverConfig.env,
+        env: {
+            ...(process.env || {}),
+            ...(serverConfig.env || {}),
+        },
     });
     const client = new Client(
         {
@@ -205,43 +211,8 @@ export async function loadServerConfig() {
         if (Object.keys(servers).length === 0) {
             return []; // 서버가 없으면 빈 배열 반환
         }
-
-        // 모든 서버 구성을 배열로 반환
-        let nodePath = isWindows() ? await getConfiguration('nodePath') : await getConfiguration('nodePath');
-        let npxPath = path.dirname(nodePath);
-        if (!npxPath || !(await is_dir(npxPath))) {
-            npxPath = 'npx';
-        } else {
-            npxPath = npxPath + '/npx';
-        }
         return Object.keys(servers).map(serverName => {
             const serverConfig = servers[serverName];
-            if (isWindows()) {
-                if (serverConfig.command === 'npx' || serverConfig.command === 'npx.cmd') {
-                    return {
-                        name: serverName,
-                        command: nodePath,
-                        args: [
-                            "-e",
-                            `require('child_process').execSync('npx ${(serverConfig.args || []).map(d => `"${d}"`).join(' ')}', {stdio: 'inherit'})`
-                        ],
-                        env: serverConfig.env,
-                    };
-                }
-            }
-            else {
-                if (serverConfig.command === 'npx') {
-                    return {
-                        name: serverName,
-                        command: nodePath,
-                        args: [
-                            "-e",
-                            `require('child_process').execSync('${npxPath} ${(serverConfig.args || []).map(d => `"${d}"`).join(' ')}', {stdio: 'inherit'})`
-                        ],
-                        env: serverConfig.env,
-                    };
-                }
-            }
             return {
                 name: serverName,
                 command: serverConfig.command,

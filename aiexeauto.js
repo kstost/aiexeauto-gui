@@ -18,7 +18,7 @@ import { fileURLToPath } from 'url';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { is_dir } from './codeExecution.js';
 import { exportFromDockerForDataCheck } from './docker.js';
-import { cloneCustomTool, getToolList, supportLanguage, toolSupport, getCustomToolList, getMCPToolList } from './system.js';
+import { getEnv, cloneCustomTool, getToolList, supportLanguage, toolSupport, getCustomToolList, getMCPToolList } from './system.js';
 import envConst from './envConst.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,6 +30,15 @@ export async function reqRenderer(mode, arg) {
 export function isTaskAborted(taskId) {
     if (!taskId) return false;
     return !!(singleton.abortQueue[taskId]);
+}
+try {
+    const envVars = await getEnv();
+    for (const [key, value] of Object.entries(envVars)) {
+        process.env[key] = value;
+    }
+    console.log('환경 변수가 성공적으로 로드되었습니다.');
+} catch (error) {
+    console.error('.env 파일에서 환경 변수를 로드하는 중 오류 발생:', error);
 }
 
 let prompt = process.argv[2];

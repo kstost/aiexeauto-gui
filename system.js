@@ -17,6 +17,52 @@ import { virtualPython, is_file, is_dir } from './codeExecution.js';
 import { getDockerPath } from './executableFinder.js';
 import { getNodePath, getNPMPath, getPythonPath } from './executableFinder.js';
 import { connectAllServers, closeAllServers, convertToolsInfoToAIEXEStyle, getAllToolNames, getToolsClientByToolName, getToolsInfoByToolName, getMCPNameByToolName } from './mcp.js';
+import { homedir } from 'os';
+export async function getEnv() {
+    /*
+                    env > ~/.aiexeauto/.env
+                    Get-ChildItem Env: | ForEach-Object { "$($_.Name)=$($_.Value)" } > ~/.aiexeauto/.env
+    */
+    try {
+        // Read the .env file from the home directory
+        const homePath = homedir();
+        const envFilePath = `${homePath}/.aiexeauto/.env`;
+
+        // Read the file contents as a string
+        const data = await fs.promises.readFile(envFilePath, 'utf8');
+
+        // Parse the file line by line
+        const lines = data.split('\n');
+        const envObject = {};
+
+        // Process each line
+        for (const line of lines) {
+            // Skip empty lines
+            if (!line.trim()) continue;
+
+            // Handle lines without an equals sign
+            if (!line.includes('=')) {
+                envObject[line.trim()] = '';
+                continue;
+            }
+
+            // Split by the first equals sign
+            const separatorIndex = line.indexOf('=');
+            const key = line.substring(0, separatorIndex).trim();
+            const value = line.substring(separatorIndex + 1).trim();
+
+            // Add to the environment object
+            envObject[key] = value;
+        }
+
+        return envObject;
+    } catch (error) {
+        // console.error('Error reading or parsing .env file:', error);
+        // throw error;
+    }
+    return {};
+}
+
 export function getSystemLangCode() {
     try {
         return app.getLocale().split('-')[0] || 'en'
