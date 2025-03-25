@@ -741,7 +741,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             console.log('confirmed!!!!!!!!!!!!!', confirmed);
                             if (singleton.missionAborting) throw new Error(caption('missionAborted'));
                             pythonCodeToRun = confirmed.confirmedCode;
-                            pythonCode = confirmed.confirmedCode;
+                            // pythonCode = confirmed.confirmedCode;
                             executionId = confirmed.executionId;
                         }
                         pi3d13 = await out_state(caption('runningCode'));
