@@ -8,6 +8,34 @@ import { checkSyntax } from './docker.js';
 import { supportLanguage, toolSupport, promptTemplate, templateBinding } from './system.js';
 import envConst from './envConst.js';
 
+export function removeAdditionalProperties(json) {
+    // 기본 케이스: json이 객체나 배열이 아닌 경우
+    if (json === null || typeof json !== 'object') {
+        return json;
+    }
+
+    // json이 배열인 경우
+    if (Array.isArray(json)) {
+        // 배열의 각 요소에 대해 재귀적으로 함수 호출
+        return json.map(item => removeAdditionalProperties(item));
+    }
+
+    // json이 객체인 경우
+    const result = {};
+
+    // 객체의 각 키-값 쌍을 확인
+    for (const key in json) {
+        // 'additionalProperties' 키는 건너뜀
+        if (key === 'additionalProperties') {
+            continue;
+        }
+
+        // 다른 키들은 값을 재귀적으로 처리하여 결과 객체에 추가
+        result[key] = removeAdditionalProperties(json[key]);
+    }
+
+    return result;
+}
 export function isExceedMaxTokens(result) {
     /*
 
@@ -1496,7 +1524,7 @@ claude
                     parts: [{ text: systemPrompt }]
                 },
                 contents: messages,
-                ...toolConfig,
+                ...removeAdditionalProperties(toolConfig),
                 generationConfig: {
                     temperature: 0,
                     topP: 0.6,
