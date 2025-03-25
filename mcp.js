@@ -213,6 +213,17 @@ export async function loadServerConfig() {
         }
         return Object.keys(servers).map(serverName => {
             const serverConfig = servers[serverName];
+            if (isWindows()) {
+                return {
+                    name: serverName,
+                    command: nodePath,
+                    args: [
+                        "-e",
+                        `require('child_process').execSync('"${serverConfig.command}" ${(serverConfig.args || []).map(d => `"${d}"`).join(' ')}', {stdio: 'inherit'})`
+                    ],
+                    env: serverConfig.env,
+                };
+            }
             return {
                 name: serverName,
                 command: serverConfig.command,
