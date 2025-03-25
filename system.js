@@ -27,7 +27,11 @@ export async function getEnv() {
         // Read the .env file from the home directory
         const homePath = homedir();
         const envFilePath = `${homePath}/.aiexeauto/.env`;
-
+        try {
+            const fileContent = fs.readFileSync(envFilePath, 'utf8');
+            await fs.promises.writeFile(envFilePath, `${fileContent.split('\n').filter(line => line.trim() !== '').join('\n')}`, { encoding: 'utf8' });
+        } catch (error) {
+        }
         // Read the file contents as a string
         const data = await fs.promises.readFile(envFilePath, 'utf8');
 

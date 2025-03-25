@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import subprocess
 
 async def _browser_use(input):
+    global virtual_playwright
     if aiexe_configuration["useDocker"]:
         virtual_playwright = "playwright"
     try:
