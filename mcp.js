@@ -216,13 +216,13 @@ export async function loadServerConfig() {
         let nodePath = isWindows() ? await getConfiguration('nodePath') : '';
         return Object.keys(servers).map(serverName => {
             const serverConfig = servers[serverName];
-            if (isWindows()) {
+            if (isWindows() && serverConfig.command?.indexOf(' ') === -1) {
                 return {
                     name: serverName,
                     command: nodePath,
                     args: [
                         "-e",
-                        `require('child_process').execSync('"${serverConfig.command}" ${(serverConfig.args || []).map(d => `"${d}"`).join(' ')}', {stdio: 'inherit'})`
+                        `require('child_process').execSync('${serverConfig.command} ${(serverConfig.args || []).map(d => `"${d}"`).join(' ')}', {stdio: 'inherit'})`
                     ],
                     env: serverConfig.env,
                 };
