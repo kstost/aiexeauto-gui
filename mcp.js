@@ -211,6 +211,9 @@ export async function loadServerConfig() {
         if (Object.keys(servers).length === 0) {
             return []; // 서버가 없으면 빈 배열 반환
         }
+
+        // 모든 서버 구성을 배열로 반환
+        let nodePath = isWindows() ? await getConfiguration('nodePath') : '';
         return Object.keys(servers).map(serverName => {
             const serverConfig = servers[serverName];
             if (isWindows()) {
