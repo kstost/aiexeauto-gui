@@ -112,6 +112,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             conversations.appendChild(inputBox.resultContainer);
             const resultContainer = inputBox.getContainer();
             resultContainer.textContent = `${message}`;
+            message && dissmissPreviousDisplayState();
             scrollBodyToBottomSmoothly();
         },
         out_stream(str, type, id) {
@@ -372,6 +373,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             workData.history.push({ class: 'out_state', text: body.stateLabel, state: 'done' });
             displayState[id].setState({ text: body.stateLabel, state: 'done' });
+            body.stateLabel && dissmissPreviousDisplayState();
             scrollBodyToBottomSmoothly();
             delete displayState[id];
         },
@@ -381,6 +383,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             workData.history.push({ class: 'out_state', text: body.stateLabel, state: 'fail' });
             displayState[id].setState({ text: body.stateLabel, state: 'fail' });
+            body.stateLabel && dissmissPreviousDisplayState();
             scrollBodyToBottomSmoothly();
             delete displayState[id];
         },
