@@ -37,7 +37,8 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
                 evaluationText: makeTag('EvaluationOfPreviousTasks', evaluationText, !!evaluationText),
                 whatdidwedo: makeTag('WorkDoneSoFar', whatdidwedo, !!whatdidwedo),
                 whattodo: whattodo ? makeTag('NextTasks', whattodo, !!whattodo) : '',
-                sequentialthinking: await isSequentialthinking() ? `**Rely on the \`sequentialthinking\` function tool for strategizing**` : ``
+                sequentialthinking: await isSequentialthinking() ? `` : ``
+                // sequentialthinking: await isSequentialthinking() ? `**Rely on the \`sequentialthinking\` function tool for strategizing**` : ``
             }),
         };
     } else if (type === 'evaluation') {

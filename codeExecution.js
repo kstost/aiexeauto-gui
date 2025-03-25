@@ -131,7 +131,7 @@ export async function runPythonCodeInRealWorld(code, streamGetter = null) {
     ].join('\n');
     if (ensureAppsHomePath(absPath)) await fs.promises.writeFile(absPath, code);
     const pythonPath = await virtualPython();
-    if (pythonPath) return await executeCommand(`'${pythonPath}' ${fileName}`, streamGetter, workdir);
+    if (pythonPath) return await executeCommand(`'${pythonPath}' -u ${fileName}`, streamGetter, workdir);
 }
 
 export function checkValidSyntaxJavascript(code) {
