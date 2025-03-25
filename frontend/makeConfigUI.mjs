@@ -109,6 +109,12 @@ export async function makeConfigUI(configurationContainer) {
         <option value="groq">Groq</option>
         <option value="gemini">Gemini</option>
     `;
+    llmSelect.innerHTML = `
+        <option value="" disabled selected>${caption('selectLLM')}</option>
+        <option value="openai">OpenAI</option>
+        <option value="ollama">Ollama</option>
+        <option value="gemini">Gemini</option>
+    `;
     llmContainer.appendChild(llmSelect);
     configWrapper.appendChild(llmRow);
 
@@ -585,7 +591,7 @@ export async function makeConfigUI(configurationContainer) {
     await singleton.loadConfigurations();
 
     llmSelect.addEventListener('change', async (e) => {
-        if (llmSelect.value === 'gemini' || llmSelect.value === 'openai') {
+        if (true || llmSelect.value === 'gemini' || llmSelect.value === 'openai') {
             await setConfig('llm', llmSelect.value);
             await singleton.loadConfigurations();
         } else {
