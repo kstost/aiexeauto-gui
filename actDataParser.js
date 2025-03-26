@@ -94,6 +94,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             let keys = Object.keys(input);
             let values = Object.values(input);
             let formattedInput = keys.map((key, index) => `${key}="${values[index]}"`).join(',');
+            return `.`;
             return `# Call \`${actData.name}\` tool with arguments: ${formattedInput}`;
         }
         let toolCode;

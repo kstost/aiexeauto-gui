@@ -48,11 +48,6 @@ As a task-running agent, it handles the steps needed to finish the <SubMission> 
 
 {{customRulesForCodeGenerator}}
 
-You can use the following tools to perform the task:
-<Tools>
-{{tools}}
-</Tools>
-
 <ToolsUsageInCode>
   - If you need to use tools in the code, use `default_api` class.
   - The `default_api` class is already set up in the code environment so that you can just use it like `print(default_api.tool_name(name=value, name=value, ...))`. If you want to use a tool, write your code using this class.

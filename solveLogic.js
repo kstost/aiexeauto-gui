@@ -512,7 +512,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     }, () => areBothSame(processTransactions, ++reduceLevel));
                     // if (whatdidwedo) whatdidwedo = whatdidwedo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
                     whatdidwedo = cleanDescription(whatdidwedo);
-                    if (whatdidwedo) await out_print({ data: whatdidwedo, mode: 'whatdidwedo' });
+                    if (whatdidwedo) await out_print({ data: `📜 ${whatdidwedo}`, mode: 'whatdidwedo' });
                     processTransactions[processTransactions.length - 1].whatdidwedo = whatdidwedo;
                 }
                 if (!nextPrompt) {
@@ -552,7 +552,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             if (whattodo) whattodo = whattodo.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
                         } else {
                             if (whattodo.trim().startsWith('# Call') || whattodo.trim().startsWith('#Call')) { } else {
-                                await out_print({ data: whattodo, mode: 'whattodo' });
+                                if (whattodo.trim()) await out_print({ data: `📝 ${whattodo}`, mode: 'whattodo' });
                             }
                         }
                     }
@@ -756,26 +756,13 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     let client
                     try {
                         if (!confirmedd) {
-                            //run_python_code
                             const toolInfo = await getToolsInfoByToolName(singleton.serverClients, actData.name);
-                            const mcpSum = {
-                                toolInfo
-                            }
                             let aoidfsja
-                            //  = [
-                            //     // `# MCP Code Execution`,
-                            //     // `Name: ${toolInfo.name}`,
-                            //     // desc && `Description: ${desc}`,
-                            //     // `with Args: ${JSON.stringify(mcpInfo.args)}`,
-
-                            //     `"${mcpInfo.args.thought}"`,
-                            //     // if()
-                            // ].filter(Boolean).join('\n');
                             if (actData.name === 'sequentialthinking') {
                                 aoidfsja = [
                                     `"${mcpInfo.args.thought}"`,
                                 ].filter(Boolean).join('\n');
-                                if(false) nextPlan = aoidfsja;
+                                if (false) nextPlan = aoidfsja;
                             } else {
                                 const desc = toolInfo?.description?.split('\n')?.[0] || '';
                                 aoidfsja = [
@@ -855,6 +842,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     streamGetter(JSON.stringify({ str: summarized, type: 'stdout' }), true);
                 },
                 async retrieve_from_webpage() {
+                    if (!parsed) return;
                     let pid6 = await out_state(caption('retrievingFromWebpage') + ' <a href="' + parsed.url + '" target="_blank">🔗 ' + parsed.url + '</a>');
                     summarized = `❌ Page Not Found: ${errorData}`;
                     if (!errorData) {
@@ -979,7 +967,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     // if (spinners.iter) {
                     //     spinners.iter.succeed(`검증완료`);
                     // }
-                    await out_print(({ data: reason, mode: 'evaluation' }));
+                    await out_print(({ data: `🔍 ${reason}`, mode: 'evaluation' }));
                     evaluationText = reason;
                 }
 

@@ -231,6 +231,7 @@ function createModelSelect(container, currentModel) {
         'llama-3.3-70b-versatile',
         'llama-3.1-8b-instant',
         'deepseek-chat',
+        'gemini-2.5-pro-exp-03-25',
         'gemini-2.0-flash',
         'gemini-1.5-flash',
         'gemini-1.5-pro',

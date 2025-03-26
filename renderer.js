@@ -163,7 +163,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             let waitTime = body.total;
             percentBar[id] = new PercentBar({ template: body.template, total: waitTime });
             conversations.appendChild(percentBar[id].barContainer);
-
+            dissmissPreviousDisplayState();
             scrollBodyToBottomSmoothly();
             return id;
         },

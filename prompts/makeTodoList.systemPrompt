@@ -36,12 +36,6 @@ You can complete tasks using Python code, or by calling specific functions(tools
   - The `user` executes the solution proposed by the `assistant` and shares the execution results
 </AgentLoops>
 
-You can use the following tools to perform the tasks.
-You refer to this Tools List for planning the to-do list schedule.
-<Tools>
-{{tools}}
-</Tools>
-
 <Instructions>
 - Respond in {{languageFullName}}.
 - Only respond with a markdown-formatted to-do list.
@@ -51,8 +45,8 @@ You refer to this Tools List for planning the to-do list schedule.
 When creating the to-do list, consider below:
 <StronglyConsider>
 - You don't need to worry how to run the Python code or tools.
+- Use web search if you need a new information.
 - how to efficiently perform each step by utilizing appropriate tools or coding Python code.
-- Refer to what methods are available in the tools for each task.
 - **Don't consider anything at all regarding the execution of the code file!**
 - **Never think about how to save and run the code file! Please!!**
 - **If you make code, the code must be PYTHON CODE!!**

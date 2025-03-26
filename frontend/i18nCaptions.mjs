@@ -119,13 +119,13 @@ export const i18nCaptions = {
         "geminiApiKeyNotSet": "Gemini API 키가 설정되어 있지 않습니다.",
         "dockerPathNotSet": "Docker 경로가 설정되어 있지 않습니다.",
         "ollamaServerNotRunning": "Ollama API 서버 확인에 문제가 있습니다.",
-        "aiProcessing": "{{stateLabel}}을 {{model}}이 처리중입니다...",
-        "aiMissionAborted": "{{stateLabel}}을 {{model}}이 중단했습니다 ({{errorMessage}})",
-        "aiNoResult": "{{model}}이 {{stateLabel}}에 대한 결과가 없습니다.",
-        "aiRetryWaiting": "{{model}}이 {{stateLabel}}을 재시도 대기중입니다.",
-        "aiAnalyzingResult": "{{stateLabel}}을 분석중입니다...",
+        "aiProcessing": "{{stateLabel}} 중입니다...",
+        "aiMissionAborted": "{{stateLabel}} 중단했습니다 ({{errorMessage}})",
+        "aiNoResult": "{{stateLabel}}에 대한 결과가 없습니다.",
+        "aiRetryWaiting": "{{stateLabel}} 재시도 대기중입니다.",
+        "aiAnalyzingResult": "{{stateLabel}} 분석중입니다...",
         "aiAnalyzingResultFailed": "{{stateLabel}} 분석에 실패했습니다.",
-        "aiRetryWaitingSecondLeft": "{{model}}이 {{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
+        "aiRetryWaitingSecondLeft": "{{stateLabel}}을 {{second}}초 후에 재시도 대기중입니다."
     },
     "en": {
         "retrievingData": "Retrieving data...",
@@ -247,13 +247,13 @@ export const i18nCaptions = {
         "geminiApiKeyNotSet": "Gemini API key is not set.",
         "dockerPathNotSet": "Docker path is not set.",
         "ollamaServerNotRunning": "Ollama API server check has a problem.",
-        "aiProcessing": "{{stateLabel}} is being processed by {{model}}...",
-        "aiMissionAborted": "{{stateLabel}} has been aborted by {{model}} ({{errorMessage}})",
-        "aiNoResult": "{{model}} has no result for {{stateLabel}}",
-        "aiRetryWaiting": "{{model}} is waiting for retry of {{stateLabel}}",
-        "aiAnalyzingResult": "{{stateLabel}} is being analyzed...",
-        "aiAnalyzingResultFailed": "{{stateLabel}} analysis failed",
-        "aiRetryWaitingSecondLeft": "{{model}} is waiting for retry of {{stateLabel}} {{second}} seconds left"
+        "aiProcessing": "Processing {{stateLabel}}...",
+        "aiMissionAborted": "{{stateLabel}} aborted ({{errorMessage}})",
+        "aiNoResult": "No result for {{stateLabel}}.",
+        "aiRetryWaiting": "Waiting to retry {{stateLabel}}.",
+        "aiAnalyzingResult": "Analyzing {{stateLabel}}...",
+        "aiAnalyzingResultFailed": "Failed to analyze {{stateLabel}}.",
+        "aiRetryWaitingSecondLeft": "Will retry {{stateLabel}} in {{second}} seconds."
     },
     "ja": {
         "retrievingData": "データを取得中...",
@@ -375,13 +375,13 @@ export const i18nCaptions = {
         "geminiApiKeyNotSet": "Gemini APIキーが設定されていません。",
         "dockerPathNotSet": "Dockerパスが設定されていません。",
         "ollamaServerNotRunning": "Ollama APIサーバーの確認に問題があります。",
-        "aiProcessing": "{{stateLabel}}を{{model}}が処理中です...",
-        "aiMissionAborted": "{{stateLabel}}を{{model}}が中断しました ({{errorMessage}})",
-        "aiNoResult": "{{model}}が{{stateLabel}}の結果を出力できませんでした。",
-        "aiRetryWaiting": "{{model}}が{{stateLabel}}を再試行待ちです。",
+        "aiProcessing": "{{stateLabel}}を処理中です...",
+        "aiMissionAborted": "{{stateLabel}}を中断しました ({{errorMessage}})",
+        "aiNoResult": "{{stateLabel}}の結果がありません。",
+        "aiRetryWaiting": "{{stateLabel}}の再試行を待機中です。",
         "aiAnalyzingResult": "{{stateLabel}}を分析中です...",
         "aiAnalyzingResultFailed": "{{stateLabel}}の分析に失敗しました。",
-        "aiRetryWaitingSecondLeft": "{{model}}が{{stateLabel}}を{{second}}秒後に再試行します。"
+        "aiRetryWaitingSecondLeft": "{{stateLabel}}を{{second}}秒後に再試行します。"
     },
     "vi": {
         "retrievingData": "Đang truy vấn dữ liệu...",
@@ -503,13 +503,13 @@ export const i18nCaptions = {
         "geminiApiKeyNotSet": "Chưa thiết lập khóa API Gemini.",
         "dockerPathNotSet": "Chưa thiết lập đường dẫn Docker.",
         "ollamaServerNotRunning": "Có vấn đề khi kiểm tra máy chủ API Ollama.",
-        "aiProcessing": "{{model}} đang xử lý {{stateLabel}}...",
-        "aiMissionAborted": "{{model}} đã dừng {{stateLabel}} ({{errorMessage}})",
-        "aiNoResult": "{{model}} không có kết quả cho {{stateLabel}}.",
-        "aiRetryWaiting": "{{model}} đang chờ thử lại {{stateLabel}}.",
+        "aiProcessing": "Đang xử lý {{stateLabel}}...",
+        "aiMissionAborted": "{{stateLabel}} đã bị hủy ({{errorMessage}})",
+        "aiNoResult": "Không có kết quả cho {{stateLabel}}.",
+        "aiRetryWaiting": "Đang chờ thử lại {{stateLabel}}.",
         "aiAnalyzingResult": "Đang phân tích {{stateLabel}}...",
         "aiAnalyzingResultFailed": "Phân tích {{stateLabel}} thất bại.",
-        "aiRetryWaitingSecondLeft": "{{model}} sẽ thử lại {{stateLabel}} sau {{second}} giây."
+        "aiRetryWaitingSecondLeft": "Sẽ thử lại {{stateLabel}} sau {{second}} giây."
     },
     "zh": {
         "retrievingData": "正在检索数据...",
@@ -631,13 +631,13 @@ export const i18nCaptions = {
         "geminiApiKeyNotSet": "未设置Gemini API密钥",
         "dockerPathNotSet": "未设置Docker路径",
         "ollamaServerNotRunning": "Ollama API服务器检查出现问题",
-        "aiProcessing": "{{model}}正在处理{{stateLabel}}...",
-        "aiMissionAborted": "{{model}}已中止{{stateLabel}}（{{errorMessage}}）",
-        "aiNoResult": "{{model}}没有{{stateLabel}}的结果",
-        "aiRetryWaiting": "{{model}}正在等待重试{{stateLabel}}",
-        "aiAnalyzingResult": "正在分析{{stateLabel}}...",
-        "aiAnalyzingResultFailed": "{{stateLabel}}分析失败",
-        "aiRetryWaitingSecondLeft": "{{model}}将在{{second}}秒后重试{{stateLabel}}"
+        "aiProcessing": "正在处理 {{stateLabel}}...",
+        "aiMissionAborted": "{{stateLabel}} 已中止 ({{errorMessage}})",
+        "aiNoResult": "没有 {{stateLabel}} 的结果。",
+        "aiRetryWaiting": "等待重试 {{stateLabel}}。",
+        "aiAnalyzingResult": "正在分析 {{stateLabel}}...",
+        "aiAnalyzingResultFailed": "分析 {{stateLabel}} 失败。",
+        "aiRetryWaitingSecondLeft": "将在 {{second}} 秒后重试 {{stateLabel}}。"
     },
 
 };

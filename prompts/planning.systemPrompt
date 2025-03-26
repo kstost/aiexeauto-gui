@@ -37,7 +37,3 @@ Exclude code or unnecessary content and respond with only one sentence in {{lang
 
 {{customRulesForCodeGenerator}}
 
-You can use the following tools to perform the task:
-<Tools>
-{{tools}}
-</Tools>

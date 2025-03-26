@@ -457,6 +457,7 @@ export function cleanDescription(description) {
             }
             description = description.trim();
             description = description.split('\n').map(a => a.trim()).filter(Boolean).join('\n');
+            if (description?.trim() === '.') description = '';
             return description;
         }
     } catch (error) {
@@ -900,7 +901,17 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
             let toolNameForce = ''; // 페이로드에 tool을 지정해줬음에도 무시해버리는 경우가 있다. 그런경우는 toolNameForce에 지정해주면 지정해준 툴을 사용할 확률이 올라감.
             let forRetry = 0;
             let exponentialBackoffCount = 1;
+            let turnedGeminiModel = model;
+            let loopCount = 0;
             while (true) {
+                loopCount++;
+                // console.log('LOOOP', llm, '|', exponentialBackoffCount, '|', turnedGeminiModel)
+                if (llm === 'gemini' && exponentialBackoffCount > 1) {
+                    const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+                    if (turnedGeminiModel === 'gemini-2.5-pro-exp-03-25') turnedGeminiModel = 'gemini-2.0-flash';
+                    else if (turnedGeminiModel === 'gemini-2.0-flash') turnedGeminiModel = 'gemini-2.5-pro-exp-03-25';
+                    url = `${baseUrl}/models/${turnedGeminiModel}:generateContent?key=${geminiApiKey}`;
+                }
                 if (llm === 'gemini' && malformed_function_called) {
                     console.log('mallformed fix');
                     delete data.tools;
@@ -1140,19 +1151,21 @@ claude
                     // no_use_tool
                     continue;
                 }
-                let pid65 = await out_state(``);
+                // let pid65werwer;// = await out_state(``);
 
                 // 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit (https://docs.anthropic.com/en/api/rate-limits); see the response headers for current usage. Please reduce the prompt length or the maximum tokens requested, or try again later. You may also contact sales at https://www.anthropic.com/contact-sales to discuss your options for a rate limit increase."}}                
                 if (errorMessage) {
                     const forRateLimit = errorMessage.includes('Rate limit') || errorMessage.includes('rate limit');
-                    if (forRateLimit || errorMessage.includes('Overloaded') || RESOURCE_EXHAUSTED) {
-                        pid65.fail(errorMessage);
+                    if (forRateLimit || errorMessage?.toLowerCase()?.includes('overloaded') || RESOURCE_EXHAUSTED) {
+                        // if (false) pid65.fail(errorMessage);
+                        // else pid65.dismiss(false);
                         if (!detailed) await leaveLog({ callMode, data: { resultErrorSystem: result }, llm });
                         let waitTime = Math.ceil(extractWaitTime(errorMessage));
                         if (!waitTime) waitTime = 5;
                         if (llm === 'claude') waitTime *= 2;
                         if (RESOURCE_EXHAUSTED) waitTime = 5;
                         exponentialBackoffCount *= 1.5;
+                        if (loopCount < 2) continue;
                         waitTime *= exponentialBackoffCount;
                         waitTime = Math.ceil(waitTime);
                         let aiRetryWaitingSecondLeft = caption('aiRetryWaitingSecondLeft');
@@ -1169,11 +1182,11 @@ claude
                         }
                         continue;
                     } else {
-                        pid65.dismiss();
+                        // pid65werwer.dismiss();
                     }
                     throw new Error(errorMessage);
                 } else {
-                    pid65.dismiss();
+                    // pid65werwer.dismiss();
                 }
                 if (llm === 'claude') {
                     if (tools_ofsdijfsadiosoidjaoisjdf || generateCodeMode) {

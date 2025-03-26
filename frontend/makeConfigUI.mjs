@@ -112,7 +112,6 @@ export async function makeConfigUI(configurationContainer) {
     llmSelect.innerHTML = `
         <option value="" disabled selected>${caption('selectLLM')}</option>
         <option value="openai">OpenAI</option>
-        <option value="ollama">Ollama</option>
         <option value="gemini">Gemini</option>
     `;
     llmContainer.appendChild(llmSelect);
@@ -221,6 +220,7 @@ export async function makeConfigUI(configurationContainer) {
     applyDarkModeSelect(geminiModelSelect);
     geminiModelSelect.innerHTML = `
         <option value="" disabled selected>${caption('selectModel')}</option>
+        <option value="gemini-2.5-pro-exp-03-25">gemini-2.5-pro-exp-03-25</option>
         <option value="gemini-2.0-flash">gemini-2.0-flash</option>
         <option value="gemini-1.5-flash">gemini-1.5-flash</option>
         <option value="gemini-1.5-pro">gemini-1.5-pro</option>

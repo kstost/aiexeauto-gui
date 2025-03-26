@@ -42,7 +42,7 @@ async function initialize() {
                     try {
                         const jsonData = JSON.parse(content);
                         // console.log(jsonData.model);
-                        if (jsonData.model === 'gemini') jsonData.model = 'gemini-2.0-flash';
+                        if (jsonData.model === 'gemini') jsonData.model = 'gemini-2.5-pro-exp-03-25';
                         const editor = await createJsonEditor(jsonData);
                         rightDiv.appendChild(editor);
 
