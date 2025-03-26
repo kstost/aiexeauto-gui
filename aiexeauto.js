@@ -223,11 +223,10 @@ if (prompt === 'version') {
                 await reqRenderer('out_stream', body)
             },
             async out_print(data) {
-                // ㅑㄹ 
-                // if(!data.data)
-                // console.log('out_print....', data);
-                // console.log(...data);
                 await reqRenderer('out_print', data)
+            },
+            async out_summary(data) {
+                await reqRenderer('out_summary', data)
             },
             async percent_bar(data) {
                 // console.log(...data);

@@ -80,6 +80,9 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (body.class === 'out_print') {
                 this.out_print(body.message);
             }
+            if (body.class === 'out_summary') {
+                this.out_summary(body.message);
+            }
             if (body.class === 'code_confirmed') {
                 this.code_confirmed(body.confirmedCode, body.language);
             }
@@ -106,6 +109,16 @@ window.addEventListener('DOMContentLoaded', async () => {
             editor.setSize('100%', '100%');
             runButton.remove();
             cancelButton.remove();
+        },
+        out_summary(message) {
+            const inputBox = new ContentBox();
+            conversations.appendChild(inputBox.resultContainer);
+            const resultContainer = inputBox.getContainer();
+            resultContainer.style.whiteSpace = 'pre-wrap';
+            resultContainer.style.fontFamily = 'intelone-mono-font-family-regular';
+            resultContainer.textContent = message;//`<pre>${message}</pre>`;
+            message && dissmissPreviousDisplayState();
+            scrollBodyToBottomSmoothly();
         },
         out_print(message) {
             const inputBox = new ContentBox();
@@ -173,6 +186,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (!message) return;
             workData.history.push({ class: 'out_print', message });
             displayer.out_print(message);
+        },
+        async out_summary(body) {
+            const message = body.data;// body.message[0];
+            const mode = body.mode;
+            if (!message) return;
+            workData.history.push({ class: 'out_summary', message });
+            displayer.out_summary(message);
         },
         async out_state(body) {
 

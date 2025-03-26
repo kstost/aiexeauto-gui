@@ -211,7 +211,7 @@ export const createSpinner = (text, spinnerType = 'dots') => {
     // return spinner;
 };
 
-export function omitMiddlePart(text, length = 1024, outputDataId) {
+export function omitMiddlePart(text, length = 2049, outputDataId) {
     text = text.trim();
     let lineCount = text.split('\n').length;
     let omitted = false;
@@ -226,7 +226,7 @@ export function omitMiddlePart(text, length = 1024, outputDataId) {
 }
 
 export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle, reduceLevel }) {
-    const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    const { percent_bar, out_print, out_summary, await_prompt, out_state, out_stream, operation_done } = interfaces;
     // const pid1 = await out_state(caption('solvingLogic'));
     // 채ㅜ내
     singleton.serverClients = await connectAllServers({ interfaces });
@@ -871,7 +871,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 let output = codeExecutionResult?.output;
                 let pid6 = await out_state(caption('retrievingData') + ' 💬 ' + (dataNameKey ? (actData.input[dataNameKey] + ' : ') : '') + actData.input.question);
                 const md5Hash = crypto.createHash('md5').update(output).digest('hex');
-                let answered = await retriving(dataNameKey ? actData.input[dataNameKey] : md5Hash, output, actData.input.question);
+                let answered = await retriving(dataNameKey ? actData.input[dataNameKey] : md5Hash, output, `${actData.input.question}. ` + `\nExtract the essential parts from this document and compile them into a comprehensive detailed report format in ${await getLanguageFullName()} language.`);
                 summarized = [
                     dataNameKey ? `📄 ${dataNameKey}: ${actData.input[dataNameKey]}` : '',
                     `💬 question: ${actData.input.question}`,
@@ -895,7 +895,18 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                 summarized = sum.join('\n');
             }
 
-            const codeExecutionResultOutput = codeExecutionResult?.output?.replace(/\x1b\[[0-9;]*m/g, '') || '';
+            let codeExecutionResultOutput = codeExecutionResult?.output?.replace(/\x1b\[[0-9;]*m/g, '') || '';
+            // if (actData.name === 'browser_use' && codeExecutionResult?.output) {
+            let maxOmitLength = await getConfiguration('maxOmitLength');
+            if (!summarized && codeExecutionResultOutput && codeExecutionResultOutput.length > maxOmitLength && codeExecutionResultOutput.length < maxOmitLength * 100) {
+                let pid6 = await out_state(caption('inspectingOutput'));
+                const md5hash = crypto.createHash('md5').update(codeExecutionResultOutput).digest('hex');
+                let answered = await retriving(md5hash, codeExecutionResultOutput, `Extract the essential parts from this document and compile them into a comprehensive detailed report format in ${await getLanguageFullName()} language.`);
+                if (false) codeExecutionResultOutput = `${codeExecutionResultOutput}\n\n---\n\n${answered}`;
+                summarized = answered;
+                await pid6.dismiss();
+                await out_summary({ data: summarized, mode: 'inspectingOutput' });
+            }
 
             //whattodo
             const outputDataId = Math.random().toString(36).substring(2, 7).toUpperCase();

@@ -122,7 +122,7 @@ export async function getMCPNameByToolName(serverClients, toolName) {
 
 export async function connectAllServers(args) {
     const { interfaces } = args;
-    const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    const { percent_bar, out_print, out_summary, await_prompt, out_state, out_stream, operation_done } = interfaces;
     const serverConfig = await loadServerConfig();
     const serverClients = {};
 

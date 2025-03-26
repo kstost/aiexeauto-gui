@@ -415,7 +415,7 @@ function stripSourceCodeInFencedCodeBlock(text) {
     return null;
 }
 async function plainParser(text, callMode, interfaces) {
-    const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    const { percent_bar, out_print, out_summary, await_prompt, out_state, out_stream, operation_done } = interfaces;
     let pid6 = await out_state(caption('parseResult')); // `${stateLabel}를 ${model}가 처리중...`
     let plain = await langParser(text, callMode);
     pid6.dismiss();
@@ -812,7 +812,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
     if (!systemPromptForGemini && systemPrompt) systemPromptForGemini = systemPrompt;
     if (systemPromptForGemini && !systemPrompt) systemPrompt = systemPromptForGemini;
 
-    const { percent_bar, out_print, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    const { percent_bar, out_print, out_summary, await_prompt, out_state, out_stream, operation_done } = interfaces;
     let detailedRaw;
     async function requestChatCompletion(systemPrompt, promptList, model) {
         const llm = await getConfiguration('llm');

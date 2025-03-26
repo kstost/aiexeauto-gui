@@ -89,6 +89,8 @@ export class TerminalStreamBox {
         // streamBox.style.whiteSpace = 'pre';
         streamBox.style.wordBreak = 'break-all';
         streamBox.classList.add('terminal-stream-box');
+        streamBox.style.whiteSpace = 'pre-wrap';
+        // streamBox.style.fontFamily = 'intelone-mono-font-family-regular';
         streamBox.textContent = stream;
         streamBox.style.padding = '2px';
         streamBox.style.paddingLeft = '10px';

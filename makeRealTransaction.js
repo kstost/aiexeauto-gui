@@ -28,7 +28,7 @@ export async function archivingForRetriver({ data, talkSessionId, orderNumber })
     await retriver.addContent(talkSessionId, `message_${orderNumber}`, addContent);
     await retriver.embedAll(talkSessionId);
 }
-export async function makeRealTransaction({ processTransactions, processTransactionsReduced, multiLineMission, type, whatdidwedo, whattodo,  evaluationText, check_list, talkSessionId, lastMessage }) {
+export async function makeRealTransaction({ processTransactions, processTransactionsReduced, multiLineMission, type, whatdidwedo, whattodo, evaluationText, check_list, talkSessionId, lastMessage }) {
     processTransactions = JSON.parse(JSON.stringify(processTransactions));
     processTransactionsReduced = JSON.parse(JSON.stringify(processTransactionsReduced));
     // let lll = processTransactions.length - (processTransactions.length - processTransactionsReduced.length);
@@ -67,8 +67,9 @@ export async function makeRealTransaction({ processTransactions, processTransact
         let whattodo = processTransactions[i].whattodo;
         let whatdidwedo = processTransactions[i].whatdidwedo;
         let outputDataId = classData === 'output' ? processTransactions[i].outputDataId : null;
-        let omitLevel = 1024;
-        if (topDepth) omitLevel = 1024 * 10;
+        let maxOmitLength = await getConfiguration('maxOmitLength');
+        let omitLevel = maxOmitLength;
+        if (topDepth) omitLevel = maxOmitLength * 10;
         if (output) {
             if (summarized) {
                 output = summarized;

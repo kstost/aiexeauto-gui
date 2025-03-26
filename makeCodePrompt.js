@@ -18,7 +18,8 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
         output = summarized;
     }
     else if (output) {
-        const { text, omitted } = omitMiddlePart(output, 1024, outputDataId);
+        let maxOmitLength = await getConfiguration('maxOmitLength');
+        const { text, omitted } = omitMiddlePart(output, maxOmitLength, outputDataId);
         output = text;
         if (omitted) {
             // output = `${output}\n\n(The middle part of the output is omitted due to length. You can see the full output by clicking the button below.)`;
