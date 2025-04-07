@@ -37,3 +37,6 @@ Exclude code or unnecessary content and respond with only one sentence in {{lang
 
 {{customRulesForCodeGenerator}}
 
+{{mcpList}}
+
+{{mcpNotifier}}

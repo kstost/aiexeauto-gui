@@ -13,7 +13,7 @@ import { getLastDirectoryName, getDetailDirectoryStructure } from './dataHandler
 import { isNodeInitialized, initNodeProject, restoreWorkspace, waitingForDataCheck, exportFromDockerForDataCheck, cleanContainer, isDockerContainerRunning, getDockerInfo, runDockerContainer, killDockerContainer, runDockerContainerDemon, importToDocker, exportFromDocker, isInstalledNodeModule, installNodeModules, runNodeJSCode, runPythonCode, doesDockerImageExist, isInstalledPythonModule, installPythonModules } from './docker.js';
 import { cloneCustomTool, getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
 import fs from 'fs';
-import { connectAllServers } from './mcp.js';
+import { connectAllServers, getAllToolNames, getMCPNameByToolName } from './mcp.js';
 import { getConfiguration, isSequentialthinking } from './system.js';
 import { actDataParser } from './actDataParser.js';
 import { makeCodePrompt, indention } from './makeCodePrompt.js';
@@ -112,6 +112,25 @@ export async function getOperatingSystem() {
     if (isWindows()) return 'Windows';
     return 'macOS';
 }
+export async function mcpListForPrompt() {
+    const serverClients = singleton.serverClients;
+    try {
+        const toolNames = await getAllToolNames(serverClients);
+        let group = {};
+        for (const toolName of toolNames) {
+            const mcpName = await getMCPNameByToolName(serverClients, toolName);
+            group[mcpName] = group[mcpName] || [];
+            group[mcpName].push(toolName);
+        }
+        let content = '';
+        Object.keys(group).forEach(mcpName => {
+            content += `## \`${mcpName}\` server has following tools:\n- ${group[mcpName].join('\n- ')}\n\n`;
+        });
+        return content;
+    } catch (e) {
+    }
+    return '';
+}
 export async function toolsForPrompt() {
     return `${await (async () => {
         const toolList = await getToolList();
@@ -125,10 +144,13 @@ export async function toolsForPrompt() {
     })()}`;
 }
 export async function getBinderDefault() {
+    const mcpList = await mcpListForPrompt();
     return {
         operatingSystem: await getOperatingSystem(),
         languageFullName: await getLanguageFullName(),
         tools: await toolsForPrompt(),
+        mcpList: makeTag('MCPServers', mcpList, !!mcpList),
+        mcpNotifier: !!mcpList ? 'Consider using the tools included in the MCP Server first!' : '',
     };
 }
 const prompts = {
@@ -230,6 +252,31 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     // const pid1 = await out_state(caption('solvingLogic'));
     // 채ㅜ내
     singleton.serverClients = await connectAllServers({ interfaces });
+    // if (true) {
+    //     const serverClients = singleton.serverClients;
+    //     // if (!serverClients) return candidateList;
+    //     try {
+    //         const toolNames = await getAllToolNames(serverClients);
+    //         console.log('singleton.serverClie11111111111111111111111111111111111111111111111nts', singleton.serverClients);
+    //         console.log('toolNames', toolNames);
+    //         let group = {};
+    //         for (const toolName of toolNames) {
+    //             const mcpName = await getMCPNameByToolName(serverClients, toolName);
+    //             group[mcpName] = group[mcpName] || [];
+    //             group[mcpName].push(toolName);
+    //         }
+    //         // console.log('group', group);
+    //         let content = '';
+    //         Object.keys(group).forEach(mcpName => {
+    //             content += `## \`${mcpName}\` server has following tools:\n- ${group[mcpName].join('\n- ')}\n\n`;
+    //         });
+    //         // await out_print({ mode: 'content', data: content });
+    //         console.log(content);
+    //     } catch (e) {
+    //         console.log(e);
+    //     }
+    //     process.exit(0);
+    // }
     if (false) if (await isSequentialthinking()) {
         multiLineMission = [
             multiLineMission,

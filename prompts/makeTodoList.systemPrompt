@@ -42,6 +42,8 @@ You can complete tasks using Python code, or by calling specific functions(tools
 - Do not include any code.
 </Instructions>
 
+{{mcpList}}
+
 When creating the to-do list, consider below:
 <StronglyConsider>
 - You don't need to worry how to run the Python code or tools.
@@ -54,3 +56,4 @@ When creating the to-do list, consider below:
 - **ABSOLUTELY PROHIBIT INCLUDING ANY ACTIONS NOT DIRECTLY RELATED TO THE USER'S REQUEST!**
 </StronglyConsider>
 
+{{mcpNotifier}}

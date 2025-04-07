@@ -14,7 +14,7 @@
             "question": "question to answer, e.g., What is the main topic of this page? or Extract the essential parts from this document and compile them into a comprehensive detailed report format."
         }
     ],
-    "activate": true,
+    "activate": false,
     "only_use_in_code": false,
     "return_description": "",
     "return_type": "",

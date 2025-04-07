@@ -40,6 +40,8 @@ As an artificial intelligence agent, your role is to make a question list to che
 Create a question list of 3~4 items to be checked.
 Focus on the core content of the mission.
 
+If the user requested information research or provision, you should consider whether the information was well organized in an appealing format and determine if this task was accomplished.
+
 <Mission>
 {{mission}}
 </Mission>

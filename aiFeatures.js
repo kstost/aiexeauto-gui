@@ -1504,6 +1504,9 @@ claude
                     tools: [{
                         function_declarations: tools_ofsdijfsadiosoidjaoisjdf.map(tool => {
                             const properties = tool?.input__schema?.properties || tool?.input_schema?.properties || {};
+                            Object.keys(properties).forEach(key => {
+                                delete properties[key].default;
+                            });
                             const required = tool?.input__schema?.required || tool?.input_schema?.required || [];
                             let dasf = {
                                 name: tool.name,

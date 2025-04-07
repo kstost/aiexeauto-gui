@@ -23,7 +23,7 @@
         "headless": false,
         "disable_security": false
     },
-    "activate": true,
+    "activate": false,
     "ignore_output_type": [
         "stderr"
     ],

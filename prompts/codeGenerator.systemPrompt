@@ -55,7 +55,11 @@ As a task-running agent, it handles the steps needed to finish the <SubMission> 
   - Mind the **return types** when using `default_api` methods.
 </ToolsUsageInCode>
 
+{{mcpList}}
+
 <Reminder>
 - Remeber that you can not use `input` for confirmation in the code.
-- If the task can be accomplished with tools, select from the available tools.
+- If the task can be accomplished with MCP or tools, select from the available MCP or tools.
 </Reminder>
+
+{{mcpNotifier}}
