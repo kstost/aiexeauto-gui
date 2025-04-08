@@ -149,8 +149,10 @@ export async function getBinderDefault() {
         operatingSystem: await getOperatingSystem(),
         languageFullName: await getLanguageFullName(),
         tools: await toolsForPrompt(),
-        mcpList: makeTag('MCPServers', mcpList, !!mcpList),
-        mcpNotifier: !!mcpList ? 'Consider using the tools included in the MCP Server first!' : '',
+        mcpList: '',
+        // mcpList: makeTag('MCPServers', mcpList, !!mcpList),
+        // mcpNotifier: !!mcpList ? 'Consider using the tools included in the MCP Server first!' : '',
+        mcpNotifier: '',
     };
 }
 const prompts = {
@@ -250,8 +252,9 @@ export function omitMiddlePart(text, length = 2049, outputDataId) {
 export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle, reduceLevel }) {
     const { percent_bar, out_print, out_summary, await_prompt, out_state, out_stream, operation_done } = interfaces;
     // const pid1 = await out_state(caption('solvingLogic'));
+    // console.log(dataSourcePath);
+    // process.exit(0);
     // 채ㅜ내
-    singleton.serverClients = await connectAllServers({ interfaces });
     // if (true) {
     //     const serverClients = singleton.serverClients;
     //     // if (!serverClients) return candidateList;
@@ -348,6 +351,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     let llm = await getConfiguration('llm');
     let isGemini = llm === 'gemini';
     let ifUseDocker = await getUseDocker();
+    singleton.virtualMountedInDocker = !!(ifUseDocker && !isWindows());
     try {
         if (await getConfiguration('llm') === 'ollama') {
             let ollamaModel = await getConfiguration('ollamaModel');
@@ -393,19 +397,20 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
             if (containerId) {
                 if (!(await isDockerContainerRunning(containerId))) {
-                    containerId = await runDockerContainerDemon(dockerImage);
+                    containerId = await runDockerContainerDemon(dockerImage, dataSourcePath);
                     console.log('없어.')
                 } else {
                     console.log('있어.')
                 }
             } else {
-                containerId = await runDockerContainerDemon(dockerImage);
+                containerId = await runDockerContainerDemon(dockerImage, dataSourcePath);
             }
             await cleanContainer(containerId);
         }
         if (ifUseDocker) singleton.currentWorkingContainerId = containerId;
 
         // let browser, page;
+        singleton.serverClients = await connectAllServers({ interfaces }, containerId);
 
 
         //multiLineMission
@@ -478,7 +483,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             console.log(actDataEvalPrepare);
             multiLineMission = `${multiLineMission}\n\n${actDataEvalPrepare}`;
         }
-        if (true) {
+        if (!true) {
             let actDataEvalPrepare;
             const systemPrompt = templateBinding((await promptTemplate()).makeTodoList.systemPrompt, {
                 ...(await getBinderDefault()),
@@ -1065,7 +1070,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     finally {
         if (containerId) {
             const pid12 = await out_state(caption('savingResults'));
-            if (await getConfiguration('useDocker')) {
+            if (!singleton.virtualMountedInDocker && await getConfiguration('useDocker')) {
                 exported = await exportFromDocker(containerId, await getConfiguration('dockerWorkDir'), dataOutputPath, directoryStructureBeforeOperation);
             }
             await pid12.dismiss();

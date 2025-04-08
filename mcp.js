@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import singleton from "./singleton.js";
 import { is_dir } from "./codeExecution.js";
-// getCodePath
+import { getDockerCommand } from "./docker.js";
 import { getHomePath, getConfiguration, isWindows } from "./system.js";
 
 export async function convertToolsInfoToAIEXEStyle(toolsInfo) {
@@ -120,7 +120,7 @@ export async function getMCPNameByToolName(serverClients, toolName) {
     }
 }
 
-export async function connectAllServers(args) {
+export async function connectAllServers(args, containerId) {
     const { interfaces } = args;
     const { percent_bar, out_print, out_summary, await_prompt, out_state, out_stream, operation_done } = interfaces;
     const serverConfig = await loadServerConfig();
@@ -131,7 +131,7 @@ export async function connectAllServers(args) {
         const pd = await out_state(`Connecting to ${config.name} MCP`);
         let client;
         try {
-            client = await runClient(config.name);
+            client = await runClient(config.name, containerId);
         } catch (e) {
             console.log(process.env);
             console.error(e);
@@ -174,11 +174,28 @@ export async function getServerList() {
     const serverConfig = await loadServerConfig();
     return serverConfig.map(config => config.name);
 }
-export async function runClient(serverName) {
+export async function runClient(serverName, containerId) {
     const serverConfig = await loadServer(serverName);
+    let args;
+    let command;
+    let useDocker = await getConfiguration('useDocker');
+    if (!(useDocker && !isWindows() && containerId && singleton.virtualMountedInDocker)) {
+        args = serverConfig.args;
+        command = serverConfig.command;
+    } else {
+        command = await getDockerCommand();
+        args = [
+            "exec",
+            "-i",
+            containerId,
+            "/bin/sh",
+            "-c",
+            `'${serverConfig.command}' ${serverConfig.args.map(d => `"${d}"`).join(' ')}`,
+        ];
+    }
     const transport = new StdioClientTransport({
-        command: serverConfig.command,
-        args: serverConfig.args,
+        command: command,
+        args: args,
         env: {
             ...(process.env || {}),
             ...(serverConfig.env || {}),

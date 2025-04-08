@@ -24,9 +24,11 @@ export async function executeInContainer(containerId, command, streamGetter = nu
             error: new Error('쌍따옴표는 허용되지 않습니다')
         };
     }
+    ///mounted/workspace
+    // console.log('명령어!', '\'' + (await getDockerCommand()) + '\' exec -w /mounted/workspace "' + containerId + '" /bin/sh -c "' + command + '"');
     return await executeCommand('\'' + (await getDockerCommand()) + '\' exec "' + containerId + '" /bin/sh -c "' + command + '"', streamGetter)
 }
-async function getDockerCommand() {
+export async function getDockerCommand() {
     const dockerPath = await getConfiguration('dockerPath');
     if (dockerPath) return dockerPath;
     // return 'docker';
@@ -108,6 +110,7 @@ export function executeCommandSync(command, args = []) {
 let commandPowershell;
 let commandDocker;
 export async function executeCommand(command, streamGetter = null, workingDirectory = undefined) {
+    console.log('명령어!', command);
     const khongLog = true;
     return new Promise(async (resolve, reject) => {
         let result;
@@ -196,10 +199,12 @@ export async function executeCommand(command, streamGetter = null, workingDirect
 export async function importToDocker(containerId, workDir, inputDir) {
     if (!(await getConfiguration('useDocker'))) return;
     let result = await executeInContainer(containerId, 'mkdir -p ' + workDir);
-    if (result.code !== 0) throw new Error('작업 디렉토리 생성 실패');
+    if (!singleton.virtualMountedInDocker) {
+        if (result.code !== 0) throw new Error('작업 디렉토리 생성 실패');
 
-    result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + inputDir + '/." "' + containerId + ':' + workDir + '"');
-    if (result.code !== 0) throw new Error('input 폴더 복사 실패');
+        result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + inputDir + '/." "' + containerId + ':' + workDir + '"');
+        if (result.code !== 0) throw new Error('input 폴더 복사 실패');
+    }
 }
 export async function backupWorkspace(containerId, workDir) {
     if (!(await getConfiguration('useDocker'))) return;
@@ -681,7 +686,7 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     }
     code = [
         `import os`,
-        useDocker ? `os.remove('${pyFileName}')` : ``,
+        !singleton.virtualMountedInDocker && useDocker ? `os.remove('${pyFileName}')` : ``,
         `# ${'-'.repeat(80)}`,
         `# Please understand that the code is quite long. AI often omits necessary modules when executing code. To address this, I have prepared code at the top that imports commonly used module packages. The main logic of the code created by the AI can be found at the bottom of this code.`,
         `# ${'-'.repeat(80)}`,
@@ -746,8 +751,15 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
         console.log(`[remove.003!] unlink - ${tmpPyFile}`);
     }
 
+    //singleton.virtualMountedInDocker
+    // let result = await executeInContainer(containerId, 'cd ' + workDir + ' && python -u ' + pyFileName, streamGetter);
+    let result;
 
-    let result = await executeInContainer(containerId, 'cd ' + workDir + ' && python -u ' + pyFileName, streamGetter);
+    if (!singleton.virtualMountedInDocker) {
+        result = await executeInContainer(containerId, 'cd ' + workDir + ' && python -u ' + pyFileName, streamGetter);
+    } else {
+        result = await executeInContainer(containerId, 'cd /mounted/workspace/ && python -u ' + workDir + '/' + pyFileName, streamGetter);
+    }
     result.output = `${result.stderr}\n\n${result.stdout}`;
     return result;
 
@@ -799,7 +811,13 @@ export async function runNodeJSCode(containerId, workDir, code, requiredPackageN
 
 
 
-    let result = await executeInContainer(containerId, 'cd ' + workDir + ' && node ' + jsFileName, streamGetter);
+    // let result = await executeInContainer(containerId, 'cd ' + workDir + ' && node ' + jsFileName, streamGetter);
+    let result;
+    if (!singleton.virtualMountedInDocker) {
+        result = await executeInContainer(containerId, 'cd ' + workDir + ' && node ' + jsFileName, streamGetter);
+    } else {
+        result = await executeInContainer(containerId, 'cd /mounted/workspace/ && node ' + workDir + '/' + jsFileName, streamGetter);
+    }
     result.output = `${result.stderr}\n\n${result.stdout}`;
     return result;
 }
@@ -807,11 +825,20 @@ export async function killDockerContainer(containerId) {
     if (!(await getConfiguration('useDocker'))) return;
     await executeCommand(`'${await getDockerCommand()}' kill "${containerId}"`);
 }
-export async function runDockerContainerDemon(dockerImage) {
+export async function runDockerContainerDemon(dockerImage, dataSourcePath) {
     if (!(await getConfiguration('useDocker'))) return;
-    let result = await executeCommand(`'${await getDockerCommand()}' run -d --rm --platform linux/x86_64 "${dockerImage}" tail -f /dev/null`);
-    if (result.code !== 0) throw new Error('컨테이너 시작 실패');
-    return result.stdout.trim();
+    if (isWindows() && !singleton.virtualMountedInDocker) {
+        let result = await executeCommand(`'${await getDockerCommand()}' run -d --rm --platform linux/x86_64 "${dockerImage}" tail -f /dev/null`);
+        if (result.code !== 0) throw new Error('컨테이너 시작 실패');
+        return result.stdout.trim();
+    } else {
+        let workPath = dataSourcePath;
+        workPath = pathSanitizing(workPath);
+        let workSpace = '/mounted/workspace'
+        let result = await executeCommand(`'${await getDockerCommand()}' run -d --rm --platform linux/x86_64 -v "${workPath}:${workSpace}" "${dockerImage}" tail -f /dev/null`);
+        if (result.code !== 0) throw new Error('컨테이너 시작 실패');
+        return result.stdout.trim();
+    }
 }
 export async function isDockerContainerRunning(containerId) {
     if (!(await getConfiguration('useDocker'))) return;
