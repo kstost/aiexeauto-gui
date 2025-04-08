@@ -130,6 +130,7 @@ RUN pip install \
     requests
 
 RUN playwright install
+RUN npx playwright install chrome
 
 # Download fonts
 RUN mkdir -p /fonts
