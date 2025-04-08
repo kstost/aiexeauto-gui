@@ -33,7 +33,7 @@ const defaultConfig = {
     npmPath: '', // npm 경로
     pythonPath: '', // Python 경로
     latestMemoryDepth: 30,
-    maxOmitLength: 204989,
+    maxOmitLength: 2049,
 };
 export default {
     devmode,

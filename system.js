@@ -442,15 +442,15 @@ export async function getToolList() {
     const list = await (async () => {
         let list = await getPromptToolPath();
         let rlist = [];
+        Object.keys(await getMCPToolList()).forEach(tool => {
+            rlist.push(tool);
+        });
         for (const path of list) {
             const toolList = await fs.promises.readdir(path);
             let clist = toolList.filter(tool => tool.endsWith('.toolspec.json')).map(tool => tool.replace(/\.toolspec\.json$/, ''));
             rlist.push(...clist);
         }
         Object.keys(await getCustomToolList()).forEach(tool => {
-            rlist.push(tool);
-        });
-        Object.keys(await getMCPToolList()).forEach(tool => {
             rlist.push(tool);
         });
 

@@ -944,6 +944,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
 
             let codeExecutionResultOutput = codeExecutionResult?.output?.replace(/\x1b\[[0-9;]*m/g, '') || '';
             // if (actData.name === 'browser_use' && codeExecutionResult?.output) {
+            const serverClients = singleton.serverClients;
+            const toolName = actData.name;
+            const mcpName = await getMCPNameByToolName(serverClients, toolName);
             let maxOmitLength = await getConfiguration('maxOmitLength');
             if (!summarized && codeExecutionResultOutput && codeExecutionResultOutput.length > maxOmitLength && codeExecutionResultOutput.length < maxOmitLength * 100) {
                 let pid6 = await out_state(caption('inspectingOutput'));

@@ -14,16 +14,21 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
     let output = processTransactions.at(-1).data;
     let summarized = processTransactions.at(-1).summarized;
     let outputDataId = processTransactions.at(-1).outputDataId;
-    if (summarized) {
+    const useOmmit = false;
+    if (false && summarized) {
         output = summarized;
     }
     else if (output) {
-        let maxOmitLength = await getConfiguration('maxOmitLength');
-        const { text, omitted } = omitMiddlePart(output, maxOmitLength, outputDataId);
-        output = text;
-        if (omitted) {
-            // output = `${output}\n\n(The middle part of the output is omitted due to length. You can see the full output by clicking the button below.)`;
-            // outputDataId
+        if (useOmmit) {
+            let maxOmitLength = await getConfiguration('maxOmitLength');
+            const { text, omitted } = omitMiddlePart(output, maxOmitLength, outputDataId);
+            output = text;
+            if (omitted) {
+                // output = `${output}\n\n(The middle part of the output is omitted due to length. You can see the full output by clicking the button below.)`;
+                // outputDataId
+            }
+        } else {
+
         }
         //outputDataId
     }
