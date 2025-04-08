@@ -315,16 +315,19 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             } else {
                 const name = actData.name;
                 const input = JSON.parse(JSON.stringify(actData.input));
-                const { spec, npm_package_list, pip_package_list } = await getToolData(name);
-                const rule = spec.input_schema[0];
-                const desc = spec.input_schema[1];
-                const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
-                const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
-                if (structure1 === structure2) {
-                    if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-                    if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
-                    if (npm_package_list) requiredPackageNames = npm_package_list;
-                    if (pip_package_list) requiredPackageNames = pip_package_list;
+                const data = await getToolData(name);
+                if (data) {
+                    const { spec, npm_package_list, pip_package_list } = data;
+                    const rule = spec.input_schema[0];
+                    const desc = spec.input_schema[1];
+                    const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
+                    const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
+                    if (structure1 === structure2) {
+                        if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
+                        if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+                        if (npm_package_list) requiredPackageNames = npm_package_list;
+                        if (pip_package_list) requiredPackageNames = pip_package_list;
+                    }
                 }
             }
         }

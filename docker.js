@@ -569,6 +569,7 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
                 continue;
             }
             let data = await getToolData(toolName);
+            if (!data) continue;
             let { prompt, spec, npm_package_list, pip_package_list } = data;
             if (spec) spec.input = spec.input_schema;
             npm_package_list = npm_package_list || [];
