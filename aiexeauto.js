@@ -18,7 +18,7 @@ import { fileURLToPath } from 'url';
 import { linuxStyleRemoveDblSlashes, ensureAppsHomePath } from './dataHandler.js';
 import { is_dir } from './codeExecution.js';
 import { exportFromDockerForDataCheck } from './docker.js';
-import { getEnv, cloneCustomTool, getToolList, supportLanguage, toolSupport, getCustomToolList, getMCPToolList } from './system.js';
+import { isWindows, getUseDocker, getEnv, cloneCustomTool, getToolList, supportLanguage, toolSupport, getCustomToolList, getMCPToolList } from './system.js';
 import envConst from './envConst.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -295,6 +295,11 @@ if (prompt === 'version') {
 
         // getToolsClientByToolName
         // await get
+
+        let ifUseDocker = await getUseDocker();
+        const virtualMountedInDocker = !!(ifUseDocker && !isWindows());// && !dataSourcePath.startsWith(getHomePath('.aiexeauto/workspace'))
+
+
         try {
             let solved = await solveLogic({ taskId, multiLineMission: prompt, dataSourcePath, dataOutputPath, interfaces, odrPath, containerIdToUse, processTransactions, talktitle, reduceLevel });
             exported = solved.exported;
@@ -311,7 +316,10 @@ if (prompt === 'version') {
             if (dataOutputNotAssigned) {
                 await flushFolder([dataOutputPath]);
             }
-            if (fs.existsSync(dataOutputPath)) {
+            if (virtualMountedInDocker) {
+                resultPath = dataSourcePath;
+            }
+            else if (fs.existsSync(dataOutputPath)) {
                 let over = false;
                 let outputCandidate = odrPath;
                 let outputPath = await prepareOutputDir(outputCandidate, over, true);

@@ -178,11 +178,16 @@ export async function runClient(serverName, containerId) {
     const serverConfig = await loadServer(serverName);
     let args;
     let command;
+
     let useDocker = await getConfiguration('useDocker');
     if (!(useDocker && !isWindows() && containerId && singleton.virtualMountedInDocker)) {
         args = serverConfig.args;
         command = serverConfig.command;
     } else {
+        //singleton.dataSourcePath
+        // let 
+        let args_ = JSON.parse(JSON.stringify(serverConfig.args));
+        if (serverName === 'filesystem') args_.push('/mounted/workspace');
         command = await getDockerCommand();
         args = [
             "exec",
@@ -190,7 +195,7 @@ export async function runClient(serverName, containerId) {
             containerId,
             "/bin/sh",
             "-c",
-            `'${serverConfig.command}' ${serverConfig.args.map(d => `"${d}"`).join(' ')}`,
+            `'${serverConfig.command}' ${args_.map(d => `"${d}"`).join(' ')}`,
         ];
     }
     const transport = new StdioClientTransport({

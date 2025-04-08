@@ -382,6 +382,7 @@ export async function makeConfigUI(configurationContainer) {
     keepDockerContainer.appendChild(keepDockerDescription);
 
     configWrapper.appendChild(keepDockerRow);
+    keepDockerRow.remove();
 
     // Docker 사용 여부에 따라 Docker 관련 설정들 표시/숨김
     useDockerCheckbox.addEventListener('change', async () => {

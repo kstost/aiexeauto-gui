@@ -14,7 +14,7 @@ import { isNodeInitialized, initNodeProject, restoreWorkspace, waitingForDataChe
 import { cloneCustomTool, getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
 import fs from 'fs';
 import { connectAllServers, getAllToolNames, getMCPNameByToolName } from './mcp.js';
-import { getConfiguration, isSequentialthinking } from './system.js';
+import { getConfiguration, isSequentialthinking, getHomePath } from './system.js';
 import { actDataParser } from './actDataParser.js';
 import { makeCodePrompt, indention } from './makeCodePrompt.js';
 import { getToolsClientByToolName, getToolsInfoByToolName } from './mcp.js';
@@ -351,7 +351,9 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     let llm = await getConfiguration('llm');
     let isGemini = llm === 'gemini';
     let ifUseDocker = await getUseDocker();
-    singleton.virtualMountedInDocker = !!(ifUseDocker && !isWindows());
+    // console.log('!!!!!!!!!!!!!!!!!!!!!!!!dataSourcePath', dataSourcePath)
+    singleton.virtualMountedInDocker = !!(ifUseDocker && !isWindows());// && !dataSourcePath.startsWith(getHomePath('.aiexeauto/workspace'))
+    singleton.dataSourcePath = dataSourcePath;
     try {
         if (await getConfiguration('llm') === 'ollama') {
             let ollamaModel = await getConfiguration('ollamaModel');
@@ -1075,6 +1077,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
             }
             await pid12.dismiss();
         }
+        await setConfiguration('keepDockerContainer', true);
         if (containerId && !(await getConfiguration('keepDockerContainer'))) {
             const pid14 = await out_state(caption('stoppingDockerContainer'));
             await killDockerContainer(containerId);

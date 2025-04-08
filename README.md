@@ -14,6 +14,7 @@ Watch our demo video on YouTube to get a quick overview of what aiexe can do for
 - **Automation Features**: Automates various repetitive tasks such as file management, image editing, and document processing.
 - **Cross-Platform Support**: Supports both Windows and macOS.
 - **Real-Time Progress Display**: Check task progress through a clean interface.
+- **MCP Support**: MCP (Model Context Protocol) is supported and runs inside the Docker container when Docker is used.
 
 ## System Requirements
 
@@ -114,7 +115,8 @@ However, **the context of the previous task is not shared with the next task.**
 
 - **Data Backup**: Always back up important data before executing tasks.
 - **Security**: Be cautious about security when allowing the application to perform real-world tasks.
-- **API Costs**: Tasks may incur API fees for services like Claude, DeepSeek, OpenAI, Groq, and Gemini.
+- **API Costs**: Tasks may incur API fees for services like Claude, DeepSeek, OpenAI, Groq, and Gemini. Currently, only Gemini and OpenAI are temporarily supported as API providers.
+- **macOS Docker Usage**: When using Docker on macOS, please note that the application directly modifies data in the connected folder for data processing.
 
 ## Troubleshooting
 
@@ -133,4 +135,3 @@ This software is distributed under the MIT License. For details, refer to the [L
 ## Disclaimer
 
 This software is in the prototype stage. Users are fully responsible for its use, and caution is advised when using it with important data or systems.
-
