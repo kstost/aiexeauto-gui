@@ -14,7 +14,7 @@
             "content": "content to write, e.g., print('Hello, world!')"
         }
     ],
-    "activate": true,
+    "activate": false,
     "only_use_in_code": true,
     "return_description": "Boolean value indicating whether the file was written successfully.",
     "return_type": "boolean",

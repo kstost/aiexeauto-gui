@@ -104,7 +104,7 @@ export async function retriving(key, data, question) {
 
 export function makeTag(tagName, data, condition = true) {
     if (!condition) return;
-    return `<${tagName}>\n${indention(1, data)}\n</${tagName}>`
+    return `<${tagName}>\n${indention(1, (data || '').trim())}\n</${tagName}>`
 }
 export async function getOperatingSystem() {
     const useDocker = await getConfiguration('useDocker');
@@ -305,6 +305,10 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     const taskId_ = `${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}-${Math.random().toString(36).substring(2, 15)}`;
     let uniqueSumNumber = 0;
     let containerId = containerIdToUse;
+    if (containerId && !(await getConfiguration('keepDockerContainer'))) {
+        containerId = null;
+        containerIdToUse = null;
+    }
 
     // const pid54 = await out_state(`미션 착수 준비중...`);
     // while (singleton.installedPackages.length) singleton.installedPackages.splice(0, 1);
@@ -449,7 +453,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
         let nextCodeForValidation;
         let evaluationText = '';
 
-        if (true) {
+        if (!true) {
             let actDataEvalPrepare;
             const systemPrompt = templateBinding((await promptTemplate()).measureKeyPointOfMission.systemPrompt, {
                 ...(await getBinderDefault()),
@@ -633,7 +637,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                             caption('codeGeneration')
                         );
                     }, () => areBothSame(processTransactions, ++reduceLevel));
-                    let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId });
+                    let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId, interfaces });
                     // 채ㅜㄴ 
                     mcpInfo = actDataResult.mcpInfo;
                     lazyMode = actDataResult.lazyMode;
@@ -739,7 +743,7 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
                     canceled = confirmed.cancel;
                     // confirmedd = true;
                     // console.log('confirmed', confirmed);
-                    let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId });
+                    let actDataResult = await actDataParser({ actData, processTransactions, out_state, containerId, interfaces });
                     setCodeDefault(actDataResult);
                 }
             } catch (error) {
@@ -1071,13 +1075,23 @@ export async function solveLogic({ taskId, multiLineMission, dataSourcePath, dat
     }
     finally {
         if (containerId) {
+            console.log('컨테이너 ID 확인됨:', containerId);
             const pid12 = await out_state(caption('savingResults'));
+            console.log('결과 저장 상태 메시지 표시됨');
             if (!singleton.virtualMountedInDocker && await getConfiguration('useDocker')) {
+                console.log('가상 마운트가 아니고 도커 사용 중임을 확인');
+                console.log('도커 내보내기 시작 - 컨테이너:', containerId, '작업 디렉토리:', await getConfiguration('dockerWorkDir'));
                 exported = await exportFromDocker(containerId, await getConfiguration('dockerWorkDir'), dataOutputPath, directoryStructureBeforeOperation);
+                console.log('도커 내보내기 완료, 결과:', exported ? '성공' : '실패');
+            } else {
+                console.log('도커 내보내기 건너뜀 - 가상 마운트 상태:', singleton.virtualMountedInDocker, '도커 사용 상태:', await getConfiguration('useDocker'));
             }
             await pid12.dismiss();
+            console.log('결과 저장 상태 메시지 닫힘');
+        } else {
+            console.log('컨테이너 ID가 없음, 도커 내보내기 건너뜀');
         }
-        await setConfiguration('keepDockerContainer', true);
+        await setConfiguration('keepDockerContainer', false);
         if (containerId && !(await getConfiguration('keepDockerContainer'))) {
             const pid14 = await out_state(caption('stoppingDockerContainer'));
             await killDockerContainer(containerId);

@@ -7,9 +7,11 @@ import { getToolsInfoByToolName } from './mcp.js';
 import { virtualPlaywright } from './codeExecution.js';
 import { getToolCode, getToolData, convertJsonToResponseFormat, sortKeyOfObject } from './system.js';
 import { runPythonCode } from './docker.js';
+import { makeRealTransaction } from './makeRealTransaction.js';
+import { chatCompletion } from './aiFeatures.js';
 import { loadConfiguration } from './system.js';
 import singleton from './singleton.js';
-export async function actDataParser({ actData, processTransactions, out_state, containerId }) {
+export async function actDataParser({ actData, processTransactions, out_state, containerId, interfaces }) {
     console.log('actDataParser!!!!!!!!!!!!!!!!!!!!!!', actData);
     let lazyMode = '';
     const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
@@ -89,13 +91,50 @@ export async function actDataParser({ actData, processTransactions, out_state, c
     }
     let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, mcpInfo;
     try {
-        function formatToolCode(actData) {
+        async function formatToolCode(actData) {
             let input = actData.input;
             let keys = Object.keys(input);
             let values = Object.values(input);
             let formattedInput = keys.map((key, index) => `${key}="${values[index]}"`).join(',');
             // return `.`;
-            return `# Call \`${actData.name}\` tool with arguments: ${formattedInput}`;
+            // return `Call \`${actData.name}\` tool with arguments: ${formattedInput}`;
+            let asfd;
+            try {
+                asfd = await chatCompletion(
+                    [
+                        `Your role is to transform user messages into natural language sentences in the form of commands.`,
+                        `If there are specific values included, quote them exactly as they are.`,
+                        `Respond with only the sentence.`
+                    ].join(`\n`),
+                    [
+                        {
+                            role: 'user',
+                            content: `Call \`${actData.name}\` tool with arguments: ${formattedInput}`
+                        },
+                    ],
+                    'naturalizing',
+                    interfaces,
+                    'Naturalizing'
+                );
+            } catch (e) {
+                // console.log('1111111111123123', e)
+            }
+            // return await chatCompletion(
+            //     [
+            //         `사용자의 메시지를 명령문 형태로 자연어 형태의 문장화 하는 역할을 한다.`,
+            //         `포함된 특정 값이 있다면 그대로 인용해줘`,
+            //         `문장만 응답해줘.`
+            //     ].join(`\n`),
+            //     [
+            //         {
+            //             role: 'user',
+            //             content: `Call \`${actData.name}\` tool with arguments: ${formattedInput}`
+            //         },
+            //     ],
+            //     'tmdms',
+            // )
+            if (asfd && asfd.constructor === String) return asfd;
+            return `Call \`${actData.name}\` tool with arguments: ${formattedInput}`;
         }
         let toolCode;
         try { toolCode = await loadToolCode(actData); } catch { }
@@ -116,16 +155,16 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             if (!actData.input.directory_path) actData.input.directory_path = './';
             actData.input.directory_path = `${actData.input.directory_path}/`;
             while (actData.input.directory_path.includes('//')) actData.input.directory_path = actData.input.directory_path.replace('//', '/');
-            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = await formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = await formatToolCode(actData); }
         } else if (actData.name === 'apt_install') {
             if (is_none_data(actData?.input?.package_name)) throw null;
-            javascriptCode = formatToolCode(actData);
+            javascriptCode = await formatToolCode(actData);
             javascriptCodeBack = shellCommander(`apt install -y ${actData.input.package_name}`);
         } else if (actData.name === 'which_command') {
             if (is_none_data(actData?.input?.command)) throw null;
-            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = await formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = await formatToolCode(actData); }
         } else if (actData.name === 'shell_command_execute') {
             if (is_none_data(actData?.input?.command)) throw null;
             javascriptCode = [
@@ -136,21 +175,21 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             //     lazyMode = actData.name;
             //     if (is_none_data(actData?.input?.file_path)) throw null;
             //     if (is_none_data(actData?.input?.question)) throw null;
-            //     if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-            //     if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+            //     if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = await formatToolCode(actData); }
+            //     if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = await formatToolCode(actData); }
         } else if (actData.name === 'remove_file') {
             if (is_none_data(actData?.input?.file_path)) throw null;
-            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = await formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = await formatToolCode(actData); }
         } else if (actData.name === 'remove_directory_recursively') {
             if (is_none_data(actData?.input?.directory_path)) throw null;
-            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = await formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = await formatToolCode(actData); }
         } else if (actData.name === 'rename_file_or_directory') {
             if (is_none_data(actData?.input?.old_path)) throw null;
             if (is_none_data(actData?.input?.new_path)) throw null;
-            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+            if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = await formatToolCode(actData); }
+            if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = await formatToolCode(actData); }
         } else if (actData.name === 'show_output_range') {
             lazyMode = actData.name;
             if (is_none_data(actData?.input?.outputDataId)) throw null;
@@ -166,7 +205,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                 return data1 === data2;
             })[0];
             let data = theLine ? theLine.data.split('\n').slice(actData.input.startLineNumber, actData.input.endLineNumber).join('\n') : '';
-            javascriptCode = formatToolCode(actData);
+            javascriptCode = await formatToolCode(actData);
             // console.log('emoji 🔎');
             data = `🔎 Part of the output from the outputDataId: ${actData.input.outputDataId} (Range: ${actData.input.startLineNumber} - ${actData.input.endLineNumber})\n---\n${data}`;
             // console.log(data);
@@ -194,7 +233,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             //     let ob = { data: codeExecutionResult_.stdout, question: actData.input.question, pdf_file_path: actData.input.pdf_file_path };
             //     const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');
 
-            //     javascriptCode = formatToolCode(actData);
+            //     javascriptCode = await formatToolCode(actData);
             //     javascriptCodeBack = [`console.log('${base64}');`,].join('\n');
             //     await p12.dismiss();
         } else if (actData.name === 'retrieve_from_webpage') {
@@ -280,7 +319,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             }
             let ob = { data, question, url };
             const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');
-            javascriptCode = formatToolCode(actData);
+            javascriptCode = await formatToolCode(actData);
             javascriptCodeBack = [
                 `console.log('${!fail ? base64 : `["${url}"]`}');`,
             ].join('\n');
@@ -296,7 +335,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             let sum = [...url_list1];
             let printData = sum.map(a => `${a.name} - ${a.latest}`).join('\n');
             if (sum.length === 0) printData = 'NOT FOUND';
-            javascriptCode = formatToolCode(actData);
+            javascriptCode = await formatToolCode(actData);
             javascriptCodeBack = [
                 `console.log('🌏 CDN Library URL of ${actData.input.package_name}');`,
                 `console.log((${JSON.stringify({ printData })}).printData);`,
@@ -310,7 +349,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                 mcpInfo = {
                     args: actData.input,
                     name: actData.name,
-                    code: formatToolCode(actData)
+                    code: await formatToolCode(actData)
                 };
             } else {
                 const name = actData.name;
@@ -323,8 +362,8 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                     const structure1 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(rule), desc))
                     const structure2 = JSON.stringify(convertJsonToResponseFormat(sortKeyOfObject(input), desc))
                     if (structure1 === structure2) {
-                        if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = formatToolCode(actData); }
-                        if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = formatToolCode(actData); }
+                        if (toolCode.kind === 'js') { javascriptCodeBack = toolCode.code; javascriptCode = await formatToolCode(actData); }
+                        if (toolCode.kind === 'py') { pythonCodeBack = toolCode.code; pythonCode = await formatToolCode(actData); }
                         if (npm_package_list) requiredPackageNames = npm_package_list;
                         if (pip_package_list) requiredPackageNames = pip_package_list;
                     }

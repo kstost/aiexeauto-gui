@@ -241,23 +241,28 @@ async function leaveLog({ callMode, data, llm }) {
                 data = JSON.parse(JSON.stringify(data));
                 data.callMode = callMode;
                 //---------
-                let unified = unifiedStructure(data);
-                let contentToLeave = `## callMode: ${callMode}\n\n`;
-                contentToLeave += `${'-'.repeat(120)}\n## system ##\n${unified.systemPrompt}\n\n`;
-                for (let i = 0; i < unified.messages.length; i++) {
-                    contentToLeave += `${'-'.repeat(120)}\n## ${unified.messages[i].role} ##\n${unified.messages[i].content}\n\n`;
+                let unified;// = unifiedStructure(data);
+                try { unified = unifiedStructure(data); } catch { }
+                if (unified) {
+                    let contentToLeave = `## callMode: ${callMode}\n\n`;
+                    contentToLeave += `${'-'.repeat(120)}\n## system ##\n${unified.systemPrompt}\n\n`;
+                    for (let i = 0; i < unified.messages.length; i++) {
+                        contentToLeave += `${'-'.repeat(120)}\n## ${unified.messages[i].role} ##\n${unified.messages[i].content}\n\n`;
+                    }
+                    if (false) {
+                        contentToLeave += '\n\n';
+                        contentToLeave += '----------------\n';
+                        contentToLeave += JSON.stringify(data, undefined, 3);
+                        contentToLeave += '\n\n';
+                        contentToLeave += '----------------\n';
+                        contentToLeave += JSON.stringify(unified, undefined, 3);
+                    }
+                    contentToLeave += `\n\n\n------------------\n${JSON.stringify(data, undefined, 3)}`;
+                    await writeEnsuredFile(`${aiLogFolder}/${date}_UNI_${callMode}.txt`, JSON.stringify({ ...unified, callMode, llm }));
+                    await writeEnsuredFile(`${aiLogFolder}/${date}_REQ_${callMode}.txt`, contentToLeave);
+                } else {
+                    console.log('ERRor', data)
                 }
-                if (false) {
-                    contentToLeave += '\n\n';
-                    contentToLeave += '----------------\n';
-                    contentToLeave += JSON.stringify(data, undefined, 3);
-                    contentToLeave += '\n\n';
-                    contentToLeave += '----------------\n';
-                    contentToLeave += JSON.stringify(unified, undefined, 3);
-                }
-                contentToLeave += `\n\n\n------------------\n${JSON.stringify(data, undefined, 3)}`;
-                await writeEnsuredFile(`${aiLogFolder}/${date}_UNI_${callMode}.txt`, JSON.stringify({ ...unified, callMode, llm }));
-                await writeEnsuredFile(`${aiLogFolder}/${date}_REQ_${callMode}.txt`, contentToLeave);
             } else {
                 let contentToLeave = '';
                 let parsed = JSON.parse(data.resultText);
@@ -932,7 +937,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 let aiProcessing = caption('aiProcessing');
                 aiProcessing = replaceAll(aiProcessing, '{{stateLabel}}', stateLabel);
                 aiProcessing = replaceAll(aiProcessing, '{{model}}', model);
-                let pid6 = await out_state(aiProcessing); // `${stateLabel}를 ${model}가 처리중...`
+                let pid6 = out_state && await out_state(aiProcessing); // `${stateLabel}를 ${model}가 처리중...`
                 let response;
                 let result;
                 //\n\n---\nTOOL NAME TO USE:\ngenerate_python_code\n

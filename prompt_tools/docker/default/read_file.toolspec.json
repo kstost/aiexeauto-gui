@@ -15,7 +15,7 @@
             "file_path": "file path to save, e.g., ./program/robots.txt"
         }
     ],
-    "activate": true,
+    "activate": false,
     "only_use_in_code": false,
     "return_description": "String of the file content.",
     "return_type": "string",

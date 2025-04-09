@@ -10,7 +10,8 @@ const __dirname = dirname(__filename);
 
 const app3 = express();
 const staticPath = __dirname + '/timeMachineRes';
-app3.use(express.json());
+app3.use(express.json({ limit: '50mb' }));
+app3.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app3.use(express.static(staticPath));
 

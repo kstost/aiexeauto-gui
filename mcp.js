@@ -191,6 +191,8 @@ export async function runClient(serverName, containerId) {
         command = await getDockerCommand();
         args = [
             "exec",
+            "-w",
+            "/mounted/workspace",
             "-i",
             containerId,
             "/bin/sh",
@@ -205,6 +207,7 @@ export async function runClient(serverName, containerId) {
             ...(process.env || {}),
             ...(serverConfig.env || {}),
         },
+        // cwd
     });
     const client = new Client(
         {

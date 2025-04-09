@@ -12,7 +12,7 @@
             "directory_path": "directory path to list, e.g, ./program"
         }
     ],
-    "activate": true,
+    "activate": false,
     "return_description": "Array of objects with type, name, and size. type is 'directory' or 'file'. size is the size of the file in bytes. name is the name of the file or directory.",
     "tooling_in_realworld": true,
     "return_type": "Array"
