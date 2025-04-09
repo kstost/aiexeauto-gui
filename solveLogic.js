@@ -14,7 +14,7 @@ import { isNodeInitialized, initNodeProject, restoreWorkspace, waitingForDataChe
 import { cloneCustomTool, getToolList, getToolData, getAppPath, getUseDocker, replaceAll, promptTemplate } from './system.js';
 import fs from 'fs';
 import { connectAllServers, getAllToolNames, getMCPNameByToolName } from './mcp.js';
-import { getConfiguration, isSequentialthinking, getHomePath } from './system.js';
+import { setConfiguration, getConfiguration, isSequentialthinking, getHomePath } from './system.js';
 import { actDataParser } from './actDataParser.js';
 import { makeCodePrompt, indention } from './makeCodePrompt.js';
 import { getToolsClientByToolName, getToolsInfoByToolName } from './mcp.js';
