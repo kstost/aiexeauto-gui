@@ -250,7 +250,13 @@ export async function makeConfigUI(configurationContainer) {
         <option value="" disabled selected>${caption('selectModel')}</option>
         <option value="gpt-4o">gpt-4o</option>
         <option value="gpt-4o-mini">gpt-4o-mini</option>
+        <option value="gpt-4.1-2025-04-14">gpt-4.1-2025-04-14</option>
+        <option value="gpt-4.1-mini-2025-04-14">gpt-4.1-mini-2025-04-14</option>
+        <option value="gpt-4.1-nano-2025-04-14">gpt-4.1-nano-2025-04-14</option>
     `;
+    // 'gpt-4.1-2025-04-14',
+    // 'gpt-4.1-mini-2025-04-14',
+    // 'gpt-4.1-nano-2025-04-14',
     openaiModelContainer.appendChild(openaiModelSelect);
     openaiGroup.appendChild(openaiModelRow);
 
