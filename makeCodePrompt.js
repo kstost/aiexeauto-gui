@@ -73,6 +73,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
             content: templateBinding((await promptTemplate()).recollection.userPrompt, {
                 last: lastMessage,
                 mission: makeTag('MustAchieveMission', mission, !!mission),
+                unresolvedIssue: makeTag('UnresolvedIssue', evaluationText, !!evaluationText),
                 languageFullName: await getLanguageFullName(),
             }),
         };
@@ -82,6 +83,7 @@ export async function makeCodePrompt(mission, type, whatdidwedo, whattodo, evalu
             content: templateBinding((await promptTemplate()).planning.userPrompt, {
                 last: lastMessage,
                 mission: makeTag('MustAchieveMission', mission, !!mission),
+                whatdidwedo: makeTag('WorkDoneSoFar', whatdidwedo, !!whatdidwedo),
                 languageFullName: await getLanguageFullName(),
             }),
         };

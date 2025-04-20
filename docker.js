@@ -12,6 +12,7 @@ import { writeEnsuredFile } from './dataHandler.js';
 import singleton from './singleton.js';
 import { indention } from './makeCodePrompt.js';
 import { runPythonCodeInRealWorld, runNodeCodeInRealWorld, prepareNodeRunningSpace, isInstalledNodeModuleInRealWorld, isInstalledPythonModuleInRealWorld, installNodeModulesInRealWorld, installPythonModulesInRealWorld } from './codeExecution.js';
+import { chatCompletion } from './aiFeatures.js';
 import open from 'open';
 import { getNodePath } from './executableFinder.js';
 export async function executeInContainer(containerId, command, streamGetter = null) {
@@ -110,7 +111,6 @@ export function executeCommandSync(command, args = []) {
 let commandPowershell;
 let commandDocker;
 export async function executeCommand(command, streamGetter = null, workingDirectory = undefined) {
-    console.log('명령어!', command);
     const khongLog = true;
     return new Promise(async (resolve, reject) => {
         let result;
@@ -307,10 +307,7 @@ export async function exportFromDocker(containerId, workDir, outputDir, director
         }
         // [remove.004] unlink - /Users/kst/.aiexeauto/workspace/.code_0.10591924509577666.js
         if ((ensureAppsHomePath(tmpJsFile)) && linuxStyleRemoveDblSlashes(tmpJsFile).includes('/.aiexeauto/workspace/') && await is_file(tmpJsFile) && tmpJsFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
-            console.log(`[remove.004] unlink - ${tmpJsFile}`);
             await fs.promises.unlink(tmpJsFile);
-        } else {
-            console.log(`[remove.004!] unlink - ${tmpJsFile}`);
         }
         let result = await executeInContainer(containerId, 'cd ' + '/nodework/' + ' && node ' + jsFileName);
         structure = (result.stdout || '').trim();
@@ -351,8 +348,6 @@ export async function exportFromDockerForDataCheck(containerId, dataOutputPath) 
                 if (ensureAppsHomePath(candidate) && !(await is_dir(candidate))) break;
             }
             let result = await executeCommand('\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + candidate + '"');
-            // console.log('***command', '\'' + (await getDockerCommand()) + '\' cp "' + containerId + ':' + workDir + '/." "' + candidate + '"');
-            // console.log('***result', result);
             return result.code === 0 ? candidate : null;
         }
         if (containerId) {
@@ -471,6 +466,54 @@ export async function installPythonModules(containerId, workDir, moduleName) {
         return result.code === 0;
     }
 }
+
+export async function isLinuxCommand(message) {
+    let result = await chatCompletion({
+        systemPrompt_: [
+            "Determine whether the user's message is a Linux command or not. Respond with 'true' if it is a Linux command, otherwise respond with 'false'.",
+            '\n',
+            "# Steps",
+            '\n',
+            "1. Analyze the user's message.",
+            "2. Use context clues to identify if the message closely resembles a typical Linux command.",
+            "3. Consider standard Linux command structure, syntax, and common commands.",
+            "4. Make an assessment based on the above analysis.",
+            '\n',
+            "# Output Format",
+            '\n',
+            "- Respond with 'true' if the message is determined to be a Linux command.",
+            "- Respond with 'false' if the message is not a Linux command.",
+            '\n',
+            "# Examples",
+            '\n',
+            "- Input: \"ls -la\"",
+            "  - Reasoning: \"The command 'ls -la' follows the syntax of a typical Linux command, listing contents in long format including hidden files.\"",
+            "  - Output: true",
+            '\n',
+            "- Input: \"Hello, how are you?\"",
+            "  - Reasoning: \"The message does not resemble a Linux command and is instead a common greeting.\"",
+            "  - Output: false",
+            '\n',
+            "# Notes",
+            '\n',
+            "- A Linux command typically includes a base command like 'ls', 'cd', 'echo', followed by options or arguments.",
+            "- Be cautious of ambiguous cases where the text might appear similar to a command but lacks specific Linux-related context.",
+            "- Consider the evolving nature of commands and new common utilities in Linux environments.",
+        ].join(`\n`),
+        promptList: [
+            {
+                role: 'user',
+                content: `${message}`
+            },
+        ],
+        outputTokens: 16,
+        temperature: 0,
+        callMode: 'isLinuxCommand'
+    });
+    let rst = (result || '').trim().toLowerCase() === 'true';
+    return rst;
+}
+
 /**
  * RealWorld Compatible
  * 
@@ -496,7 +539,17 @@ export async function checkSyntax(containerId, code) {
         await writeEnsuredFile(workdirFile, code);
         validated.py = isValid(await executeCommand(`'${await virtualPython()}' -m py_compile ${filename}`, null, workdir));
         validated.js = isValid(await executeCommand(`'${await getConfiguration('nodePath')}' --check ${filename}`, null, workdir));
+
         validated.bash = false;
+        if (!validated.py && !validated.js) {
+            // validated.bash = await isLinuxCommand(code);
+            if (await isLinuxCommand(code)) {
+                validated.bash = true;
+            } else {
+                validated.plain = true;
+            }
+        }
+
         if (ensureAppsHomePath(workdirFile)) {
             await fs.promises.unlink(workdirFile);
         }
@@ -515,6 +568,7 @@ export async function checkSyntax(containerId, code) {
         py: false,
         js: false,
         bash: false,
+        plain: false,
     }
     let isJson = false;// = isValid(await executeInContainer(containerId, 'cd /chksyntax && python -m json.tool ' + pyFileName));
     try {
@@ -529,7 +583,17 @@ export async function checkSyntax(containerId, code) {
     }
     validated.py = isValid(await executeInContainer(containerId, 'cd /chksyntax && python -m py_compile ' + pyFileName));
     validated.js = isValid(await executeInContainer(containerId, 'cd /chksyntax && node --check ' + pyFileName));
-    validated.bash = isValid(await executeInContainer(containerId, 'cd /chksyntax && bash -n ' + pyFileName));
+
+    validated.bash = false;
+    if (!validated.py && !validated.js) {
+        if (await isLinuxCommand(code)) {
+            validated.bash = true;
+        } else {
+            validated.plain = true;
+        }
+    }
+    // validated.bash = isValid(await executeInContainer(containerId, 'cd /chksyntax && bash -n ' + pyFileName));
+    // isLinuxCommand(message)
     return validated;
 }
 
@@ -744,11 +808,7 @@ export async function runPythonCode(containerId, workDir, code, requiredPackageN
     }
     // [remove.003] unlink - /Users/kst/.aiexeauto/workspace/.code_0.7196721389583982.py
     if ((ensureAppsHomePath(tmpPyFile)) && linuxStyleRemoveDblSlashes(tmpPyFile).includes('/.aiexeauto/workspace/') && await is_file(tmpPyFile) && tmpPyFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
-        console.log(`[remove.003] unlink - ${tmpPyFile}`);
-        if (!false) await fs.promises.unlink(tmpPyFile);
-        else console.log('not removed!!!!!!!!', tmpPyFile);
-    } else {
-        console.log(`[remove.003!] unlink - ${tmpPyFile}`);
+        await fs.promises.unlink(tmpPyFile);
     }
 
     //singleton.virtualMountedInDocker
@@ -803,10 +863,7 @@ export async function runNodeJSCode(containerId, workDir, code, requiredPackageN
     }
     // [remove.004] unlink - /Users/kst/.aiexeauto/workspace/.code_0.10591924509577666.js
     if ((ensureAppsHomePath(tmpJsFile)) && linuxStyleRemoveDblSlashes(tmpJsFile).includes('/.aiexeauto/workspace/') && await is_file(tmpJsFile) && tmpJsFile.startsWith(getHomePath('.aiexeauto/workspace'))) {
-        console.log(`[remove.004] unlink - ${tmpJsFile}`);
         await fs.promises.unlink(tmpJsFile);
-    } else {
-        console.log(`[remove.004!] unlink - ${tmpJsFile}`);
     }
 
 

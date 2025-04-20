@@ -10,6 +10,8 @@
         "Use `subprocess` when executing shell commands.",
         "The process must be terminated after code execution.",
         "Do not hardcode data in the source code.",
+        "Code must indicate every state of the process with `print` function.",
+        "Code must include all necessary dependencies.",
         "Skip optional tasks."
     ],
     "input_schema": [

@@ -12,7 +12,6 @@ import { chatCompletion } from './aiFeatures.js';
 import { loadConfiguration } from './system.js';
 import singleton from './singleton.js';
 export async function actDataParser({ actData, processTransactions, out_state, containerId, interfaces }) {
-    console.log('actDataParser!!!!!!!!!!!!!!!!!!!!!!', actData);
     let lazyMode = '';
     const actDataCloneBackedUp = JSON.parse(JSON.stringify(actData));
     let toolingFailed = false;
@@ -89,7 +88,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
         }
         return { code, kind };
     }
-    let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, mcpInfo;
+    let javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, mcpInfo, plainText;
     try {
         async function formatToolCode(actData) {
             let input = actData.input;
@@ -100,39 +99,23 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             // return `Call \`${actData.name}\` tool with arguments: ${formattedInput}`;
             let asfd;
             try {
-                asfd = await chatCompletion(
-                    [
+                asfd = await chatCompletion({
+                    systemPrompt_: [
                         `Your role is to transform user messages into natural language sentences in the form of commands.`,
                         `If there are specific values included, quote them exactly as they are.`,
                         `Respond with only the sentence.`
                     ].join(`\n`),
-                    [
+                    promptList: [
                         {
                             role: 'user',
                             content: `Call \`${actData.name}\` tool with arguments: ${formattedInput}`
                         },
                     ],
-                    'naturalizing',
-                    interfaces,
-                    'Naturalizing'
-                );
+                    callMode: 'naturalizing'
+                });
             } catch (e) {
                 // console.log('1111111111123123', e)
             }
-            // return await chatCompletion(
-            //     [
-            //         `사용자의 메시지를 명령문 형태로 자연어 형태의 문장화 하는 역할을 한다.`,
-            //         `포함된 특정 값이 있다면 그대로 인용해줘`,
-            //         `문장만 응답해줘.`
-            //     ].join(`\n`),
-            //     [
-            //         {
-            //             role: 'user',
-            //             content: `Call \`${actData.name}\` tool with arguments: ${formattedInput}`
-            //         },
-            //     ],
-            //     'tmdms',
-            // )
             if (asfd && asfd.constructor === String) return asfd;
             return `Call \`${actData.name}\` tool with arguments: ${formattedInput}`;
         }
@@ -142,6 +125,8 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             if (is_none_data(actData?.input?.nodejs_code)) throw null;
             javascriptCode = actData.input.nodejs_code;
             requiredPackageNames = actData.input.npm_package_list;
+        } else if (actData.name === 'just_plain_text') {
+            plainText = actData.input.plain_text;
         } else if (actData.name === 'generate_nodejs_code_for_puppeteer') {
             if (is_none_data(actData?.input?.nodejs_code)) throw null;
             javascriptCode = actData.input.nodejs_code;
@@ -238,7 +223,6 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             //     await p12.dismiss();
         } else if (actData.name === 'retrieve_from_webpage') {
             lazyMode = actData.name;
-            console.log('retrieve_from_webpage!!!!!!!!!!!!!!......................!!!!!!!!');
             if (is_none_data(actData?.input?.url)) throw null;
             if (is_none_data(actData?.input?.question)) {
                 actData.input.question = 'Summary of the webpage';
@@ -272,7 +256,6 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                     args: ['--window-size=1366,768']
                 });
                 try {
-                    console.log('puppeteer launch');
                     const page = await browser.newPage();
                     await page.setViewport({ width: 1366, height: 768 });
 
@@ -313,9 +296,7 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                     fail = true;
                 }
                 await browser.close();
-                console.log('htmldata!!!!!!!!!!!!!!!!!!!!!!', htmldata);
                 data = new TurndownService().turndown(htmldata);
-                console.log('data!!!!!!!!!!!!!!!!!!!!!!', data);
             }
             let ob = { data, question, url };
             const base64 = Buffer.from(JSON.stringify(ob)).toString('base64');
@@ -324,7 +305,6 @@ export async function actDataParser({ actData, processTransactions, out_state, c
                 `console.log('${!fail ? base64 : `["${url}"]`}');`,
             ].join('\n');
             await p12.dismiss();
-            // console.log('javascriptCodeBack!!!!!!!!!!!!!!!!!!!!!!', javascriptCodeBack);
         } else if (actData.name === 'cdnjs_finder') {
             if (is_none_data(actData?.input?.package_name)) throw null;
             const packageName = actData.input.package_name;
@@ -375,12 +355,12 @@ export async function actDataParser({ actData, processTransactions, out_state, c
             둘다 없다면 LLM이 Tooling 실패했다고 봐야해.
             실패했다면 actData 어떤 모습인지 확인할 수 있도록 actDataCloneBackedUp 준비했어.
         */
-        if (!javascriptCode && !pythonCode) toolingFailed = true;
+        if (!javascriptCode && !pythonCode && plainText === undefined) toolingFailed = true;
         if (mcpInfo) {
             javascriptCode = '';
             pythonCode = '';
         }
-        return { javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, toolingFailed, actDataCloneBackedUp, lazyMode, mcpInfo };
+        return { javascriptCode, requiredPackageNames, pythonCode, javascriptCodeBack, pythonCodeBack, toolingFailed, actDataCloneBackedUp, lazyMode, mcpInfo, plainText };
     } catch {
         return {
             toolingFailed,

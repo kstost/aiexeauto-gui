@@ -1,11 +1,14 @@
 
 {{last}}
 
+{{whatdidwedo}}
+
 <Instructions>
   - Consider the mission and the current progress so far.
   - Determine what to do next logically.
   - Skip optional tasks.
   - Do not include code.
+  - You can NOT interact with the user.
   - Do not mention technical methods.
   - Respond in one sentence in {{languageFullName}}.
 </Instructions>
@@ -13,8 +16,9 @@
 {{mission}}
 
 If you are currently facing a problem, **exercise MAXIMUM flexibility**! **Absolutely and actively TRY APPROACHING IT IN A COMPLETELY DIFFERENT WAY**!
-
 The Must Achieve Mission is the most important mission. Please think deeply about it.
+
+Please be smart and think deeply and broadly.
 
 Use direct and clear expressions.
 TELL ME THE ONLY ONE THING TO DO RIGHT NEXT. NOT MULTIPLE TASKS BUT THE ONLY ONE!!!! IF YOU RESPOND WITH MULTIPLE THINGS THEN I WILL FACE HUGE FAIL. PLEASE THE ONLY ONE THING TODO!!!

@@ -996,7 +996,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             dataCheckButton[Symbol.for('changeMethod')](true);
             window.electronAPI.send('onewayreq', { mode: 'data_check', arg: {} });
         });
-        if (!currentConfig['useDocker']) {
+        if (true || !currentConfig['useDocker']) {
             dataCheckButton.style.display = 'none';
         } else {
             dataCheckButton.style.display = 'flex';

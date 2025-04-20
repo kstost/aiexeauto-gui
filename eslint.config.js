@@ -20,6 +20,7 @@ const config = [
       "no-unused-vars": "warn",  // 사용하지 않는 변수에 대해 경고
       "no-empty": "off",  // 빈 블록을 허용
       "no-constant-condition": "off", // 상수 조건문 허용
+      "no-constant-binary-expression": "off", // 상수 이진 표현식 허용
       "no-control-regex": "off" // 정규식의 제어 문자 허용
     },
   },
@@ -31,6 +32,7 @@ const config = [
       "no-unused-vars": "off",  // 사용하지 않는 변수에 대해 경고
       "no-constant-condition": "off", // 상수 조건문 허용
       "no-control-regex": "off", // 정규식의 제어 문자 허용
+      "no-constant-binary-expression": "off", // 상수 이진 표현식 허용
       "no-async-promise-executor": "off" // 비동기 프로미스 실행자 허용
     }
   }

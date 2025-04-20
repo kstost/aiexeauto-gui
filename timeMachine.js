@@ -64,11 +64,12 @@ app3.post('/request', async (req, res) => {
 
     // console.log(callMode, tool);
     try {
-        const asdf = await chatCompletion(
-            systemPrompt,
-            messages,
-            callMode,
-            {
+        //assign key names: systemPrompt_, promptList, callMode, interfaces, stateLabel, detailed, tool
+        const asdf = await chatCompletion({
+            systemPrompt_: systemPrompt,
+            promptList: messages,
+            callMode: callMode,
+            interfaces: {
                 out_state() {
                     return {
                         fail: () => {
@@ -82,10 +83,10 @@ app3.post('/request', async (req, res) => {
                     }
                 }
             },
-            '',
-            true,
-            tool
-        )
+            stateLabel: '',
+            detailed: true,
+            tool: tool
+        });
         res.send(asdf);
     } catch (e) {
         console.log(e);

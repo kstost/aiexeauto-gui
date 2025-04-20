@@ -420,8 +420,8 @@ function stripSourceCodeInFencedCodeBlock(text) {
     return null;
 }
 async function plainParser(text, callMode, interfaces) {
-    const { percent_bar, out_print, out_summary, await_prompt, out_state, out_stream, operation_done } = interfaces;
-    let pid6 = await out_state(caption('parseResult')); // `${stateLabel}를 ${model}가 처리중...`
+    const { out_state } = interfaces;
+    let pid6 = await out_state(caption('parseResult'));
     let plain = await langParser(text, callMode);
     pid6.dismiss();
     if (plain) {
@@ -682,7 +682,7 @@ export function stripTags(fileContent, allowedTags) {
     // allowedTags가 제공되지 않으면 모든 태그를 처리 (기존 동작 유지)
     fileContent = removeUnmatchedTags(fileContent);
     const tagPattern = allowedTags && allowedTags.length > 0
-        ? allowedTags.map(tag => tag.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')
+        ? allowedTags.map(tag => tag.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')
         : '[A-Za-z0-9_-]+';
 
     // 지정된 태그들만 매칭하는 정규표현식
@@ -725,7 +725,6 @@ export function stripTags(fileContent, allowedTags) {
 async function langParser(text, callMode) {
     try {
         if (true) text = stripTags(text, ['CodeForNextTasks']).join('\n').trim() || text;
-        console.log('textcode', text);
         const striped = stripSourceCodeInFencedCodeBlock(text);
         let code, languageName;
         if (striped) {
@@ -736,7 +735,6 @@ async function langParser(text, callMode) {
             code = text;
         }
         let validation = await checkSyntax(singleton.currentWorkingContainerId, code);
-        console.log('validation', validation);
         let toolCall = {
             name: null,
             args: null
@@ -762,6 +760,12 @@ async function langParser(text, callMode) {
                     pip_package_list: []
                 }
             }
+            else if (validation.plain) {
+                toolCall.name = 'just_plain_text';
+                toolCall.args = {
+                    plain_text: code,
+                }
+            }
         } else if (callMode === 'evaluateCode') {
             let parsed = {};
             try {
@@ -784,7 +788,6 @@ async function langParser(text, callMode) {
         }
         return toolCall;
     } catch (ee) {
-        console.log('ee', ee);
     }
 }
 export async function getModel() {
@@ -804,7 +807,9 @@ export async function getModel() {
                             : null;
     return model;
 }
-export async function chatCompletion(systemPrompt_, promptList, callMode, interfaces = {}, stateLabel = '', detailed = false, tool = null) {
+export async function chatCompletion({ systemPrompt_, promptList, callMode, interfaces = null, stateLabel = '', detailed = false, tool = null, outputTokens, temperature = 0, top_p, top_k }) {
+    if (!interfaces) interfaces = singleton.interfaces;
+    if (!stateLabel) stateLabel = 'Thinking';
     let systemPrompt;
     let systemPromptForGemini;
     let malformed_function_called = false;
@@ -817,7 +822,7 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
     if (!systemPromptForGemini && systemPrompt) systemPromptForGemini = systemPrompt;
     if (systemPromptForGemini && !systemPrompt) systemPrompt = systemPromptForGemini;
 
-    const { percent_bar, out_print, out_summary, await_prompt, out_state, out_stream, operation_done } = interfaces;
+    const { percent_bar, out_state } = interfaces;
     let detailedRaw;
     async function requestChatCompletion(systemPrompt, promptList, model) {
         const llm = await getConfiguration('llm');
@@ -889,7 +894,6 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     if (!toolData) continue;
                     if (toolData.only_use_in_code) continue;
                     if (!useDocker) if (!toolData.tooling_in_realworld) continue;
-                    // continue;
                     toolData.spec.input_schema = convertJsonToResponseFormat(...toolData.spec.input_schema).json_schema.schema;
                     toolPrompts.push(toolData.spec);
                 }
@@ -910,7 +914,6 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
             let loopCount = 0;
             while (true) {
                 loopCount++;
-                // console.log('LOOOP', llm, '|', exponentialBackoffCount, '|', turnedGeminiModel)
                 if (llm === 'gemini' && exponentialBackoffCount > 1) {
                     const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
                     if (turnedGeminiModel === 'gemini-2.5-pro-exp-03-25') turnedGeminiModel = 'gemini-2.0-flash';
@@ -918,7 +921,6 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     url = `${baseUrl}/models/${turnedGeminiModel}:generateContent?key=${geminiApiKey}`;
                 }
                 if (llm === 'gemini' && malformed_function_called) {
-                    console.log('mallformed fix');
                     delete data.tools;
                     delete data.tool_config;
                     data = {
@@ -937,10 +939,9 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                 let aiProcessing = caption('aiProcessing');
                 aiProcessing = replaceAll(aiProcessing, '{{stateLabel}}', stateLabel);
                 aiProcessing = replaceAll(aiProcessing, '{{model}}', model);
-                let pid6 = out_state && await out_state(aiProcessing); // `${stateLabel}를 ${model}가 처리중...`
+                let pidadsjfajsdf6 = stateLabel ? await out_state(aiProcessing) : null;
                 let response;
                 let result;
-                //\n\n---\nTOOL NAME TO USE:\ngenerate_python_code\n
                 function setDefaultToolName() {
                     forRetry++;
                     if (callMode === 'generateCode') {
@@ -970,7 +971,6 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     const controller = new AbortController();
                     if (!singleton.abortController) singleton.abortController = [];
                     singleton.abortController.push(controller);
-                    console.log('url', url);
                     const body = dataPayload(data);
                     if (!detailed) await leaveLog({ callMode, data: body, llm });
                     if (detailed) console.log(JSON.stringify(body, null, 2));
@@ -984,120 +984,16 @@ export async function chatCompletion(systemPrompt_, promptList, callMode, interf
                     result = await response.text();
                     if (detailed) detailedRaw = result;
                 } catch (err) {
-                    // aiMissionAborted:`${stateLabel}를 ${model}가 처리 중단 (${err.message})`
                     let aiMissionAborted = caption('aiMissionAborted');
                     aiMissionAborted = replaceAll(aiMissionAborted, '{{stateLabel}}', stateLabel);
                     aiMissionAborted = replaceAll(aiMissionAborted, '{{model}}', model);
                     aiMissionAborted = replaceAll(aiMissionAborted, '{{errorMessage}}', err.message);
-                    pid6.fail(aiMissionAborted);
+                    pidadsjfajsdf6?.fail(aiMissionAborted);
                     throw new Error(caption('missionAborted'));
                 } finally {
-                    pid6.dismiss();
+                    pidadsjfajsdf6?.dismiss();
                 }
                 {
-                    /*
-gemini
-{
-   "system_instruction": {
-      "parts": [
-         {
-            "text": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
-         }
-      ]
-   },
-   "contents": [
-      {
-         "role": "user",
-         "parts": [
-            {
-               "text": "print 1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
-            }
-         ]
-      }
-   ],
-   "generationConfig": {
-      "temperature": 0.1,
-      "topP": 0.6,
-      "topK": 10
-   }
-}
-
-groq
-{
-   "model": "llama-3.3-70b-versatile",
-   "messages": [
-      {
-         "role": "system",
-         "content": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
-      },
-      {
-         "role": "user",
-         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
-      }
-   ]
-}
-
-ollama
-{
-   "model": "qwen2.5:14b",
-   "messages": [
-      {
-         "role": "system",
-         "content": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
-      },
-      {
-         "role": "user",
-         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
-      }
-   ]
-}
-
-openai
-{
-   "model": "gpt-4o-mini",
-   "messages": [
-      {
-         "role": "system",
-         "content": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
-      },
-      {
-         "role": "user",
-         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
-      }
-   ]
-}
-
-deepseek
-{
-   "model": "deepseek-chat",
-   "messages": [
-      {
-         "role": "system",
-         "content": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent."
-      },
-      {
-         "role": "user",
-         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
-      }
-   ]
-}
-
-claude
-{
-   "model": "claude-3-5-sonnet-20241022",
-   "system": "You are a prompt-engineer.\nYour task is to clarify the prompt provided by the user, making it easy to read and detailed for the Code Interpreter AI agent.",
-   "messages": [
-      {
-         "role": "user",
-         "content": "1\n\n------\nMake the prompt for requesting a task from the Code Interpreter AI-Agent easier to understand, more detailed, and clearer.\n\nResponse **only the prompt**."
-      }
-   ],
-   "max_tokens": 4096
-}
-
-
-
-                    */
                     try {
                         const _result = JSON.parse(result);
                         if (isExceedMaxTokens(_result)) {
@@ -1109,42 +1005,39 @@ claude
                 }
                 if (!result) {
                     let pid64 = await out_state(``);
-                    // aiNoResult:`${model}가 ${stateLabel} 처리한 결과가 없음`
                     let aiNoResult = caption('aiNoResult');
                     aiNoResult = replaceAll(aiNoResult, '{{model}}', model);
                     aiNoResult = replaceAll(aiNoResult, '{{stateLabel}}', stateLabel);
-                    pid64.fail(aiNoResult);
+                    stateLabel ? pid64.fail(aiNoResult) : pid64.dismiss();
                     let aiRetryWaiting = caption('aiRetryWaiting');
                     aiRetryWaiting = replaceAll(aiRetryWaiting, '{{model}}', model);
                     aiRetryWaiting = replaceAll(aiRetryWaiting, '{{stateLabel}}', stateLabel);
-                    let pid643 = await out_state(aiRetryWaiting);
+                    let pid643 = stateLabel ? await out_state(aiRetryWaiting) : null;
                     await new Promise(resolve => setTimeout(resolve, 5000));
-                    pid643.dismiss();
+                    pid643?.dismiss();
                     continue;
                 }
                 if (!detailed) await leaveLog({ callMode, data: { resultText: result }, llm });
 
-                // aiAnalyzingResult:`${stateLabel} 처리 데이터 분석 중`
                 let aiAnalyzingResult = caption('aiAnalyzingResult');
                 aiAnalyzingResult = replaceAll(aiAnalyzingResult, '{{stateLabel}}', stateLabel);
-                let pid64 = await out_state(aiAnalyzingResult);
+                let pid64 = stateLabel ? await out_state(aiAnalyzingResult) : null;
                 try {
                     result = JSON.parse(result);
                 } catch {
-                    // aiAnalyzingResultFailed:`${stateLabel} 처리 데이터 분석 실패`
                     let aiAnalyzingResultFailed = caption('aiAnalyzingResultFailed');
                     aiAnalyzingResultFailed = replaceAll(aiAnalyzingResultFailed, '{{stateLabel}}', stateLabel);
-                    pid64.fail(aiAnalyzingResultFailed);
+                    pid64?.fail(aiAnalyzingResultFailed);
                     if (!detailed) await leaveLog({ callMode, data: { resultErrorJSON: result }, llm });
                     let aiRetryWaiting = caption('aiRetryWaiting');
                     aiRetryWaiting = replaceAll(aiRetryWaiting, '{{model}}', model);
                     aiRetryWaiting = replaceAll(aiRetryWaiting, '{{stateLabel}}', stateLabel);
-                    let pid643 = await out_state(aiRetryWaiting);
+                    let pid643 = stateLabel ? await out_state(aiRetryWaiting) : null;
                     await new Promise(resolve => setTimeout(resolve, 5000));
-                    pid643.dismiss();
+                    pid643?.dismiss();
                     continue;
                 } finally {
-                    pid64.dismiss();
+                    pid64?.dismiss();
                 }
                 const errorMessage = result?.error?.message || '';
                 const errorStatus = result?.error?.status || '';
@@ -1153,17 +1046,12 @@ claude
                 const MALFORMED_FUNCTION_CALL = finishReason === 'MALFORMED_FUNCTION_CALL';
                 if (MALFORMED_FUNCTION_CALL) {
                     malformed_function_called = true;
-                    // no_use_tool
                     continue;
                 }
-                // let pid65werwer;// = await out_state(``);
 
-                // 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit (https://docs.anthropic.com/en/api/rate-limits); see the response headers for current usage. Please reduce the prompt length or the maximum tokens requested, or try again later. You may also contact sales at https://www.anthropic.com/contact-sales to discuss your options for a rate limit increase."}}                
                 if (errorMessage) {
                     const forRateLimit = errorMessage.includes('Rate limit') || errorMessage.includes('rate limit');
                     if (forRateLimit || errorMessage?.toLowerCase()?.includes('overloaded') || RESOURCE_EXHAUSTED) {
-                        // if (false) pid65.fail(errorMessage);
-                        // else pid65.dismiss(false);
                         if (!detailed) await leaveLog({ callMode, data: { resultErrorSystem: result }, llm });
                         let waitTime = Math.ceil(extractWaitTime(errorMessage));
                         if (!waitTime) waitTime = 5;
@@ -1186,12 +1074,8 @@ claude
                             }
                         }
                         continue;
-                    } else {
-                        // pid65werwer.dismiss();
                     }
                     throw new Error(errorMessage);
-                } else {
-                    // pid65werwer.dismiss();
                 }
                 if (llm === 'claude') {
                     if (tools_ofsdijfsadiosoidjaoisjdf || generateCodeMode) {
@@ -1200,7 +1084,8 @@ claude
                             let rt = !data ? await plainParser(result?.content?.[0]?.text, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!data && forRetry < 1) throw null;
-                            return data;
+                            return result?.content?.filter(c => c.type === 'tool_use');
+                            // return data;
                         } catch {
                             continue;
                         }
@@ -1215,11 +1100,16 @@ claude
                             let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
-                            return {
-                                type: 'tool_use',
-                                name: await getSimilar(toolCall.function.name),
-                                input: JSON.parse(toolCall.function.arguments)
-                            };
+                            const toolCalls = result?.choices?.[0]?.message?.tool_calls || [];
+                            const toolUse = [];
+                            for (const toolCall of toolCalls) {
+                                toolUse.push({
+                                    type: 'tool_use',
+                                    name: await getSimilar(toolCall.function.name),
+                                    input: JSON.parse(toolCall.function.arguments)
+                                });
+                            }
+                            return toolUse;
                         } catch {
                             setDefaultToolName();
                             continue;
@@ -1235,11 +1125,16 @@ claude
                             let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
-                            return {
-                                type: 'tool_use',
-                                name: await getSimilar(toolCall.function.name),
-                                input: JSON.parse(toolCall.function.arguments)
-                            };
+                            const toolCalls = result?.choices?.[0]?.message?.tool_calls || [];
+                            const toolUse = [];
+                            for (const toolCall of toolCalls) {
+                                toolUse.push({
+                                    type: 'tool_use',
+                                    name: await getSimilar(toolCall.function.name),
+                                    input: JSON.parse(toolCall.function.arguments)
+                                });
+                            }
+                            return toolUse;
                         } catch {
                             setDefaultToolName();
                             continue;
@@ -1255,11 +1150,16 @@ claude
                             let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
-                            return {
-                                type: 'tool_use',
-                                name: await getSimilar(toolCall.function.name),
-                                input: JSON.parse(toolCall.function.arguments)
-                            };
+                            const toolCalls = result?.choices?.[0]?.message?.tool_calls || [];
+                            const toolUse = [];
+                            for (const toolCall of toolCalls) {
+                                toolUse.push({
+                                    type: 'tool_use',
+                                    name: await getSimilar(toolCall.function.name),
+                                    input: JSON.parse(toolCall.function.arguments)
+                                });
+                            }
+                            return toolUse;
                         } catch {
                             setDefaultToolName();
                             continue;
@@ -1277,11 +1177,16 @@ claude
                             let rt = !toolCall ? await plainParser(result?.choices?.[0]?.message?.content, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
-                            return {
-                                type: 'tool_use',
-                                name: await getSimilar(toolCall.function.name),
-                                input: JSON.parse(toolCall.function.arguments)
-                            };
+                            const toolCalls = result?.choices?.[0]?.message?.tool_calls || [];
+                            const toolUse = [];
+                            for (const toolCall of toolCalls) {
+                                toolUse.push({
+                                    type: 'tool_use',
+                                    name: await getSimilar(toolCall.function.name),
+                                    input: JSON.parse(toolCall.function.arguments)
+                                });
+                            }
+                            return toolUse;
                         } catch {
                             setDefaultToolName();
                             continue;
@@ -1299,11 +1204,11 @@ claude
                             let rt = !toolCall ? await plainParser(parts.filter(part => part.text)[0].text, callMode, interfaces) : null;
                             if (rt) return rt;
                             if (!toolCall && forRetry < 1) throw null;
-                            return {
+                            return [{
                                 type: 'tool_use',
                                 name: await getSimilar(toolCall.name),
                                 input: toolCall.args
-                            };
+                            }];
                         } catch {
                             setDefaultToolName();
                             continue;
@@ -1342,7 +1247,9 @@ claude
                     content: p.content
                 })),
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
-                temperature: 0,
+                max_completion_tokens: outputTokens,
+                temperature: temperature,
+                top_p: top_p,
             };
             data.messages = [
                 {
@@ -1356,6 +1263,7 @@ claude
         }
 
         if (llm === 'deepseek') {
+            // https://api-docs.deepseek.com/api/create-chat-completion
             const url = "https://api.deepseek.com/chat/completions";
             const headers = {
                 "Content-Type": "application/json",
@@ -1379,7 +1287,9 @@ claude
                     content: p.content
                 })),
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
-                temperature: 0,
+                max_tokens: outputTokens,
+                temperature: temperature,
+                top_p: top_p,
             };
             data.messages = [
                 {
@@ -1415,7 +1325,9 @@ claude
                     content: p.content
                 })),
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
-                temperature: 0,
+                max_completion_tokens: outputTokens,
+                temperature: temperature,
+                top_p: top_p,
             };
             data.messages = [
                 {
@@ -1451,7 +1363,9 @@ claude
                     content: p.content
                 })),
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
-                temperature: 0,
+                max_tokens: outputTokens,
+                temperature: temperature,
+                top_p: top_p,
             };
             data.messages = [
                 {
@@ -1471,6 +1385,17 @@ claude
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json"
             };
+            if (outputTokens && outputTokens < 1) outputTokens = 1;
+            // console.log('tools_ofsdijfsadiosoidjaoisjdf1111111111', JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf, null, 2))
+            // console.log('tool_choice_list[callMode]11111111111', JSON.stringify(tool_choice_list[callMode], null, 2))
+            if (tools_ofsdijfsadiosoidjaoisjdf) {
+                tools_ofsdijfsadiosoidjaoisjdf = JSON.stringify(tools_ofsdijfsadiosoidjaoisjdf)
+                tools_ofsdijfsadiosoidjaoisjdf = JSON.parse(tools_ofsdijfsadiosoidjaoisjdf)
+                tools_ofsdijfsadiosoidjaoisjdf.forEach(tool => {
+                    if (tool.input__schema) tool.input_schema = tool.input__schema;
+                    delete tool.input__schema;
+                });
+            }
             let data = {
                 model: model,
                 system: systemPrompt,
@@ -1478,10 +1403,12 @@ claude
                     role: p.role === "assistant" ? "assistant" : "user",
                     content: p.content
                 })),
-                max_tokens: 4096, // 토큰 수를 늘림
+                max_tokens: outputTokens || 4096, // 토큰 수를 늘림
                 tools: tools_ofsdijfsadiosoidjaoisjdf,
                 tool_choice: tool_choice_list[callMode],
-                temperature: 0,
+                temperature: temperature,
+                top_p: top_p,
+                top_k: top_k,
             };
             if (tool) data = { ...data, ...tool };
             return await requestAI(llm, callMode, data, url, headers);
@@ -1547,9 +1474,10 @@ claude
                 contents: messages,
                 ...removeAdditionalProperties(toolConfig),
                 generationConfig: {
-                    temperature: 0,
-                    topP: 0.6,
-                    topK: 10
+                    temperature: temperature,
+                    topP: top_p || 0.6,
+                    topK: top_k || 10,
+                    maxOutputTokens: outputTokens
                 }
             };
             if (tool) data = { ...data, ...tool };
@@ -1560,27 +1488,57 @@ claude
     const llm = await getConfiguration('llm');
     const gemini = llm === 'gemini';
     const responseData = await requestChatCompletion(gemini ? systemPromptForGemini : systemPrompt, promptList, model);
-    let actData = responseData;
-    if (actData && actData?.input && actData?.input?.constructor === Object) {
-        Object.keys(actData.input).forEach(key => {
-            let alphanumeric = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_';
-            let newKey = '';
-            for (let i = 0; i < key.length; i++) {
-                if (alphanumeric.includes(key[i])) {
-                    newKey += key[i];
+    /*
+    responseData:
+                {
+                    type: 'tool_use',
+                    name: 'just_plain_text',
+                    input: {
+                        plain_text: '안녕하세요! 현재 기분에 대해 솔직하게 표현할 수 있도록 간단한 질문을 드리겠습니다.\n' +
+                        '\n' +
+                        '1. 오늘 하루는 전반적으로 어땠나요? (예: 즐거웠다, 힘들었다, 평범했다 등)\n' +
+                        '2. 지금 기분을 한 단어로 표현한다면 무엇인가요?\n' +
+                        '3. 지금 기분이 좋아지거나 나빠지게 한 특별한 이유가 있나요?\n' +
+                        '4. 지금 기분을 색깔로 표현한다면 어떤 색일까요?\n' +
+                        '5. 지금 기분을 숫자로 표현한다면 1부터 10까지 중 몇 점인가요?\n' +
+                        '\n' +
+                        '편하게 답변해 주세요!'
+                    }
                 }
-            }
-            if (newKey !== key) {
-                // console.log('newKey!!', newKey, key);
-                actData.input[newKey] = actData.input[key];
-                delete actData.input[key];
-            }
-        });
+
+    or 
+
+    responseData: Hello World.
+
+    */
+    // console.log('responseData11111111111111', responseData);
+    let actData = responseData;
+    if (actData?.constructor === Array) {
+        for (const item of actData) {
+            if (!item?.input) continue;
+            if (item?.input?.constructor !== Object) continue;
+            setKeyNameAlnum(item.input);
+        }
     }
-    if (!detailed) return responseData;
+    if (!detailed && responseData?.constructor !== Array) return responseData;
+    if (!detailed && responseData?.constructor === Array) return responseData[0];
     return {
         text: responseData,
         raw: detailedRaw
     }
 }
 
+function setKeyNameAlnum(obj) {
+    Object.keys(obj).forEach(key => {
+        let alphanumeric = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_';
+        let newKey = '';
+        for (let i = 0; i < key.length; i++) {
+            if (alphanumeric.includes(key[i])) newKey += key[i];
+        }
+        if (newKey !== key) {
+            obj[newKey] = obj[key];
+            delete obj[key];
+        }
+    });
+    return obj;
+}

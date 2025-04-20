@@ -3,3 +3,5 @@
 {{mission}}
 
 {{check_list}}
+
+Judge conditions in <MissionCheckList> **strictly** with clear justification.

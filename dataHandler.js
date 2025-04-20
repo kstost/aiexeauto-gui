@@ -89,18 +89,12 @@ export async function serializeFolder(folderPath) {
             chunks.push(chunk.toString('base64'));
         }
         if (ensureAppsHomePath(tempTarPath)) {
-            console.log(`[remove.006] unlink - ${tempTarPath}`);
             await fs.promises.unlink(tempTarPath);
-        } else {
-            console.log(`[remove.006!] unlink - ${tempTarPath}`);
         }
         return chunks;
     } catch (error) {
         if (ensureAppsHomePath(tempTarPath)) {
-            console.log(`[remove.007] unlink - ${tempTarPath}`);
             try { await fs.promises.unlink(tempTarPath); } catch (cleanupError) { }
-        } else {
-            console.log(`[remove.007!] unlink - ${tempTarPath}`);
         }
         throw error;
     }
@@ -108,8 +102,6 @@ export async function serializeFolder(folderPath) {
 export async function writeEnsuredFile(path, content) {
     if (ensureAppsHomePath(path)) {
         await fs.promises.writeFile(path, content);
-    } else {
-        console.log(`[remove.055!] writeFile - ${path}`);
     }
 }
 
@@ -294,17 +286,11 @@ export async function exportData(page, dataSourcePath, dataOutputPath) {
 
         // 임시 파일 정리
         if (ensureAppsHomePath(path.join(dataOutputPath, tmpTarFile))) {
-            console.log(`[remove.008] unlinkSync - ${path.join(dataOutputPath, tmpTarFile)}`);
             fs.unlinkSync(path.join(dataOutputPath, tmpTarFile));
-        } else {
-            console.log(`[remove.008!] unlinkSync - ${path.join(dataOutputPath, tmpTarFile)}`);
         }
         for (const name of fileList) {
             if (ensureAppsHomePath(name)) {
-                console.log(`[remove.009] unlinkSync - ${name}`);
                 fs.unlinkSync(name);
-            } else {
-                console.log(`[remove.009!] unlinkSync - ${name}`);
             }
         }
         const name = getLastDirectoryName(dataOutputPath);

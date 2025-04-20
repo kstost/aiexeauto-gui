@@ -113,6 +113,7 @@ export async function makeConfigUI(configurationContainer) {
         <option value="" disabled selected>${caption('selectLLM')}</option>
         <option value="openai">OpenAI</option>
         <option value="gemini">Gemini</option>
+        <option value="claude">Claude</option>
     `;
     llmContainer.appendChild(llmSelect);
     configWrapper.appendChild(llmRow);

@@ -280,6 +280,7 @@ if (prompt === 'version') {
                 }
             }
         };
+        singleton.interfaces = interfaces;
         dataOutputPath = await getOutputPath(taskId);
         let dataSourceNotAssigned = !dataSourcePath;
         let dataOutputNotAssigned = !dataOutputPath;
@@ -317,7 +318,7 @@ if (prompt === 'version') {
                 await flushFolder([dataOutputPath]);
             }
             if (virtualMountedInDocker) {
-                resultPath = dataSourcePath;
+                if (await is_dir(dataSourcePath)) resultPath = dataSourcePath;
             }
             else if (fs.existsSync(dataOutputPath)) {
                 let over = false;

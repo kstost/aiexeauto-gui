@@ -8,6 +8,7 @@ const singleton = {
     // installedPackages: {},
     lang: getSystemLangCode(),
     abortQueue: {},
+    interfaces: null,
     async debug(data, scopename) {
         const optionscopename = singleton?.options?.debug;
         if (!scopename || !optionscopename) return;
